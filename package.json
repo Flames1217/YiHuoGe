@@ -1,0 +1,42 @@
+{
+  "name": "yihuoge",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "YiHuoGe / ??? self-hosted renewal dashboard",
+  "scripts": {
+    "dev": "vite",
+    "api": "tsx watch server/index.ts",
+    "dev:full": "concurrently -n web,api -c orange,cyan \"npm run dev\" \"npm run api\"",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "start:api": "tsx server/index.ts"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^6.2.5",
+    "antd": "^6.4.3",
+    "cors": "^2.8.6",
+    "dayjs": "^1.11.21",
+    "express": "^5.2.1",
+    "i18next": "^26.3.1",
+    "lunar-javascript": "^1.7.7",
+    "mysql2": "^3.22.5",
+    "nanoid": "^5.1.11",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.8",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.9.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "concurrently": "^10.0.3",
+    "tsx": "^4.22.4",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.12"
+  }
+}

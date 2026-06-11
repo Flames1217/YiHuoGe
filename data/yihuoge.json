@@ -1,0 +1,96 @@
+{
+  "assets": [
+    {
+      "id": "api-domain-yihuoge",
+      "name": "yihuoge.dev",
+      "type": "domain",
+      "provider": "Cloudflare Registrar",
+      "account": "root@yihuoge.local",
+      "renewalDate": "2026-07-18",
+      "price": 11.2,
+      "currency": "USD",
+      "cycle": "yearly",
+      "status": "warning",
+      "tags": [
+        "domain",
+        "dns",
+        "core"
+      ]
+    }
+  ],
+  "domains": [
+    {
+      "id": "api-domain-yihuoge",
+      "name": "yihuoge.dev",
+      "type": "domain",
+      "provider": "Cloudflare Registrar",
+      "account": "root@yihuoge.local",
+      "renewalDate": "2026-07-18",
+      "price": 11.2,
+      "currency": "USD",
+      "cycle": "yearly",
+      "status": "warning",
+      "tags": [
+        "domain",
+        "dns",
+        "core"
+      ],
+      "registrar": "Cloudflare Registrar",
+      "createdAt": "2024-07-18",
+      "expiresAt": "2026-07-18",
+      "dns": [
+        "aria.ns.cloudflare.com",
+        "dax.ns.cloudflare.com"
+      ],
+      "whoisStatus": [
+        "clientTransferProhibited",
+        "autoRenewPeriod"
+      ]
+    }
+  ],
+  "channels": [
+    {
+      "id": "api-email",
+      "name": "阁主邮箱",
+      "type": "Email",
+      "enabled": true,
+      "target": "renew@yihuoge.local",
+      "secretMasked": "smtp://***"
+    }
+  ],
+  "ai": {
+    "provider": "OpenAI Compatible",
+    "baseUrl": "https://api.openai.com/v1",
+    "models": [
+      "gpt-4.1",
+      "gpt-4.1-mini",
+      "o4-mini"
+    ],
+    "defaultModel": "gpt-4.1-mini"
+  },
+  "settings": {
+    "language": "zh",
+    "timezone": "Asia/Shanghai",
+    "storageAdapters": [
+      "Cloudflare D1/KV",
+      "Postgres",
+      "MySQL/MariaDB",
+      "MongoDB",
+      "SQLite",
+      "Git JSON"
+    ],
+    "deployTargets": [
+      "Cloudflare Workers/Pages",
+      "Vercel",
+      "Netlify",
+      "Deno Deploy",
+      "Docker",
+      "Manual VPS"
+    ],
+    "backupAdapters": [
+      "WebDAV",
+      "S3",
+      "Custom external storage"
+    ]
+  }
+}

@@ -1,0 +1,76 @@
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+
+export const resources = {
+  zh: {
+    translation: {
+      overview: "阁内总览",
+      assets: "资产管理",
+      notifications: "通知渠道",
+      ai: "AI 炼化",
+      settings: "设置",
+      search: "搜索资产、域名、渠道",
+      addAsset: "新增资产",
+      import: "批量导入",
+      table: "列表",
+      card: "卡片",
+      all: "全部",
+      healthy: "安稳",
+      warning: "将燃",
+      critical: "急焰",
+      expired: "熄灭",
+      renewal: "续期",
+      provider: "服务商",
+      account: "账号",
+      price: "价格",
+      status: "状态",
+      action: "操作",
+      test: "测试",
+      enabled: "启用",
+      disabled: "停用",
+      whois: "域名档案查询",
+      aiImport: "AI 炼化",
+      modelManage: "模型管理",
+    },
+  },
+  en: {
+    translation: {
+      overview: "Overview",
+      assets: "Assets",
+      notifications: "Notifications",
+      ai: "AI Assistant",
+      settings: "Settings",
+      search: "Search assets, domains, channels",
+      addAsset: "Add asset",
+      import: "Batch import",
+      table: "Table",
+      card: "Cards",
+      all: "All",
+      healthy: "Healthy",
+      warning: "Warning",
+      critical: "Critical",
+      expired: "Expired",
+      renewal: "Renewal",
+      provider: "Provider",
+      account: "Account",
+      price: "Price",
+      status: "Status",
+      action: "Action",
+      test: "Test",
+      enabled: "Enabled",
+      disabled: "Disabled",
+      whois: "WHOIS lookup",
+      aiImport: "AI import",
+      modelManage: "Model management",
+    },
+  },
+};
+
+i18n.use(initReactI18next).init({
+  resources,
+  lng: "zh",
+  fallbackLng: "zh",
+  interpolation: { escapeValue: false },
+});
+
+export default i18n;
