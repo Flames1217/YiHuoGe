@@ -32,11 +32,6 @@ npm run dev:full
 http://localhost:5173
 ```
 
-API 默认：
-
-```text
-http://localhost:8787
-```
 
 ## 🔐 环境变量
 
@@ -81,7 +76,7 @@ CREATE TABLE IF NOT EXISTS yihuoge_state (
 
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/Flames1217/YiHuoGe)
 
-> 前端可直接部署；API 需要改成 Netlify Functions 或单独部署后端。
+> ????????????????? Netlify Functions ??????
 
 - Build command: `npm run build`
 - Publish directory: `dist`
@@ -91,7 +86,7 @@ CREATE TABLE IF NOT EXISTS yihuoge_state (
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Flames1217/YiHuoGe)
 
-> 前端可部署到 Pages；API 建议迁移到 Hono/Workers Routes，并继续使用 TiDB/MySQL HTTP 或 Serverless 连接方案。
+> ?????? Pages??????????? Hono/Workers Routes?????? TiDB/MySQL HTTP ? Serverless ?????
 
 - Build command: `npm run build`
 - Output directory: `dist`
@@ -101,7 +96,7 @@ CREATE TABLE IF NOT EXISTS yihuoge_state (
 
 [![Deploy on Deno](https://deno.com/button)](https://dash.deno.com/new?url=https://github.com/Flames1217/YiHuoGe)
 
-> 前端可作为静态站点部署；API 建议迁移为 Deno/Hono 入口后再接入 MySQL/TiDB。
+> ?????????????????????? Deno/Hono ?????? MySQL/TiDB?
 
 - Build command: `npm run build`
 - Static directory: `dist`
@@ -112,37 +107,39 @@ CREATE TABLE IF NOT EXISTS yihuoge_state (
 ```bash
 npm install
 npm run build
-npm run start:api
+npm run dev:full
 ```
 
-静态文件在 `dist/`，可由 Nginx/Caddy 托管；API 由 `server/index.ts` 提供。
+????? `dist/`??? Nginx/Caddy ????????? `server/index.ts`?
 
-## 🧪 常用接口
+## 📁 项目结构
 
 ```text
-GET  /api/health
-GET  /api/bootstrap
-POST /api/ai/models/fetch   # 需要管理密钥
-GET  /api/whois/:domain
-```
-
-管理密钥请求头：
-
-```http
-x-admin-key: your-admin-key
-```
-
-也支持：
-
-```http
-Authorization: Bearer your-admin-key
+YiHuoGe/
+|-- api/                    # Vercel Functions
+|   |-- [...path].ts          # Express-compatible server entry
+|   |-- ai/models/fetch.ts    # Model list function
+|   `-- whois/[domain].ts     # Domain WHOIS demo adapter
+|-- docs/                   # Docs and preview image
+|-- public/                 # Fonts and static assets
+|-- server/                 # Local Express server
+|-- src/                    # React frontend source
+|   |-- data/                # Seed data
+|   |-- utils/               # Date, lunar, status helpers
+|   |-- App.tsx              # Main UI and modules
+|   |-- store.ts             # Zustand store
+|   |-- style.css            # YiHuoGe theme styles
+|   `-- types.ts             # Type definitions
+|-- .env.example            # Environment variable example
+|-- vercel.json             # Vercel config
+`-- package.json            # Scripts and dependencies
 ```
 
 ## 🧩 技术栈
 
 - React + TypeScript + Vite
 - Ant Design + Zustand + i18next
-- Express API / Vercel Functions
+- Express / Vercel Functions
 - MySQL / TiDB Cloud
 - Lunar.js / dayjs
 
