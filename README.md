@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS yihuoge_state (
 
 ### ▲ Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/YOUR_NAME/YiHuoGe&env=YIHUOGE_ADMIN_KEY,MYSQL_URL&envDescription=YiHuoGe%20requires%20an%20admin%20key%20and%20a%20MySQL%2FTiDB%20connection%20URL.)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Flames1217/YiHuoGe&env=YIHUOGE_ADMIN_KEY,MYSQL_URL&envDescription=YiHuoGe%20requires%20an%20admin%20key%20and%20a%20MySQL%2FTiDB%20connection%20URL.)
 
 1. 推送到 GitHub。
 2. 点击按钮导入项目。
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS yihuoge_state (
 
 ### 🟦 Netlify
 
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/YOUR_NAME/YiHuoGe)
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/Flames1217/YiHuoGe)
 
 > 前端可直接部署；API 需要改成 Netlify Functions 或单独部署后端。
 
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS yihuoge_state (
 
 ### 🟧 Cloudflare Pages
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/YOUR_NAME/YiHuoGe)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Flames1217/YiHuoGe)
 
 > 前端可部署到 Pages；API 建议迁移到 Hono/Workers Routes，并继续使用 TiDB/MySQL HTTP 或 Serverless 连接方案。
 
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS yihuoge_state (
 
 ### 🦕 Deno Deploy
 
-[![Deploy on Deno](https://deno.com/button)](https://dash.deno.com/new?url=https://github.com/YOUR_NAME/YiHuoGe)
+[![Deploy on Deno](https://deno.com/button)](https://dash.deno.com/new?url=https://github.com/Flames1217/YiHuoGe)
 
 > 前端可作为静态站点部署；API 建议迁移为 Deno/Hono 入口后再接入 MySQL/TiDB。
 
