@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS yihuoge_state (
 
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/Flames1217/YiHuoGe)
 
-> ????????????????? Netlify Functions ??????
+> 前端可直接部署；服务端能力需要改成 Netlify Functions 或单独部署。
 
 - Build command: `npm run build`
 - Publish directory: `dist`
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS yihuoge_state (
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Flames1217/YiHuoGe)
 
-> ?????? Pages??????????? Hono/Workers Routes?????? TiDB/MySQL HTTP ? Serverless ?????
+> 前端可部署到 Pages；服务端能力建议迁移到 Hono/Workers Routes，并继续使用 TiDB/MySQL HTTP 或 Serverless 连接方案。
 
 - Build command: `npm run build`
 - Output directory: `dist`
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS yihuoge_state (
 
 [![Deploy on Deno](https://deno.com/button)](https://dash.deno.com/new?url=https://github.com/Flames1217/YiHuoGe)
 
-> ?????????????????????? Deno/Hono ?????? MySQL/TiDB?
+> 前端可作为静态站点部署；服务端能力建议迁移为 Deno/Hono 入口后再接入 MySQL/TiDB。
 
 - Build command: `npm run build`
 - Static directory: `dist`
@@ -110,7 +110,7 @@ npm run build
 npm run dev:full
 ```
 
-????? `dist/`??? Nginx/Caddy ????????? `server/index.ts`?
+静态文件在 `dist/`，可由 Nginx/Caddy 托管；服务端入口为 `server/index.ts`。
 
 ## 📁 项目结构
 
