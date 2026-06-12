@@ -1,8 +1,6 @@
-﻿import type { VercelRequest, VercelResponse } from "@vercel/node";
+﻿const adminKey = process.env.YIHUOGE_ADMIN_KEY ?? "";
 
-const adminKey = process.env.YIHUOGE_ADMIN_KEY ?? "";
-
-export default function handler(req: VercelRequest, res: VercelResponse) {
+export default function handler(req: any, res: any) {
   if (req.method !== "POST") {
     res.status(405).json({ ok: false, error: "method not allowed" });
     return;
