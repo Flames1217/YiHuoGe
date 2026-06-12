@@ -1,10 +1,11 @@
-# 🔥 YiHuoGe / 异火阁
+<h1>
+  <img src="public/logo.png" alt="YiHuoGe" width="42" height="42" align="center">
+  YiHuoGe / 异火阁
+</h1>
 
 > 收诸般异火，掌万般续期。
 
 异火阁是一个现代化、自托管资产仪表盘，用于管理域名、云主机、云服务、AI 订阅、会员订阅、通知渠道、续期提醒、AI 炼化导入与备份配置。
-
-![YiHuoGe Logo](./public/logo.png)
 
 ## ✨ 功能
 
