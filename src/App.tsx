@@ -913,6 +913,7 @@ function AiModule() {
               <label className="field-label">模型提供方</label>
               <Select
                 showSearch
+                style={{ width: "100%" }}
                 value={aiConfig.provider}
                 optionFilterProp="label"
                 onChange={(value) => {
