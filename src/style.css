@@ -1494,38 +1494,80 @@ body::after {
   box-shadow: inset 0 0 24px rgba(245, 158, 11, 0.05);
 }
 
+.yhg-themed-modal-root .ant-modal-content,
+.yhg-themed-modal.ant-modal-confirm .ant-modal-content,
+.yhg-themed-modal.ant-modal-content,
 .yhg-themed-modal .ant-modal-content {
-  color: #f6ead4 !important;
+  color: #fff2d6 !important;
   background:
-    radial-gradient(circle at 18% 0%, rgba(245, 158, 11, 0.18), transparent 42%),
-    linear-gradient(145deg, rgba(24, 20, 18, 0.98), rgba(9, 8, 12, 0.98)) !important;
-  border: 1px solid rgba(255, 184, 77, 0.34);
-  border-radius: 22px 8px 22px 8px;
+    radial-gradient(circle at 16% 0%, rgba(245, 158, 11, 0.2), transparent 40%),
+    radial-gradient(circle at 92% 12%, rgba(139, 92, 246, 0.16), transparent 34%),
+    linear-gradient(145deg, #1b1410 0%, #0b090c 54%, #050407 100%) !important;
+  border: 1px solid rgba(255, 184, 77, 0.48) !important;
+  border-radius: 22px 8px 22px 8px !important;
   box-shadow:
-    0 28px 90px rgba(0, 0, 0, 0.68),
-    inset 0 0 28px rgba(245, 158, 11, 0.08);
+    0 28px 90px rgba(0, 0, 0, 0.76),
+    inset 0 1px 0 rgba(255, 216, 154, 0.12),
+    inset 0 0 34px rgba(245, 158, 11, 0.1) !important;
 }
 
+.yhg-themed-modal-root .ant-modal-confirm-title,
+.yhg-themed-modal-root .ant-modal-confirm-content,
+.yhg-themed-modal-root .ant-typography,
 .yhg-themed-modal .ant-modal-confirm-title,
 .yhg-themed-modal .ant-modal-confirm-content,
 .yhg-themed-modal .ant-typography {
-  color: #f6ead4 !important;
+  color: #fff2d6 !important;
 }
 
+.yhg-themed-modal-root .ant-modal-confirm-title,
 .yhg-themed-modal .ant-modal-confirm-title {
   font-family: YiHuoSerif, YiHuoNotoSans, sans-serif;
-  font-size: 20px !important;
+  color: #ffe7b5 !important;
+  font-size: 22px !important;
   letter-spacing: 0.02em;
+  text-shadow: 0 0 16px rgba(245, 158, 11, 0.24);
 }
 
+.yhg-themed-modal-root .ant-modal-confirm-content,
+.yhg-themed-modal .ant-modal-confirm-content {
+  margin-top: 16px !important;
+}
+
+.yhg-themed-modal-root .ant-modal-confirm-success .ant-modal-confirm-body > .anticon,
+.yhg-themed-modal-root .ant-modal-confirm-body > .anticon,
 .yhg-themed-modal .ant-modal-confirm-success .ant-modal-confirm-body > .anticon,
 .yhg-themed-modal .ant-modal-confirm-body > .anticon {
   color: var(--gold) !important;
 }
 
+.yhg-themed-modal-root .ant-modal-confirm-btns .ant-btn-primary,
 .yhg-themed-modal .ant-modal-confirm-btns .ant-btn-primary {
   color: #1a0d03 !important;
   background: linear-gradient(135deg, var(--gold), var(--gold-2)) !important;
   border: 0 !important;
   box-shadow: 0 10px 28px rgba(245, 158, 11, 0.28);
+}
+
+.yhg-themed-modal-root .notify-test-head,
+.yhg-themed-modal .notify-test-head {
+  color: #241202;
+  background: linear-gradient(135deg, rgba(255, 184, 77, 0.95), rgba(255, 226, 171, 0.9));
+  border-color: rgba(255, 226, 171, 0.64);
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.2);
+}
+
+.yhg-themed-modal-root .notify-test-modal pre,
+.yhg-themed-modal .notify-test-modal pre {
+  color: #fff7e8;
+  background:
+    radial-gradient(circle at 14% 0%, rgba(245, 158, 11, 0.2), transparent 42%),
+    #09080b;
+  border-color: rgba(255, 184, 77, 0.36);
+}
+
+.yhg-themed-modal-root .notify-test-modal .muted,
+.yhg-themed-modal .notify-test-modal .muted {
+  color: #ffd89a !important;
+  opacity: 1;
 }

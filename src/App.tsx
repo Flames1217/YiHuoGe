@@ -981,19 +981,20 @@ function ChannelDrawer({ open, editing, onClose }: { open: boolean; editing?: No
       if (!response.ok) throw new Error(result.error || `通道返回 ${response.status}`);
       Modal.success({
         className: "yhg-themed-modal",
-      title: "空间通道试炼",
-      width: 640,
-      okText: "知道了",
-      content: (
-        <div className="notify-test-modal">
-          <div className="notify-test-head">
-            <FireOutlined />
+        rootClassName: "yhg-themed-modal-root",
+        title: "空间通道试炼",
+        width: 640,
+        okText: "知道了",
+        content: (
+          <div className="notify-test-modal">
+            <div className="notify-test-head">
+              <FireOutlined />
               <span>{channelTypeName[type]} · 已送达</span>
-          </div>
-          <pre>{template}</pre>
+            </div>
+            <pre>{template}</pre>
             <Text className="muted">远端传讯阵法已确认收取此试炼。{result.messageId ? ` 回执：${result.messageId}` : ""}{result.deliveredAt ? ` 时间：${dayjs(result.deliveredAt).format("YYYY-MM-DD HH:mm:ss")}` : ""}</Text>
-        </div>
-      ),
+          </div>
+        ),
       });
       api.success(`${channelTypeName[type]} 空间通道试炼已送达`);
     } catch (error) {
