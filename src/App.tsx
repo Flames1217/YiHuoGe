@@ -1176,13 +1176,17 @@ function AiModule() {
         api.error("管理阁令不符，请先在设置中封存管理密钥");
         return;
       }
-      const payload = (await response.json()) as { models?: string[]; source?: string };
-      const models = payload.models ?? [];
-      models.forEach((model) => addModel(model));
-      api.success(`已${payload.source === "provider" ? "自远端" : "自本地"}召回 ${models.length} 个模型`);
-    } catch {
-      ["gpt-4.1", "gpt-4.1-mini", "o4-mini"].forEach((model) => addModel(model));
-      api.warning("模型通道暂隐，已载入本地模型火种");
+      const payload = (await response.json().catch(() => ({}))) as { models?: string[]; endpoint?: string; error?: string };
+      if (!response.ok) throw new Error(payload.error || `远端模型接口返回 ${response.status}`);
+      const models = Array.from(new Set((payload.models ?? []).filter(Boolean)));
+      if (!models.length) throw new Error("远端未返回可用模型");
+      updateAiConfig({
+        models,
+        defaultModel: models.includes(aiConfig.defaultModel) ? aiConfig.defaultModel : models[0],
+      });
+      api.success(`已自远端召回 ${models.length} 个模型${payload.endpoint ? `，通道：${payload.endpoint}` : ""}`);
+    } catch (error) {
+      api.error(error instanceof Error ? error.message : "模型列表召回失败");
     }
   };
 
