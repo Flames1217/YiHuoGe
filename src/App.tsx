@@ -125,8 +125,8 @@ const cycleName: Record<Asset["cycle"], string> = {
 
 const moduleName: Record<string, string> = {
   overview: "阁内总览",
-  assets: "资产管理",
-  notifications: "通知渠道",
+  assets: "异火库",
+  notifications: "通知功法",
   ai: "AI 炼化",
   settings: "设置",
 };
@@ -460,38 +460,94 @@ function formatPreferredAmount(amount: number, from: string, preferred: string) 
   return `${symbol}${converted.toFixed(2)}`;
 }
 
-function parseImportedAssets(text: string): Asset[] {
-  const lines = text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+function splitAssetCsvLine(line: string) {
+  const cells: string[] = [];
+  let current = "";
+  let quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    if (char === '"') {
+      if (quoted && line[index + 1] === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        quoted = !quoted;
+      }
+      continue;
+    }
+    if (!quoted && (char === "," || char === "\t")) {
+      cells.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  cells.push(current.trim());
+  return cells;
+}
 
+function normalizeAssetDate(value?: string) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return dayjs().add(1, "year").format("YYYY-MM-DD");
+  const parsed = dayjs(raw.replace(/[./\u5e74]/g, "-").replace(/\u6708/g, "-").replace(/\u65e5/g, ""));
+  return parsed.isValid() ? parsed.format("YYYY-MM-DD") : dayjs().add(1, "year").format("YYYY-MM-DD");
+}
+
+function inferAssetType(row: Record<string, string>, fallback?: string): AssetType {
+  const raw = [fallback, row["\u7c7b\u578b"], row["\u7c7b\u522b"], row["\u8d44\u4ea7\u7c7b\u578b"], row["\u57df\u540d"] ? "\u57df\u540d" : ""].filter(Boolean).join(" ");
+  const chineseTypeMap: Array<[RegExp, AssetType]> = [
+    [/\u57df\u540d|domain/i, "domain"],
+    [/vps|\u4e91\u4e3b\u673a|\u670d\u52a1\u5668|\u4e3b\u673a/i, "vps"],
+    [/\u4e91\u670d\u52a1|cloud/i, "cloud"],
+    [/AI|\u667a\u80fd|\u6a21\u578b|OpenAI|Claude|Gemini/i, "ai"],
+    [/\u4f1a\u5458|\u8ba2\u9605|membership/i, "membership"],
+  ];
+  return chineseTypeMap.find(([pattern]) => pattern.test(raw))?.[1] ?? "custom";
+}
+
+function normalizeImportedAsset(item: Partial<Asset> & Record<string, unknown>, index: number): Asset {
+  const row = item as Record<string, string>;
+  const name = String(item.name ?? row["\u540d\u79f0"] ?? row["\u57df\u540d"] ?? row["\u7ba1\u7406\u540e\u53f0"] ?? `\u70bc\u5316\u8d44\u4ea7 ${index + 1}`).trim();
+  const provider = String(item.provider ?? row["\u670d\u52a1\u5546"] ?? row["\u5e73\u53f0"] ?? row["\u6ce8\u518c\u5546"] ?? row["\u5730\u533a"] ?? "\u81ea\u5b9a\u4e49").trim();
+  const url = String(item.url ?? row["\u7ba1\u7406\u5730\u5740"] ?? row["\u7ba1\u7406\u540e\u53f0"] ?? row["\u540e\u53f0"] ?? row["\u63a7\u5236\u53f0"] ?? "").trim();
+  const account = String(item.account ?? row["\u8d26\u53f7"] ?? row["\u8d26\u6237"] ?? row["IP\u5730\u5740"] ?? "\u70bc\u5316\u5bfc\u5165").trim();
+  const renewalDate = normalizeAssetDate(String(item.renewalDate ?? row["\u7eed\u671f\u65e5"] ?? row["\u7eed\u671f\u65e5\u671f"] ?? row["\u5230\u671f\u65f6\u95f4"] ?? row["\u5230\u671f\u65e5\u671f"] ?? ""));
+  const price = Number(item.price ?? row["\u4ef7\u683c"] ?? row["\u8d39\u7528"] ?? row["\u91d1\u989d"] ?? 0) || 0;
+  const type = inferAssetType(row, item.type as string | undefined);
+  const notes = [item.notes, row["\u5907\u6ce8"], row["\u72b6\u6001"] ? `\u539f\u72b6\u6001\uff1a${row["\u72b6\u6001"]}` : "", row["\u5bc6\u7801"] ? "\u539f\u8868\u5305\u542b\u5bc6\u7801\u5217\uff0c\u5df2\u907f\u514d\u5c55\u793a\u660e\u6587\u3002" : ""].filter(Boolean).join("\n");
+  return {
+    id: String(item.id ?? `import-${Date.now()}-${index}`),
+    name: name || `\u70bc\u5316\u8d44\u4ea7 ${index + 1}`,
+    type,
+    provider: provider || "\u81ea\u5b9a\u4e49",
+    account,
+    renewalDate,
+    price,
+    currency: String(item.currency ?? row["\u8d27\u5e01"] ?? "CNY"),
+    cycle: (item.cycle === "monthly" || item.cycle === "yearly" || item.cycle === "custom" ? item.cycle : "custom") as Asset["cycle"],
+    status: "healthy",
+    url,
+    tags: Array.isArray(item.tags) ? item.tags : ["AI\u70bc\u5316"],
+    notes: notes || "\u7531 AI \u70bc\u5316/\u6279\u91cf\u5bfc\u5165\u5411\u5bfc\u751f\u6210\uff0c\u53ef\u7ee7\u7eed\u7f16\u8f91\u3002",
+  };
+}
+
+function parseImportedAssets(text: string): Asset[] {
+  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (!lines.length) return [];
+  const first = splitAssetCsvLine(lines[0]);
+  const hasHeader = first.some((cell) => ["\u540d\u79f0", "\u57df\u540d", "\u7ba1\u7406\u540e\u53f0", "\u5230\u671f\u65f6\u95f4", "\u5e73\u53f0", "\u8d26\u53f7", "\u670d\u52a1\u5546", "\u7c7b\u578b"].includes(cell));
+  if (hasHeader) {
+    return lines.slice(1).map((line, index) => {
+      const cells = splitAssetCsvLine(line);
+      const row = Object.fromEntries(first.map((header, cellIndex) => [header, cells[cellIndex] ?? ""]));
+      return normalizeImportedAsset(row, index);
+    }).filter((asset) => asset.name && !asset.name.startsWith("\u70bc\u5316\u8d44\u4ea7"));
+  }
   return lines.map((line, index) => {
-    const parts = line.split(/,|\t/).map((part) => part.trim());
-    const [name = `炼化资产 ${index + 1}`, type = "custom", provider = "自定义", renewalDate = dayjs().add(30, "day").format("YYYY-MM-DD"), price = "0"] = parts;
-    const chineseTypeMap: Record<string, AssetType> = {
-      域名: "domain",
-      云主机: "vps",
-      云服务: "cloud",
-      智能订阅: "ai",
-      会员订阅: "membership",
-      自定义: "custom",
-    };
-    const safeType = chineseTypeMap[type] ?? (assetTypes.includes(type as AssetType) ? (type as AssetType) : "custom");
-    return {
-      id: `import-${Date.now()}-${index}`,
-      name,
-      type: safeType,
-      provider,
-      account: "炼化导入",
-      renewalDate,
-      price: Number(price) || 0,
-      currency: "USD",
-      cycle: "monthly",
-      status: "healthy",
-      tags: ["AI炼化"],
-      notes: "由 AI 炼化/批量导入向导生成，可继续编辑。",
-    };
+    const parts = splitAssetCsvLine(line);
+    const [name, type, provider, renewalDate, price, url] = parts;
+    return normalizeImportedAsset({ name, type: type as AssetType, provider, renewalDate, price: Number(price) || 0, url }, index);
   });
 }
 
@@ -774,7 +830,7 @@ function AssetDrawer({
           <Col span={12}><Form.Item name="price" label={t("price")}><InputNumber min={0} style={{ width: "100%" }} /></Form.Item></Col>
           <Col span={12}><Form.Item name="currency" label="货币"><Select showSearch options={currencyOptions} /></Form.Item></Col>
         </Row>
-        <Form.Item name="url" label="服务商链接"><Input placeholder="https://..." /></Form.Item>
+        <Form.Item name="url" label="管理地址"><Input placeholder="https://console.example.com / https://admin.example.com" /></Form.Item>
         <Form.Item name="tags" label="标签"><Select mode="tags" tokenSeparators={[","]} /></Form.Item>
         <Form.Item name="notes" label="备注"><TextArea rows={3} /></Form.Item>
       </Form>
@@ -800,6 +856,8 @@ function AssetsModule({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Asset>();
   const [selectedIds, setSelectedIds] = useState<Key[]>([]);
+  const [tablePage, setTablePage] = useState(1);
+  const [tablePageSize, setTablePageSize] = useState(5);
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState("");
   const [api, contextHolder] = message.useMessage();
@@ -810,6 +868,10 @@ function AssetsModule({
       setDrawerOpen(true);
     }
   }, [quickCreateNonce]);
+
+  useEffect(() => {
+    setTablePage(1);
+  }, [keyword, type, tablePageSize]);
 
   const runAssetImport = () => {
     const parsed = parseImportedAssets(importText);
@@ -839,7 +901,7 @@ function AssetsModule({
     { title: t("provider"), dataIndex: "provider", sorter: (a, b) => a.provider.localeCompare(b.provider) },
     { title: "续期日", dataIndex: "renewalDate", sorter: (a, b) => dayjs(a.renewalDate).valueOf() - dayjs(b.renewalDate).valueOf(), render: (value: string) => <Space><CalendarOutlined />{value}<Tag color="orange">{dayUnit(value)}</Tag></Space> },
     { title: t("price"), render: (_, record) => formatPreferredAmount(record.price, record.currency, preferredCurrency) },
-    { title: t("status"), dataIndex: "status", render: (value: AssetStatus) => statusLabel(value, t) },
+    { title: "管理地址", dataIndex: "url", render: (value: string) => value ? <a className="asset-manage-link" href={value} target="_blank" rel="noreferrer">进入后台</a> : <Text className="muted">未填</Text> },
     {
       title: t("action"),
       render: (_, record) => (
@@ -883,8 +945,27 @@ function AssetsModule({
             rowKey="id"
             columns={columns}
             dataSource={filtered}
-            pagination={{ pageSize: 5, showSizeChanger: true }}
-            rowSelection={{ selectedRowKeys: selectedIds, onChange: setSelectedIds }}
+            pagination={{
+              current: tablePage,
+              pageSize: tablePageSize,
+              total: filtered.length,
+              showSizeChanger: true,
+              pageSizeOptions: ["5", "10", "20", "50"],
+              showTotal: (total) => `共 ${total} 枚火种`,
+              onChange: (page, size) => {
+                setTablePage(page);
+                setTablePageSize(size);
+              },
+              onShowSizeChange: (_page, size) => {
+                setTablePage(1);
+                setTablePageSize(size);
+              },
+            }}
+            onChange={(pagination) => {
+              setTablePage(pagination.current ?? 1);
+              setTablePageSize(pagination.pageSize ?? tablePageSize);
+            }}
+            rowSelection={{ selectedRowKeys: selectedIds, onChange: (keys) => setSelectedIds(keys), preserveSelectedRowKeys: true }}
           />
         ) : (
           <Row gutter={[16, 16]}>
@@ -1027,7 +1108,7 @@ function ChannelDrawer({ open, editing, onClose }: { open: boolean; editing?: No
       size="large"
       open={open}
       onClose={onClose}
-      title={editing ? "编辑通知渠道" : "新增通知渠道"}
+      title={editing ? "编辑通知功法" : "新增通知功法"}
       extra={(
         <Space>
           <Button title="向真实远端发送空间通道试炼，成功后才显示回执" loading={testing} onClick={testTemplate}>测试通道</Button>
@@ -1116,8 +1197,8 @@ function NotificationsModule() {
       render: (_, record) => (
         <Space>
           <Button title="向真实远端发送空间通道试炼" size="small" loading={testingId === record.id} onClick={() => runSavedTest(record)}>{t("test")}</Button>
-          <Button title="编辑该通知渠道" size="small" icon={<EditOutlined />} onClick={() => { setEditing(record); setOpen(true); }} />
-          <Popconfirm title="删除该通知渠道？" onConfirm={() => deleteChannel(record.id)}><Button title="删除该通知渠道" size="small" danger icon={<DeleteOutlined />} /></Popconfirm>
+          <Button title="编辑该通知功法" size="small" icon={<EditOutlined />} onClick={() => { setEditing(record); setOpen(true); }} />
+          <Popconfirm title="删除该通知功法？" onConfirm={() => deleteChannel(record.id)}><Button title="删除该通知渠道" size="small" danger icon={<DeleteOutlined />} /></Popconfirm>
         </Space>
       ),
     },
@@ -1137,15 +1218,15 @@ function NotificationsModule() {
 }
 
 
-function AiModule() {
+function AiModule({ onForgeDone }: { onForgeDone?: () => void }) {
   const { t } = useTranslation();
   const aiConfig = useYiHuoStore((state) => state.aiConfig);
   const updateAiConfig = useYiHuoStore((state) => state.updateAiConfig);
   const addModel = useYiHuoStore((state) => state.addModel);
   const removeModel = useYiHuoStore((state) => state.removeModel);
-  const importAssets = useYiHuoStore((state) => state.importAssets);
   const [text, setText] = useState("");
   const [modelInput, setModelInput] = useState("");
+  const [forging, setForging] = useState(false);
   const [api, contextHolder] = message.useMessage();
 
   useEffect(() => {
@@ -1158,26 +1239,56 @@ function AiModule() {
     try {
       const content = (await file.text()).trim();
       if (!content) {
-        api.warning("??????????????");
+        api.warning("此卷为空，未感知到可炼化内容");
         return false;
       }
-      setText((current) => current.trim() ? `${current.trim()}
-${content}` : content);
-      api.success(`??? ${file.name}????????`);
+      setText((current) => current.trim() ? `${current.trim()}\n${content}` : content);
+      api.success(`已读取 ${file.name}，可开始炼化资产`);
     } catch {
-      api.error("?????????? CSV ??????");
+      api.error("残卷读取失败，请换成 CSV 或纯文本清单");
     }
     return false;
   };
 
-  const runImport = () => {
-    const parsed = parseImportedAssets(text);
-    if (!parsed.length) {
-      api.warning("请先投放待炼化的资产清单");
+  const runImport = async () => {
+    if (!text.trim()) {
+      api.warning("\u8bf7\u5148\u6295\u653e\u5f85\u70bc\u5316\u7684\u8d44\u4ea7\u6e05\u5355");
       return;
     }
-    importAssets(parsed);
-    api.success(`已炼成 ${parsed.length} 枚资产火种`);
+    setForging(true);
+    try {
+      const adminKey = window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "";
+      const response = await fetch("/api/ai/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(adminKey ? { "x-admin-key": adminKey } : {}) },
+        body: JSON.stringify({ text }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { assets?: Asset[]; count?: number; source?: "ai" | "fallback"; warning?: string; error?: string; model?: string };
+      if (!response.ok) throw new Error(payload.error || `AI \u70bc\u5316\u5931\u8d25 ${response.status}`);
+      const assets = payload.assets ?? [];
+      if (!assets.length) throw new Error("\u672a\u70bc\u6210\u53ef\u5165\u5e93\u7684\u8d44\u4ea7");
+      useYiHuoStore.setState((state) => ({ assets: [...assets, ...state.assets] }));
+      setText("");
+      onForgeDone?.();
+      Modal.success({
+        className: "yhg-themed-modal",
+        rootClassName: "yhg-themed-modal-root",
+        title: "\u70bc\u5316\u6210\u529f\uff0c\u706b\u79cd\u5df2\u5165\u5e93",
+        okText: "\u8fdb\u5165\u5f02\u706b\u5e93",
+        onOk: () => onForgeDone?.(),
+        content: (
+          <div className="notify-test-modal">
+            <div className="notify-test-head"><FireOutlined /><span>{payload.source === "ai" ? "AI \u4e39\u7089\u5df2\u6210" : "\u672c\u5730\u7075\u8bc6\u515c\u5e95\u5df2\u6210"}</span></div>
+            <pre>{`\u5df2\u70bc\u6210 ${assets.length} \u679a\u8d44\u4ea7\u706b\u79cd\n\u5df2\u5199\u5165\u5f53\u524d\u5b58\u50a8\u5e93\n${payload.model ? `\u6a21\u578b\uff1a${payload.model}\n` : ""}${payload.warning ? `\u63d0\u793a\uff1a${payload.warning}` : "\u5f02\u706b\u5e93\u5df2\u5f00\uff0c\u53ef\u7acb\u5373\u6821\u9605\u3002"}`}</pre>
+          </div>
+        ),
+      });
+      api.success(`\u70bc\u5316\u6210\u529f\uff1a${assets.length} \u679a\u706b\u79cd\u5df2\u5165\u5f02\u706b\u5e93`);
+    } catch (error) {
+      api.error(error instanceof Error ? error.message : "AI \u70bc\u5316\u5931\u8d25");
+    } finally {
+      setForging(false);
+    }
   };
 
   const fetchModels = async () => {
@@ -1217,11 +1328,11 @@ ${content}` : content);
           <Card className="yhg-card" title="AI 炼化炉">
             <Upload.Dragger beforeUpload={readForgeFile} maxCount={1} accept=".csv,.txt,.tsv,text/csv,text/plain">
               <p className="ant-upload-drag-icon"><ImportOutlined /></p>
-              <p>将表格、清单或知识库残卷投入此炉（当前为前端炼化示例）</p>
+              <p>将表格、清单或知识库残卷投入此炉，交由所选模型炼化</p>
             </Upload.Dragger>
             <TextArea className="import-textarea" rows={10} value={text} onChange={(event) => setText(event.target.value)} />
             <div className="ai-forge-actions">
-              <Button className="ai-forge-button" title="将上方文本炼成资产火种并收入阁中" type="primary" icon={<RobotOutlined />} onClick={runImport}>开始炼化资产</Button>
+              <Button className="ai-forge-button" title="将上方文本炼成资产火种并收入阁中" type="primary" icon={<RobotOutlined />} loading={forging} onClick={runImport}>开始炼化资产</Button>
             </div>
           </Card>
         </Col>
@@ -1348,7 +1459,7 @@ function SettingsModule() {
               <Form.Item label="时区"><Select showSearch value={settings.timezone} onChange={(timezone) => updateSettings({ timezone })} options={timezoneOptions} /></Form.Item>
               <Form.Item label="偏好币种"><Select value={settings.currency} onChange={(currency) => updateSettings({ currency })} options={currencyOptions} /></Form.Item>
               <Form.Item label="默认提醒天数"><Select mode="tags" value={settings.reminderDays.map(String)} onChange={(values) => updateSettings({ reminderDays: values.map(Number).filter((value) => !Number.isNaN(value)) })} /></Form.Item>
-              <Form.Item label="默认通知渠道"><Select value={settings.defaultChannel} onChange={(defaultChannel) => updateSettings({ defaultChannel })} options={channels.map((channel) => ({ value: channel.id, label: channel.name }))} /></Form.Item>
+              <Form.Item label="默认通知功法"><Select value={settings.defaultChannel} onChange={(defaultChannel) => updateSettings({ defaultChannel })} options={channels.map((channel) => ({ value: channel.id, label: channel.name }))} /></Form.Item>
               <Form.Item label="模块顺序"><Select mode="multiple" value={visibleModuleOrder} onChange={(moduleOrder) => updateSettings({ moduleOrder })} options={moduleKeys.map((key) => ({ value: key, label: moduleName[key] ?? key }))} /></Form.Item>
               <Form.Item label="外观主题"><Select value={settings.theme} onChange={(theme) => updateSettings({ theme })} options={[{ value: "dark-fire", label: "玄墨异火" }, { value: "abyss-purple", label: "幽冥紫炎" }, { value: "ink-gold", label: "墨金阁令" }]} /></Form.Item>
               <Form.Item label="管理密钥">
@@ -1493,7 +1604,7 @@ export default function App() {
     overview: <OverviewModule setActive={setActive} onQuickAdd={openQuickCreate} />,
     assets: <AssetsModule globalSearch={globalSearch} goAi={() => setActive("ai")} quickCreateNonce={quickCreateNonce} />,
     notifications: <NotificationsModule />,
-    ai: <AiModule />,
+    ai: <AiModule onForgeDone={() => setActive("assets")} />,
     settings: <SettingsModule />,
   }[active];
   const palette = themePalettes[settings.theme] ?? themePalettes["dark-fire"];

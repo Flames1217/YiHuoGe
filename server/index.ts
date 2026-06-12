@@ -408,34 +408,180 @@ app.put("/api/ai/config", async (req, res) => {
   res.json(db.ai);
 });
 
-app.post("/api/ai/import", async (req, res) => {
-  const text = String(req.body.text ?? "");
-  const assets = text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line, index) => {
-      const [name = `Imported ${index + 1}`, type = "custom", provider = "Custom", renewalDate = "2026-12-31", price = "0"] = line
-        .split(/,|\t/)
-        .map((part) => part.trim());
-      return {
-        id: nanoid(10),
-        name,
-        type: ["domain", "vps", "cloud", "ai", "membership", "custom"].includes(type) ? type : "custom",
-        provider,
-        account: "ai-import",
-        renewalDate,
-        price: Number(price) || 0,
-        currency: "USD",
-        cycle: "monthly",
-        status: "healthy",
-        tags: ["ai-import"],
-      };
+
+function splitAssetCsvLine(line: string) {
+  const cells: string[] = [];
+  let current = "";
+  let quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    if (char === '"') {
+      if (quoted && line[index + 1] === '"') {
+        current += '"';
+        index += 1;
+      } else quoted = !quoted;
+      continue;
+    }
+    if (!quoted && (char === "," || char === "\t")) {
+      cells.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  cells.push(current.trim());
+  return cells;
+}
+
+function normalizeAssetDate(value?: string) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
+  const normalized = raw.replace(/[./\u5e74]/g, "-").replace(/\u6708/g, "-").replace(/\u65e5/g, "");
+  const date = new Date(normalized);
+  return Number.isNaN(date.valueOf()) ? new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10) : date.toISOString().slice(0, 10);
+}
+
+function inferAssetType(row: Record<string, string>, fallback?: string): AssetType {
+  const raw = [fallback, row["\u7c7b\u578b"], row["\u7c7b\u522b"], row["\u8d44\u4ea7\u7c7b\u578b"], row["\u57df\u540d"] ? "\u57df\u540d" : ""].filter(Boolean).join(" ");
+  if (/\u57df\u540d|domain/i.test(raw)) return "domain";
+  if (/vps|\u4e91\u4e3b\u673a|\u670d\u52a1\u5668|\u4e3b\u673a/i.test(raw)) return "vps";
+  if (/\u4e91\u670d\u52a1|cloud/i.test(raw)) return "cloud";
+  if (/AI|\u667a\u80fd|\u6a21\u578b|OpenAI|Claude|Gemini/i.test(raw)) return "ai";
+  if (/\u4f1a\u5458|\u8ba2\u9605|membership/i.test(raw)) return "membership";
+  return "custom";
+}
+
+function normalizeImportedAsset(item: Record<string, any>, index: number): Asset {
+  const name = String(item.name ?? item["\u540d\u79f0"] ?? item["\u57df\u540d"] ?? item["\u7ba1\u7406\u540e\u53f0"] ?? `\u70bc\u5316\u8d44\u4ea7 ${index + 1}`).trim();
+  const provider = String(item.provider ?? item["\u670d\u52a1\u5546"] ?? item["\u5e73\u53f0"] ?? item["\u6ce8\u518c\u5546"] ?? item["\u5730\u533a"] ?? "\u81ea\u5b9a\u4e49").trim();
+  const url = String(item.url ?? item["\u7ba1\u7406\u5730\u5740"] ?? item["\u7ba1\u7406\u540e\u53f0"] ?? item["\u540e\u53f0"] ?? item["\u63a7\u5236\u53f0"] ?? "").trim();
+  const account = String(item.account ?? item["\u8d26\u53f7"] ?? item["\u8d26\u6237"] ?? item["IP\u5730\u5740"] ?? "\u70bc\u5316\u5bfc\u5165").trim();
+  const renewalDate = normalizeAssetDate(item.renewalDate ?? item["\u7eed\u671f\u65e5"] ?? item["\u7eed\u671f\u65e5\u671f"] ?? item["\u5230\u671f\u65f6\u95f4"] ?? item["\u5230\u671f\u65e5\u671f"]);
+  const notes = [item.notes, item["\u5907\u6ce8"], item["\u72b6\u6001"] ? `\u539f\u72b6\u6001\uff1a${item["\u72b6\u6001"]}` : "", item["\u5bc6\u7801"] ? "\u539f\u8868\u5305\u542b\u5bc6\u7801\u5217\uff0c\u5df2\u907f\u514d\u5c55\u793a\u660e\u6587\u3002" : ""].filter(Boolean).join("\n");
+  return {
+    id: nanoid(10),
+    name: name || `\u70bc\u5316\u8d44\u4ea7 ${index + 1}`,
+    type: inferAssetType(item, item.type),
+    provider: provider || "\u81ea\u5b9a\u4e49",
+    account,
+    renewalDate,
+    price: Number(item.price ?? item["\u4ef7\u683c"] ?? item["\u8d39\u7528"] ?? 0) || 0,
+    currency: String(item.currency ?? item["\u8d27\u5e01"] ?? "CNY"),
+    cycle: ["monthly", "yearly", "custom"].includes(item.cycle) ? item.cycle : "custom",
+    status: "healthy",
+    url,
+    tags: Array.isArray(item.tags) ? item.tags : ["AI\u70bc\u5316"],
+    notes: notes || "\u7531 AI \u70bc\u5316\u751f\u6210\uff0c\u53ef\u7ee7\u7eed\u7f16\u8f91\u3002",
+  };
+}
+
+function parseAssetsLocally(text: string): Asset[] {
+  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (!lines.length) return [];
+  const first = splitAssetCsvLine(lines[0]);
+  const hasHeader = first.some((cell) => ["\u540d\u79f0", "\u57df\u540d", "\u7ba1\u7406\u540e\u53f0", "\u5230\u671f\u65f6\u95f4", "\u5e73\u53f0", "\u8d26\u53f7", "\u670d\u52a1\u5546", "\u7c7b\u578b"].includes(cell));
+  if (hasHeader) {
+    return lines.slice(1).map((line, index) => {
+      const cells = splitAssetCsvLine(line);
+      const row = Object.fromEntries(first.map((header, cellIndex) => [header, cells[cellIndex] ?? ""]));
+      return normalizeImportedAsset(row, index);
+    }).filter((asset) => asset.name && !asset.name.startsWith("\u70bc\u5316\u8d44\u4ea7"));
+  }
+  return lines.map((line, index) => {
+    const [name, type, provider, renewalDate, price, url] = splitAssetCsvLine(line);
+    return normalizeImportedAsset({ name, type, provider, renewalDate, price, url }, index);
+  });
+}
+
+function extractJsonPayload(content: string) {
+  const trimmed = content.trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+  try { return JSON.parse(trimmed); } catch {}
+  const objectMatch = trimmed.match(/\{[\s\S]*\}/);
+  const arrayMatch = trimmed.match(/\[[\s\S]*\]/);
+  const candidate = objectMatch?.[0] ?? arrayMatch?.[0];
+  if (!candidate) throw new Error("AI \u672a\u8fd4\u56de JSON");
+  return JSON.parse(candidate);
+}
+
+function completionEndpointCandidates(baseUrl: string) {
+  const base = baseUrl.trim().replace(/\/+$/, "");
+  if (!base) return [];
+  const urls = new Set<string>();
+  if (/\/chat\/completions$/i.test(base)) urls.add(base);
+  else {
+    urls.add(`${base}/chat/completions`);
+    if (!/\/(?:v\d+(?:beta)?|openai\/v\d+(?:beta)?|compatible-mode\/v\d+)$/i.test(base)) {
+      urls.add(`${base}/v1/chat/completions`);
+    }
+  }
+  return [...urls];
+}
+
+async function aiForgeAssets(text: string, ai: Database["ai"]): Promise<Asset[]> {
+  const baseUrl = String(ai.baseUrl ?? "").replace(/\/+$/, "");
+  const apiKey = String((ai as any).apiKey ?? "");
+  const model = ai.defaultModel || ai.models?.[0];
+  if (!baseUrl || !apiKey || !model) throw new Error("AI \u70bc\u5316\u914d\u7f6e\u4e0d\u5b8c\u6574");
+  const body = JSON.stringify({
+    model,
+    temperature: 0.05,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: "\u4f60\u662f\u5f02\u706b\u9601\u8d44\u4ea7\u70bc\u5316\u5668\uff0c\u64c5\u957f\u8bc6\u522b CSV/Excel \u5bfc\u51fa\u8868\u5934\u3002\u53ea\u8fd4\u56de {\"assets\":[...]}\u3002\u5b57\u6bb5\uff1aname,type,provider,account,renewalDate,price,currency,cycle,url,tags,notes\u3002type \u53ea\u80fd\u662f domain/vps/cloud/ai/membership/custom\u3002\u7ba1\u7406\u540e\u53f0/\u7ba1\u7406\u5730\u5740/\u540e\u53f0/\u63a7\u5236\u53f0\u5fc5\u987b\u5199\u5165 url\u3002\u57df\u540d\u5217\u4f5c\u4e3a name\uff0c\u5230\u671f\u65f6\u95f4\u4f5c\u4e3a renewalDate\u3002\u5bc6\u7801\u4e0d\u8981\u8fd4\u56de\u660e\u6587\u3002\u4e0d\u786e\u5b9a\u4ef7\u683c\u5219 price=0,currency=CNY\u3002" },
+      { role: "user", content: text.slice(0, 30000) },
+    ],
+  });
+  let lastError = "";
+  for (const endpoint of completionEndpointCandidates(baseUrl)) {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "User-Agent": "Mozilla/5.0 YiHuoGe/1.0",
+        Authorization: /^Bearer\s+/i.test(apiKey) ? apiKey : `Bearer ${apiKey}`,
+      },
+      body,
     });
+    const raw = await response.text();
+    if (!response.ok) {
+      lastError = `${response.status} @ ${endpoint}: ${raw.slice(0, 180)}`;
+      continue;
+    }
+    const data = raw ? JSON.parse(raw) : {};
+    const content = data.choices?.[0]?.message?.content ?? data.output_text ?? data.output?.[0]?.content?.[0]?.text ?? "";
+    const payload = extractJsonPayload(content);
+    const items = Array.isArray(payload) ? payload : Array.isArray(payload.assets) ? payload.assets : [];
+    const assets = items.map((item: Record<string, any>, index: number) => normalizeImportedAsset(item, index)).filter((asset: Asset) => asset.name);
+    if (assets.length) return assets;
+    lastError = "AI \u672a\u8fd4\u56de\u53ef\u5165\u5e93\u7684\u8d44\u4ea7";
+  }
+  throw new Error(`AI \u70bc\u5316\u5931\u8d25\uff1a${lastError || "\u8fdc\u7aef\u901a\u9053\u65e0\u54cd\u5e94"}`);
+}
+app.post("/api/ai/import", async (req, res) => {
+  const text = String(req.body.text ?? "").trim();
+  if (!text) {
+    res.status(400).json({ error: "\u8bf7\u5148\u6295\u653e\u5f85\u70bc\u5316\u7684\u8d44\u4ea7\u6e05\u5355" });
+    return;
+  }
   const db = await readDb();
-  db.assets.unshift(...(assets as Asset[]));
+  let source: "ai" | "fallback" = "ai";
+  let warning = "";
+  let assets: Asset[] = [];
+  try {
+    assets = await aiForgeAssets(text, db.ai);
+  } catch (error) {
+    source = "fallback";
+    warning = error instanceof Error ? error.message : "AI \u70bc\u5316\u672a\u6210\uff0c\u5df2\u542f\u7528\u672c\u5730\u89e3\u6790";
+    assets = parseAssetsLocally(text);
+  }
+  if (!assets.length) {
+    res.status(400).json({ error: warning || "\u672a\u70bc\u6210\u53ef\u5165\u5e93\u7684\u8d44\u4ea7" });
+    return;
+  }
+  db.assets.unshift(...assets);
   await writeDb(db);
-  res.json({ assets, count: assets.length });
+  res.json({ assets, count: assets.length, source, warning, model: db.ai.defaultModel });
 });
 
 app.get("/api/settings", async (_req, res) => {

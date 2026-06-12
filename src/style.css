@@ -1651,3 +1651,61 @@ body::after {
     #09080b !important;
   border-color: rgba(255, 184, 77, 0.36) !important;
 }
+
+
+/* 异火库表格：修正 Ant Design 默认选中浅色背景，并让分页下拉保持主题色 */
+.asset-manage-link {
+  color: #ffcf75;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.asset-manage-link:hover {
+  color: #fff2d6;
+  text-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
+}
+.ant-table-wrapper .ant-table-tbody > tr.ant-table-row-selected > td,
+.ant-table-wrapper .ant-table-tbody > tr.ant-table-row-selected:hover > td,
+.ant-table-wrapper .ant-table-tbody > tr.ant-table-row-selected > th {
+  color: var(--text) !important;
+  background:
+    radial-gradient(circle at 8% 50%, rgba(245, 158, 11, 0.18), transparent 34%),
+    linear-gradient(90deg, rgba(245, 158, 11, 0.14), rgba(139, 92, 246, 0.08)) !important;
+}
+.ant-table-wrapper .ant-table-tbody > tr.ant-table-row-selected .ant-typography,
+.ant-table-wrapper .ant-table-tbody > tr.ant-table-row-selected .muted {
+  color: #fff2d6 !important;
+}
+.ant-table-wrapper .ant-table-tbody > tr.ant-table-row-selected .ant-tag {
+  box-shadow: 0 0 0 1px rgba(255, 184, 77, 0.28);
+}
+.ant-table-wrapper .ant-table-selection-column .ant-checkbox-checked .ant-checkbox-inner,
+.ant-checkbox-checked .ant-checkbox-inner {
+  background: var(--gold) !important;
+  border-color: var(--gold) !important;
+}
+.ant-table-wrapper .ant-table-selection-column .ant-checkbox-inner,
+.ant-checkbox .ant-checkbox-inner {
+  background: rgba(7, 7, 11, 0.92) !important;
+  border-color: rgba(255, 184, 77, 0.42) !important;
+}
+.ant-select-dropdown,
+.ant-pagination-options .ant-select-dropdown {
+  color: var(--text) !important;
+  background: rgba(9, 8, 11, 0.98) !important;
+  border: 1px solid rgba(255, 184, 77, 0.32) !important;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.58), 0 0 24px rgba(245, 158, 11, 0.12) !important;
+}
+.ant-select-dropdown .ant-select-item {
+  color: var(--text) !important;
+}
+.ant-select-dropdown .ant-select-item-option-selected,
+.ant-select-dropdown .ant-select-item-option-active {
+  color: #1a0d03 !important;
+  background: linear-gradient(135deg, var(--gold), var(--gold-2)) !important;
+}
+.yhg-themed-modal-root .ant-modal-confirm-success .ant-modal-confirm-title,
+.yhg-themed-modal-root .ant-modal-confirm-success .ant-modal-confirm-content,
+.yhg-themed-modal-root .ant-modal-confirm-success .ant-modal-confirm-content .ant-typography {
+  color: var(--text) !important;
+}
