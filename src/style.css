@@ -418,9 +418,9 @@ body::after {
 .access-card {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(500px, 0.92fr);
+  grid-template-columns: minmax(0, 1fr) minmax(610px, 0.98fr);
   gap: clamp(34px, 4.8vw, 68px);
-  width: min(1280px, 100%);
+  width: min(1420px, 100%);
   min-height: min(650px, calc(100dvh - 88px));
   padding: clamp(30px, 5vw, 64px);
   overflow: hidden;
