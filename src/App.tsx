@@ -366,11 +366,11 @@ function OverviewModule({
             <Button title="进入 AI 炼化页，从文本或表格自动生成资产" icon={<ImportOutlined />} onClick={() => setActive("ai")}>{t("aiImport")}</Button>
           </Space>
         </div>
-        <div className="hero-visual" aria-label="异火榜续期告警">
-          <div className="flame-orb">
-            <span />
+        <div className="hero-visual hero-logo-stage" aria-label="异火阁标识与续期告警">
+          <img className="hero-logo" src="/logo.png" alt="异火阁" />
+          <div className="hero-logo-badge">
             <strong>{urgent.length}</strong>
-            <em>急焰待续</em>
+            <span>急焰待续</span>
           </div>
         </div>
       </section>
@@ -1053,7 +1053,7 @@ export default function App() {
         <Layout className={`app-shell theme-${settings.theme}`}>
         <Sider width={268} className="side-nav" breakpoint="lg" collapsedWidth={0}>
           <div className="brand-mark">
-            <div className="brand-sigil"><FireOutlined /></div>
+            <img className="brand-logo" src="/logo.png" alt="异火阁" />
             <div>
               <strong>异火阁</strong>
               <span>资产阁令</span>

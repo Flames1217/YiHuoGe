@@ -4,7 +4,7 @@
 
 异火阁是一个现代化、自托管资产仪表盘，用于管理域名、云主机、云服务、AI 订阅、会员订阅、通知渠道、续期提醒、AI 炼化导入与备份配置。
 
-![YiHuoGe](./docs/preview.png)
+![YiHuoGe Logo](./public/logo.png)
 
 ## ✨ 功能
 
