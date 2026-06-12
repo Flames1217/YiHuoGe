@@ -63,6 +63,8 @@ export interface NotificationChannel {
   target: string;
   lastTest?: string;
   secretMasked?: string;
+  config?: Record<string, string>;
+  template?: string;
 }
 
 export interface AiConfig {

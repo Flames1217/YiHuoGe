@@ -294,6 +294,120 @@ const notifyTypes: NotifyType[] = [
   "Custom",
 ];
 
+type NotifyFieldName = "target" | "secretMasked" | `config.${string}`;
+
+interface NotifyFieldPreset {
+  name: NotifyFieldName;
+  label: string;
+  placeholder?: string;
+  help?: string;
+  required?: boolean;
+  secret?: boolean;
+  multiline?: boolean;
+  options?: Array<{ value: string; label: string }>;
+}
+
+interface NotifyPreset {
+  summary: string;
+  fields: NotifyFieldPreset[];
+}
+
+const fieldName = (name: NotifyFieldName) => (name.startsWith("config.") ? ["config", name.slice(7)] : name);
+
+const webhookField = (label = "Webhook URL", placeholder = "https://..."): NotifyFieldPreset => ({
+  name: "target",
+  label,
+  placeholder,
+  required: true,
+});
+
+const tokenField = (label = "Token / Secret", placeholder = "***"): NotifyFieldPreset => ({
+  name: "secretMasked",
+  label,
+  placeholder,
+  required: true,
+  secret: true,
+});
+
+const notifyPresets: Record<NotifyType, NotifyPreset> = {
+  Email: {
+    summary: "适合个人邮箱、团队邮箱或 SMTP 服务商。",
+    fields: [
+      { name: "target", label: "收件邮箱", placeholder: "ops@example.com", required: true },
+      { name: "config.from", label: "发件邮箱", placeholder: "YiHuoGe <noreply@example.com>" },
+      { name: "config.smtpHost", label: "SMTP 主机", placeholder: "smtp.example.com", required: true },
+      { name: "config.smtpPort", label: "SMTP 端口", placeholder: "465 / 587" },
+      { name: "config.smtpUser", label: "SMTP 用户名", placeholder: "noreply@example.com" },
+      { name: "secretMasked", label: "SMTP 密码 / App Password", placeholder: "***", secret: true },
+    ],
+  },
+  Telegram: {
+    summary: "使用 Telegram Bot Token 与 Chat ID 推送到个人、群组或频道。",
+    fields: [
+      { name: "target", label: "Chat ID", placeholder: "-1001234567890 / 123456789", required: true },
+      { name: "secretMasked", label: "Bot Token", placeholder: "123456:ABC-DEF...", required: true, secret: true },
+      { name: "config.parseMode", label: "Parse Mode", placeholder: "Markdown / HTML" },
+    ],
+  },
+  Discord: { summary: "使用 Discord Incoming Webhook 发送到指定频道。", fields: [webhookField("Discord Webhook URL", "https://discord.com/api/webhooks/...")] },
+  Slack: { summary: "使用 Slack Incoming Webhook 发送到工作区频道。", fields: [webhookField("Slack Webhook URL", "https://hooks.slack.com/services/...")] },
+  Webhook: {
+    summary: "通用 HTTP Webhook，适合接入自建机器人、自动化平台或网关。",
+    fields: [
+      webhookField("请求地址", "https://example.com/webhook"),
+      { name: "config.method", label: "请求方法", placeholder: "POST", options: [{ value: "POST", label: "POST" }, { value: "PUT", label: "PUT" }, { value: "PATCH", label: "PATCH" }] },
+      { name: "config.headers", label: "额外 Headers（JSON）", placeholder: "{\"Authorization\":\"Bearer ...\"}", multiline: true },
+      { name: "secretMasked", label: "签名密钥 / Bearer Token", placeholder: "可选", secret: true },
+    ],
+  },
+  DingTalk: {
+    summary: "钉钉群机器人，支持关键词或加签安全设置。",
+    fields: [webhookField("钉钉机器人 Webhook", "https://oapi.dingtalk.com/robot/send?access_token=..."), { name: "config.keyword", label: "安全关键词", placeholder: "异火阁" }, tokenField("加签 Secret", "SEC...")],
+  },
+  WeCom: {
+    summary: "企业微信群机器人，可填写完整 Webhook 或机器人 Key。",
+    fields: [webhookField("企业微信机器人 Webhook / Key", "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..."), { name: "config.mentionedList", label: "提醒成员", placeholder: "@all / userid1,userid2" }],
+  },
+  Feishu: {
+    summary: "飞书群机器人，支持签名校验。",
+    fields: [webhookField("飞书机器人 Webhook", "https://open.feishu.cn/open-apis/bot/v2/hook/..."), tokenField("签名密钥", "可选")],
+  },
+  Bark: {
+    summary: "iOS Bark 推送，可接入官方或自建 Bark Server。",
+    fields: [webhookField("Bark Server / Device Key", "https://api.day.app/your-key"), { name: "config.group", label: "分组", placeholder: "YiHuoGe" }, { name: "config.sound", label: "提示音", placeholder: "bell" }],
+  },
+  ServerChan: { summary: "Server酱 SendKey 推送到微信。", fields: [{ name: "target", label: "SendKey", placeholder: "SCT...", required: true, secret: true }] },
+  PushPlus: { summary: "PushPlus 微信推送，支持群组 Topic。", fields: [{ name: "target", label: "Token", placeholder: "pushplus token", required: true, secret: true }, { name: "config.topic", label: "Topic / 群组编码", placeholder: "可选" }] },
+  ntfy: { summary: "ntfy 主题推送，适合自托管轻量通知。", fields: [{ name: "target", label: "Server / Topic", placeholder: "https://ntfy.sh/yihuoge 或 yihuoge", required: true }, { name: "config.priority", label: "Priority", placeholder: "default / high / urgent" }, { name: "config.tags", label: "Tags", placeholder: "fire,renewal" }, tokenField("Access Token", "可选")] },
+  Gotify: { summary: "Gotify 自托管推送服务。", fields: [webhookField("Gotify Server", "https://gotify.example.com"), tokenField("Application Token", "***"), { name: "config.priority", label: "Priority", placeholder: "5" }] },
+  Pushover: { summary: "Pushover 移动端推送。", fields: [{ name: "target", label: "User / Group Key", placeholder: "u...", required: true }, tokenField("Application Token", "a..."), { name: "config.priority", label: "Priority", placeholder: "0 / 1 / 2" }] },
+  "Microsoft Teams": { summary: "Teams Incoming Webhook / Workflow URL。", fields: [webhookField("Teams Webhook URL", "https://...webhook.office.com/...")] },
+  "Google Chat": { summary: "Google Chat Space Webhook。", fields: [webhookField("Google Chat Webhook URL", "https://chat.googleapis.com/v1/spaces/...")] },
+  Matrix: { summary: "Matrix 房间通知，适合自托管 Synapse / Element。", fields: [{ name: "target", label: "Room ID", placeholder: "!room:matrix.org", required: true }, { name: "config.homeserver", label: "Homeserver", placeholder: "https://matrix.org" }, tokenField("Access Token", "***")] },
+  Mattermost: { summary: "Mattermost Incoming Webhook。", fields: [webhookField("Mattermost Webhook URL", "https://mattermost.example.com/hooks/...")] },
+  "Rocket.Chat": { summary: "Rocket.Chat Incoming Webhook。", fields: [webhookField("Rocket.Chat Webhook URL", "https://chat.example.com/hooks/...")] },
+  Signal: { summary: "Signal 网关或 signal-cli REST API。", fields: [{ name: "config.endpoint", label: "Signal API Endpoint", placeholder: "http://signal-cli-rest-api:8080/v2/send" }, { name: "target", label: "Recipient / Group ID", placeholder: "+8613800000000 / group-id", required: true }] },
+  LINE: { summary: "LINE Messaging API 推送。", fields: [{ name: "target", label: "User / Group ID", placeholder: "U... / C...", required: true }, tokenField("Channel Access Token", "***")] },
+  Pushbullet: { summary: "Pushbullet 推送到设备或账号。", fields: [{ name: "target", label: "Device / Email", placeholder: "device iden / user@example.com" }, tokenField("Access Token", "***")] },
+  "AWS SNS": { summary: "AWS SNS Topic 推送。", fields: [{ name: "target", label: "Topic ARN", placeholder: "arn:aws:sns:ap-east-1:123:topic", required: true }, { name: "config.region", label: "Region", placeholder: "ap-east-1" }, { name: "config.accessKeyId", label: "Access Key ID", placeholder: "AKIA..." }, tokenField("Secret Access Key", "***")] },
+  Twilio: { summary: "Twilio SMS / WhatsApp 通知。", fields: [{ name: "target", label: "接收号码", placeholder: "+8613800000000", required: true }, { name: "config.from", label: "发送号码", placeholder: "+1234567890" }, { name: "config.accountSid", label: "Account SID", placeholder: "AC..." }, tokenField("Auth Token", "***")] },
+  Custom: { summary: "自定义渠道，按你的网关要求填写。", fields: [webhookField("入口地址", "https://example.com/notify"), { name: "config.payload", label: "默认 Payload（JSON）", placeholder: "{\"text\":\"{{message}}\"}", multiline: true }, tokenField("密钥 / Token", "可选")] },
+};
+
+function defaultNotifyTemplate(type: NotifyType) {
+  return [
+    "🔥【异火阁 · 续期试炼】",
+    `渠道：${channelTypeName[type]}`,
+    "火种：青莲地心火节点",
+    "状态：即将续期",
+    "剩余：16 天",
+    "到期：2026-06-28 18:00",
+    "预算：¥128.00 / 月",
+    "动作：请登录异火阁完成续期确认。",
+    "—— 收诸般异火，掌万般续期。",
+  ].join("\n");
+}
+
 const assetTypes: AssetType[] = ["domain", "vps", "cloud", "ai", "membership", "custom"];
 
 const heavenlyFlames = [
@@ -811,10 +925,34 @@ function ChannelDrawer({ open, editing, onClose }: { open: boolean; editing?: No
   const [form] = Form.useForm<NotificationChannel>();
   const addChannel = useYiHuoStore((state) => state.addChannel);
   const updateChannel = useYiHuoStore((state) => state.updateChannel);
+  const [api, contextHolder] = message.useMessage();
+  const watchedType = (Form.useWatch("type", form) ?? editing?.type ?? "Webhook") as NotifyType;
+  const preset = notifyPresets[watchedType];
 
   useEffect(() => {
-    if (open) form.setFieldsValue(editing ?? { type: "Webhook", enabled: true, target: "", name: "" });
+    if (!open) return;
+    const type = editing?.type ?? "Webhook";
+    form.setFieldsValue({
+      type,
+      enabled: true,
+      target: "",
+      name: "",
+      secretMasked: "",
+      config: {},
+      ...editing,
+      template: editing?.template ?? defaultNotifyTemplate(type),
+    });
   }, [editing, form, open]);
+
+  const handleTypeChange = (type: NotifyType) => {
+    form.setFieldsValue({
+      type,
+      target: "",
+      secretMasked: "",
+      config: {},
+      template: defaultNotifyTemplate(type),
+    });
+  };
 
   const save = async () => {
     const values = await form.validateFields();
@@ -823,13 +961,84 @@ function ChannelDrawer({ open, editing, onClose }: { open: boolean; editing?: No
     onClose();
   };
 
+  const testTemplate = async () => {
+    const values = await form.validateFields();
+    const type = values.type ?? "Webhook";
+    const template = values.template || defaultNotifyTemplate(type);
+    Modal.info({
+      title: "测试通知预览",
+      width: 640,
+      okText: "知道了",
+      content: (
+        <div className="notify-test-modal">
+          <div className="notify-test-head">
+            <FireOutlined />
+            <span>{channelTypeName[type]} · 模拟发送</span>
+          </div>
+          <pre>{template}</pre>
+          <Text className="muted">这是异火阁为该渠道生成的测试模板；保存后可在通知列表继续执行测试。</Text>
+        </div>
+      ),
+    });
+    api.success(`${channelTypeName[type]} 测试模板已生成`);
+  };
+
+  const renderField = (field: NotifyFieldPreset) => {
+    const rules = field.required ? [{ required: true, message: `请填写${field.label}` }] : undefined;
+    const control = field.options ? (
+      <Select options={field.options} />
+    ) : field.multiline ? (
+      <TextArea rows={3} placeholder={field.placeholder} />
+    ) : field.secret ? (
+      <Input.Password placeholder={field.placeholder} autoComplete="new-password" />
+    ) : (
+      <Input placeholder={field.placeholder} />
+    );
+    return (
+      <Form.Item key={field.name} name={fieldName(field.name)} label={field.label} rules={rules} extra={field.help}>
+        {control}
+      </Form.Item>
+    );
+  };
+
   return (
-    <Drawer size="large" open={open} onClose={onClose} title={editing ? "编辑通知渠道" : "新增通知渠道"} extra={<Button title="保存当前通知渠道配置" type="primary" onClick={save}>保存</Button>}>
-      <Form form={form} layout="vertical">
+    <Drawer
+      size="large"
+      open={open}
+      onClose={onClose}
+      title={editing ? "编辑通知渠道" : "新增通知渠道"}
+      extra={(
+        <Space>
+          <Button title="使用当前配置生成一条测试通知模板" onClick={testTemplate}>测试发送</Button>
+          <Button title="保存当前通知渠道配置" type="primary" onClick={save}>保存</Button>
+        </Space>
+      )}
+    >
+      {contextHolder}
+      <Form form={form} layout="vertical" className="channel-form">
         <Form.Item name="name" label="名称" rules={[{ required: true }]}><Input /></Form.Item>
-        <Form.Item name="type" label="类型"><Select showSearch options={notifyTypes.map((value) => ({ value, label: channelTypeName[value] }))} /></Form.Item>
-        <Form.Item name="target" label="目标地址 / Chat ID / Webhook" rules={[{ required: true }]}><Input /></Form.Item>
-        <Form.Item name="secretMasked" label="密钥（仅展示掩码）"><Input placeholder="***" /></Form.Item>
+        <Form.Item name="type" label="类型">
+          <Select showSearch onChange={handleTypeChange} options={notifyTypes.map((value) => ({ value, label: channelTypeName[value] }))} />
+        </Form.Item>
+        <Card className="notify-config-card" title={`${channelTypeName[watchedType]} 配置`}>
+          <Paragraph className="muted">{preset.summary}</Paragraph>
+          <Row gutter={16}>
+            {preset.fields.map((field) => (
+              <Col xs={24} md={field.multiline ? 24 : 12} key={field.name}>
+                {renderField(field)}
+              </Col>
+            ))}
+          </Row>
+        </Card>
+        <Card className="notify-template-card" title="测试模板">
+          <Paragraph className="muted">模板会用于测试发送与后续续期提醒，可按渠道风格自行改写。</Paragraph>
+          <Form.Item name="template" label="消息内容" rules={[{ required: true, message: "请填写测试模板" }]}>
+            <TextArea rows={8} />
+          </Form.Item>
+          <Space wrap className="template-vars">
+            {["{{asset}}", "{{days}}", "{{renewalDate}}", "{{price}}", "{{provider}}"].map((item) => <Tag key={item}>{item}</Tag>)}
+          </Space>
+        </Card>
         <Form.Item name="enabled" label="启用" valuePropName="checked"><Switch /></Form.Item>
       </Form>
     </Drawer>

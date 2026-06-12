@@ -1433,3 +1433,63 @@ body::after {
 .ant-tooltip-arrow::after {
   background: rgba(28, 17, 9, 0.98) !important;
 }
+
+.channel-form {
+  display: grid;
+  gap: 18px;
+}
+
+.notify-config-card,
+.notify-template-card {
+  background: linear-gradient(180deg, rgba(23, 23, 29, 0.86), rgba(12, 11, 14, 0.78)) !important;
+  border-color: rgba(255, 184, 77, 0.22) !important;
+  box-shadow: inset 0 0 24px rgba(245, 158, 11, 0.04), 0 16px 42px rgba(0, 0, 0, 0.22);
+}
+
+.notify-config-card .ant-card-body,
+.notify-template-card .ant-card-body {
+  padding: 22px 24px !important;
+}
+
+.template-vars {
+  margin-top: -4px;
+}
+
+.template-vars .ant-tag {
+  color: #170d04;
+  font-family: var(--font-number);
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--gold), var(--gold-2));
+  border: 0;
+}
+
+.notify-test-modal {
+  display: grid;
+  gap: 14px;
+  padding-top: 8px;
+}
+
+.notify-test-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  padding: 8px 12px;
+  color: #ffe7b5;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(255, 184, 77, 0.28);
+  border-radius: 14px 4px 14px 4px;
+}
+
+.notify-test-modal pre {
+  margin: 0;
+  padding: 18px;
+  color: #fff4dc;
+  white-space: pre-wrap;
+  background:
+    radial-gradient(circle at 16% 0%, rgba(245, 158, 11, 0.15), transparent 42%),
+    rgba(8, 7, 10, 0.94);
+  border: 1px solid rgba(255, 184, 77, 0.22);
+  border-radius: 18px 6px 18px 6px;
+  box-shadow: inset 0 0 24px rgba(245, 158, 11, 0.05);
+}
