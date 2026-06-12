@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { nanoid } from "nanoid";
 import { createConnection } from "mysql2/promise";
+import { sendNotificationTest } from "../server/notify.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,6 +68,8 @@ interface NotificationChannel {
   target: string;
   lastTest?: string;
   secretMasked?: string;
+  config?: Record<string, string>;
+  template?: string;
 }
 
 interface Database {
@@ -279,13 +282,34 @@ app.delete("/api/channels/:id", async (req, res) => {
   res.status(204).send();
 });
 
+app.post("/api/notifications/test", async (req, res) => {
+  try {
+    const channel = req.body.channel as NotificationChannel;
+    const result = await sendNotificationTest(channel);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error instanceof Error ? error.message : "通知试炼失败" });
+  }
+});
+
 app.post("/api/channels/:id/test", async (req, res) => {
   const db = await readDb();
+  const channel = db.channels.find((item) => item.id === req.params.id);
+  if (!channel) {
+    res.status(404).json({ ok: false, error: "channel not found" });
+    return;
+  }
+  try {
+    const result = await sendNotificationTest(channel);
+    const lastTest = result.deliveredAt;
   db.channels = db.channels.map((channel) =>
-    channel.id === req.params.id ? { ...channel, lastTest: new Date().toISOString() } : channel,
+      channel.id === req.params.id ? { ...channel, lastTest } : channel,
   );
   await writeDb(db);
-  res.json({ ok: true, id: req.params.id, simulated: true });
+    res.json({ ...result, id: req.params.id, lastTest });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error instanceof Error ? error.message : "通知试炼失败" });
+  }
 });
 
 app.get("/api/ai/models", async (_req, res) => {

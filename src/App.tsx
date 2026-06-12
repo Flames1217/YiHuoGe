@@ -921,6 +921,7 @@ function ChannelDrawer({ open, editing, onClose }: { open: boolean; editing?: No
   const addChannel = useYiHuoStore((state) => state.addChannel);
   const updateChannel = useYiHuoStore((state) => state.updateChannel);
   const [api, contextHolder] = message.useMessage();
+  const [testing, setTesting] = useState(false);
   const watchedType = (Form.useWatch("type", form) ?? editing?.type ?? "Webhook") as NotifyType;
   const preset = notifyPresets[watchedType];
 
@@ -931,7 +932,7 @@ function ChannelDrawer({ open, editing, onClose }: { open: boolean; editing?: No
       type,
       enabled: true,
       target: "",
-      name: "",
+      name: channelTypeName[type],
       secretMasked: "",
       config: {},
       ...editing,
@@ -945,6 +946,7 @@ function ChannelDrawer({ open, editing, onClose }: { open: boolean; editing?: No
       target: "",
       secretMasked: "",
       config: {},
+      name: channelTypeName[type],
       template: defaultNotifyTemplate(type),
     });
   };
@@ -957,10 +959,28 @@ function ChannelDrawer({ open, editing, onClose }: { open: boolean; editing?: No
   };
 
   const testTemplate = async () => {
-    const values = form.getFieldsValue(true) as NotificationChannel;
+    const values = await form.validateFields();
     const type = values.type ?? "Webhook";
     const template = values.template || defaultNotifyTemplate(type);
-    Modal.info({
+    const channel = {
+      ...values,
+      id: editing?.id ?? values.id ?? "draft",
+      enabled: values.enabled ?? true,
+      name: values.name || channelTypeName[type],
+      template,
+    };
+    setTesting(true);
+    try {
+      const adminKey = window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "";
+      const response = await fetch("/api/notifications/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(adminKey ? { "x-admin-key": adminKey } : {}) },
+        body: JSON.stringify({ channel }),
+      });
+      const result = await response.json().catch(() => ({})) as { deliveredAt?: string; error?: string; messageId?: string };
+      if (!response.ok) throw new Error(result.error || `通道返回 ${response.status}`);
+      Modal.success({
+        className: "yhg-themed-modal",
       title: "空间通道试炼",
       width: 640,
       okText: "知道了",
@@ -968,14 +988,19 @@ function ChannelDrawer({ open, editing, onClose }: { open: boolean; editing?: No
         <div className="notify-test-modal">
           <div className="notify-test-head">
             <FireOutlined />
-            <span>{channelTypeName[type]} · 通道稳定</span>
+              <span>{channelTypeName[type]} · 已送达</span>
           </div>
           <pre>{template}</pre>
-          <Text className="muted">此为通道试炼，不携带任何资产与续期信息。</Text>
+            <Text className="muted">远端传讯阵法已确认收取此试炼。{result.messageId ? ` 回执：${result.messageId}` : ""}{result.deliveredAt ? ` 时间：${dayjs(result.deliveredAt).format("YYYY-MM-DD HH:mm:ss")}` : ""}</Text>
         </div>
       ),
-    });
-    api.success(`${channelTypeName[type]} 空间通道试炼已唤起`);
+      });
+      api.success(`${channelTypeName[type]} 空间通道试炼已送达`);
+    } catch (error) {
+      api.error(error instanceof Error ? error.message : "空间通道试炼失败");
+    } finally {
+      setTesting(false);
+    }
   };
 
   const renderField = (field: NotifyFieldPreset) => {
@@ -1004,14 +1029,14 @@ function ChannelDrawer({ open, editing, onClose }: { open: boolean; editing?: No
       title={editing ? "编辑通知渠道" : "新增通知渠道"}
       extra={(
         <Space>
-          <Button title="唤起空间通道试炼，验证当前渠道是否稳定" onClick={testTemplate}>测试通道</Button>
+          <Button title="向真实远端发送空间通道试炼，成功后才显示回执" loading={testing} onClick={testTemplate}>测试通道</Button>
           <Button title="封存当前传讯阵法配置" type="primary" onClick={save}>保存</Button>
         </Space>
       )}
     >
       {contextHolder}
       <Form form={form} layout="vertical" className="channel-form">
-        <Form.Item name="name" label="名称" rules={[{ required: true }]}><Input /></Form.Item>
+        <Form.Item name="name" label="名称" rules={[{ required: true }]}><Input placeholder={channelTypeName[watchedType]} /></Form.Item>
         <Form.Item name="type" label="类型">
           <Select showSearch onChange={handleTypeChange} options={notifyTypes.map((value) => ({ value, label: channelTypeName[value] }))} />
         </Form.Item>
@@ -1046,6 +1071,27 @@ function NotificationsModule() {
   const [api, contextHolder] = message.useMessage();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<NotificationChannel>();
+  const [testingId, setTestingId] = useState<string>();
+
+  const runSavedTest = async (record: NotificationChannel) => {
+    setTestingId(record.id);
+    try {
+      const adminKey = window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "";
+      const response = await fetch("/api/notifications/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(adminKey ? { "x-admin-key": adminKey } : {}) },
+        body: JSON.stringify({ channel: record }),
+      });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error || `通道返回 ${response.status}`);
+      testChannel(record.id);
+      api.success(`${record.name || channelTypeName[record.type]} 空间通道试炼已送达`);
+    } catch (error) {
+      api.error(error instanceof Error ? error.message : "空间通道试炼失败");
+    } finally {
+      setTestingId(undefined);
+    }
+  };
 
   const columns: ColumnsType<NotificationChannel> = [
     { title: "名称", dataIndex: "name", render: (value: string) => <Text strong>{value}</Text> },
@@ -1068,7 +1114,7 @@ function NotificationsModule() {
       title: t("action"),
       render: (_, record) => (
         <Space>
-          <Button title="唤起一条空间通道试炼" size="small" onClick={() => { testChannel(record.id); api.success(`${record.name} 通道试炼已记录`); }}>{t("test")}</Button>
+          <Button title="向真实远端发送空间通道试炼" size="small" loading={testingId === record.id} onClick={() => runSavedTest(record)}>{t("test")}</Button>
           <Button title="编辑该通知渠道" size="small" icon={<EditOutlined />} onClick={() => { setEditing(record); setOpen(true); }} />
           <Popconfirm title="删除该通知渠道？" onConfirm={() => deleteChannel(record.id)}><Button title="删除该通知渠道" size="small" danger icon={<DeleteOutlined />} /></Popconfirm>
         </Space>

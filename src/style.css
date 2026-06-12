@@ -1493,3 +1493,39 @@ body::after {
   border-radius: 18px 6px 18px 6px;
   box-shadow: inset 0 0 24px rgba(245, 158, 11, 0.05);
 }
+
+.yhg-themed-modal .ant-modal-content {
+  color: #f6ead4 !important;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(245, 158, 11, 0.18), transparent 42%),
+    linear-gradient(145deg, rgba(24, 20, 18, 0.98), rgba(9, 8, 12, 0.98)) !important;
+  border: 1px solid rgba(255, 184, 77, 0.34);
+  border-radius: 22px 8px 22px 8px;
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.68),
+    inset 0 0 28px rgba(245, 158, 11, 0.08);
+}
+
+.yhg-themed-modal .ant-modal-confirm-title,
+.yhg-themed-modal .ant-modal-confirm-content,
+.yhg-themed-modal .ant-typography {
+  color: #f6ead4 !important;
+}
+
+.yhg-themed-modal .ant-modal-confirm-title {
+  font-family: YiHuoSerif, YiHuoNotoSans, sans-serif;
+  font-size: 20px !important;
+  letter-spacing: 0.02em;
+}
+
+.yhg-themed-modal .ant-modal-confirm-success .ant-modal-confirm-body > .anticon,
+.yhg-themed-modal .ant-modal-confirm-body > .anticon {
+  color: var(--gold) !important;
+}
+
+.yhg-themed-modal .ant-modal-confirm-btns .ant-btn-primary {
+  color: #1a0d03 !important;
+  background: linear-gradient(135deg, var(--gold), var(--gold-2)) !important;
+  border: 0 !important;
+  box-shadow: 0 10px 28px rgba(245, 158, 11, 0.28);
+}
