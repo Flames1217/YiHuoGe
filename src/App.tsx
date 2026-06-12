@@ -394,17 +394,12 @@ const notifyPresets: Record<NotifyType, NotifyPreset> = {
   Custom: { summary: "自定义渠道，按你的网关要求填写。", fields: [webhookField("入口地址", "https://example.com/notify"), { name: "config.payload", label: "默认 Payload（JSON）", placeholder: "{\"text\":\"{{message}}\"}", multiline: true }, tokenField("密钥 / Token", "可选")] },
 };
 
-function defaultNotifyTemplate(type: NotifyType) {
+function defaultNotifyTemplate(_type: NotifyType) {
   return [
-    "🔥【异火阁 · 续期试炼】",
-    `渠道：${channelTypeName[type]}`,
-    "火种：青莲地心火节点",
-    "状态：即将续期",
-    "剩余：16 天",
-    "到期：2026-06-28 18:00",
-    "预算：¥128.00 / 月",
-    "动作：请登录异火阁完成续期确认。",
-    "—— 收诸般异火，掌万般续期。",
+    "🔥【异火阁 · 空间通道试炼】",
+    "当感知到此空间波动时，证明此空间通道稳定。",
+    "阁令已达，异火未熄。",
+    "收诸般异火，掌万般续期。",
   ].join("\n");
 }
 
@@ -618,8 +613,8 @@ function OverviewModule({
           <Paragraph className="hero-mantra">{t("heroMantra")}</Paragraph>
           <Text className="muted">{t("heroDesc")}</Text>
           <Space wrap className="hero-actions">
-            <Button title="新增一条域名、云主机、订阅或自定义资产" type="primary" icon={<PlusOutlined />} onClick={onQuickAdd}>{t("addAsset")}</Button>
-            <Button title="进入 AI 炼化页，从文本或表格自动生成资产" icon={<ImportOutlined />} onClick={() => setActive("ai")}>{t("aiImport")}</Button>
+            <Button title="收录一枚域名、云主机、订阅或自定义火种" type="primary" icon={<PlusOutlined />} onClick={onQuickAdd}>{t("addAsset")}</Button>
+            <Button title="进入 AI 炼化炉，将文本与表格炼成资产火种" icon={<ImportOutlined />} onClick={() => setActive("ai")}>{t("aiImport")}</Button>
           </Space>
         </div>
         <div className="hero-visual" aria-label="异火榜续期告警">
@@ -723,9 +718,9 @@ function AssetDrawer({
         ].filter(Boolean).join("\n"),
       };
       form.setFieldsValue(patch);
-      api.success("WHOIS 已查询，到期日期已自动填入续期日期");
+      api.success("WHOIS 占验已成，到期灵纹已刻入续期日");
     } catch {
-      api.warning("WHOIS 暂不可用，请手动确认续期日期");
+      api.warning("WHOIS 灵镜暂隐，请手动校准续期日");
     }
   };
 
@@ -745,23 +740,23 @@ function AssetDrawer({
             whois.whoisStatus?.length ? `状态：${whois.whoisStatus.map(whoisStatusName).join("、")}` : "",
           ].filter(Boolean).join("\n"),
         };
-        api.success("域名 WHOIS 已校验，续期日期已按到期日写入");
+        api.success("域名 WHOIS 已验真，续期日已按到期灵纹写入");
       } catch {
-        api.warning("WHOIS 查询失败，已按当前表单续期日期保存");
+        api.warning("WHOIS 占验未成，已依当前续期日封存");
       }
     }
     if (editing) {
       updateAsset({ ...editing, ...values });
-      api.success("资产已更新");
+      api.success("资产火种已重铸");
     } else {
       addAsset(values);
-      api.success("资产已加入异火阁");
+      api.success("资产火种已收入异火阁");
     }
     onClose();
   };
 
   return (
-    <Drawer size="large" open={open} onClose={onClose} title={editing ? "编辑资产" : t("addAsset")} extra={<Button title="保存当前资产；域名类型会先自动查询 WHOIS" type="primary" onClick={submit}>保存</Button>}>
+    <Drawer size="large" open={open} onClose={onClose} title={editing ? "编辑资产" : t("addAsset")} extra={<Button title="封存当前火种；域名类型会先占验 WHOIS" type="primary" onClick={submit}>保存</Button>}>
       {contextHolder}
       <Form form={form} layout="vertical">
         <Form.Item name="name" label="名称" rules={[{ required: true }]}><Input onBlur={fillWhois} placeholder="例如：yihuoge.dev / 开放智能接口额度" /></Form.Item>
@@ -774,7 +769,7 @@ function AssetDrawer({
           <Col span={12}><Form.Item name="renewalDate" label="续期日期" rules={[{ required: true }]}><Input type="date" /></Form.Item></Col>
           <Col span={12}><Form.Item name="cycle" label="周期"><Select options={(["monthly", "yearly", "custom"] as Asset["cycle"][]).map((value) => ({ value, label: cycleName[value] }))} /></Form.Item></Col>
         </Row>
-        <Button title="仅域名类型可用：查询 WHOIS 并把到期日写入续期日期" icon={<GlobalOutlined />} onClick={fillWhois}>查询 WHOIS 并填续期日</Button>
+        <Button title="仅域名火种可用：占验 WHOIS 并把到期灵纹写入续期日" icon={<GlobalOutlined />} onClick={fillWhois}>占验 WHOIS 并刻续期日</Button>
         <Row gutter={12}>
           <Col span={12}><Form.Item name="price" label={t("price")}><InputNumber min={0} style={{ width: "100%" }} /></Form.Item></Col>
           <Col span={12}><Form.Item name="currency" label="货币"><Select showSearch options={currencyOptions} /></Form.Item></Col>
@@ -819,13 +814,13 @@ function AssetsModule({
   const runAssetImport = () => {
     const parsed = parseImportedAssets(importText);
     if (!parsed.length) {
-      api.warning("请粘贴表格文本后再导入");
+      api.warning("请先投放清单文本，再启纳火阵");
       return;
     }
     importAssets(parsed);
     setImportOpen(false);
     setImportText("");
-    api.success(`已导入 ${parsed.length} 条资产`);
+    api.success(`已纳入 ${parsed.length} 枚资产火种`);
   };
 
   const columns: ColumnsType<Asset> = [
@@ -862,11 +857,11 @@ function AssetsModule({
     <div className="module-stack">
       {contextHolder}
       <Flex className="module-head" justify="space-between" gap={16} wrap="wrap">
-        <div><Title level={2}>{t("assets")}</Title><Text className="muted">主流平台优先，自定义资产兜底；支持搜索、筛选、排序、分页与批量选择。</Text></div>
+        <div><Title level={2}>{t("assets")}</Title><Text className="muted">主流平台先入阁，冷门火种亦可自铸；支持搜寻、筛选、排序、分页与批量圈选。</Text></div>
         <Space wrap>
-          <Button title="进入 AI 炼化页，从文本或表格生成资产" icon={<RobotOutlined />} onClick={goAi}>AI 炼化</Button>
-          <Button title="粘贴表格文本批量导入资产" icon={<ImportOutlined />} onClick={() => setImportOpen(true)}>{t("import")}</Button>
-          <Button title="手动新增一条资产；域名类型会自动尝试 WHOIS" type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setDrawerOpen(true); }}>{t("addAsset")}</Button>
+          <Button title="进入 AI 炼化炉，将文本或表格炼成资产火种" icon={<RobotOutlined />} onClick={goAi}>AI 炼化</Button>
+          <Button title="投放表格文本，批量纳火入阁" icon={<ImportOutlined />} onClick={() => setImportOpen(true)}>{t("import")}</Button>
+          <Button title="手动收录一枚火种；域名类型会自动尝试 WHOIS 占验" type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setDrawerOpen(true); }}>{t("addAsset")}</Button>
         </Space>
       </Flex>
       <Card className="yhg-card">
@@ -912,8 +907,8 @@ function AssetsModule({
         )}
       </Card>
       <AssetDrawer open={drawerOpen} editing={editing} onClose={() => setDrawerOpen(false)} />
-      <Modal open={importOpen} title="批量导入资产" onCancel={() => setImportOpen(false)} onOk={runAssetImport} okText="导入">
-        <Paragraph className="muted">每行格式：名称,类型,服务商,续期日期,价格。类型可填：域名、云主机、云服务、智能订阅、会员订阅、自定义。</Paragraph>
+      <Modal open={importOpen} title="批量纳火入阁" onCancel={() => setImportOpen(false)} onOk={runAssetImport} okText="纳入">
+        <Paragraph className="muted">每行一枚火种：名称,类型,服务商,续期日期,价格。类型可填：域名、云主机、云服务、智能订阅、会员订阅、自定义。</Paragraph>
         <TextArea rows={8} value={importText} onChange={(event) => setImportText(event.target.value)} placeholder="示例：异火阁主域名,域名,火网注册局,2026-12-31,12" />
       </Modal>
     </div>
@@ -966,21 +961,21 @@ function ChannelDrawer({ open, editing, onClose }: { open: boolean; editing?: No
     const type = values.type ?? "Webhook";
     const template = values.template || defaultNotifyTemplate(type);
     Modal.info({
-      title: "测试通知预览",
+      title: "空间通道试炼",
       width: 640,
       okText: "知道了",
       content: (
         <div className="notify-test-modal">
           <div className="notify-test-head">
             <FireOutlined />
-            <span>{channelTypeName[type]} · 模拟发送</span>
+            <span>{channelTypeName[type]} · 通道稳定</span>
           </div>
           <pre>{template}</pre>
-          <Text className="muted">这是异火阁为该渠道生成的测试模板；保存后可在通知列表继续执行测试。</Text>
+          <Text className="muted">此为通道试炼，不携带任何资产与续期信息。</Text>
         </div>
       ),
     });
-    api.success(`${channelTypeName[type]} 测试模板已生成`);
+    api.success(`${channelTypeName[type]} 空间通道试炼已唤起`);
   };
 
   const renderField = (field: NotifyFieldPreset) => {
@@ -1009,8 +1004,8 @@ function ChannelDrawer({ open, editing, onClose }: { open: boolean; editing?: No
       title={editing ? "编辑通知渠道" : "新增通知渠道"}
       extra={(
         <Space>
-          <Button title="使用当前配置生成一条测试通知模板" onClick={testTemplate}>测试发送</Button>
-          <Button title="保存当前通知渠道配置" type="primary" onClick={save}>保存</Button>
+          <Button title="唤起空间通道试炼，验证当前渠道是否稳定" onClick={testTemplate}>测试通道</Button>
+          <Button title="封存当前传讯阵法配置" type="primary" onClick={save}>保存</Button>
         </Space>
       )}
     >
@@ -1030,14 +1025,11 @@ function ChannelDrawer({ open, editing, onClose }: { open: boolean; editing?: No
             ))}
           </Row>
         </Card>
-        <Card className="notify-template-card" title="测试模板">
-          <Paragraph className="muted">模板会用于测试发送与后续续期提醒，可按渠道风格自行改写。</Paragraph>
-          <Form.Item name="template" label="消息内容" rules={[{ required: true, message: "请填写测试模板" }]}>
+        <Card className="notify-template-card" title="空间通道试炼">
+          <Paragraph className="muted">所有渠道共用此试炼辞令，仅用于验证通道是否稳定。</Paragraph>
+          <Form.Item name="template" label="试炼辞令" rules={[{ required: true, message: "请填写试炼辞令" }]}>
             <TextArea rows={8} />
           </Form.Item>
-          <Space wrap className="template-vars">
-            {["{{asset}}", "{{days}}", "{{renewalDate}}", "{{price}}", "{{provider}}"].map((item) => <Tag key={item}>{item}</Tag>)}
-          </Space>
         </Card>
         <Form.Item name="enabled" label="启用" valuePropName="checked"><Switch /></Form.Item>
       </Form>
@@ -1076,7 +1068,7 @@ function NotificationsModule() {
       title: t("action"),
       render: (_, record) => (
         <Space>
-          <Button title="模拟发送一条测试通知" size="small" onClick={() => { testChannel(record.id); api.success(`${record.name} 测试消息已模拟发送`); }}>{t("test")}</Button>
+          <Button title="唤起一条空间通道试炼" size="small" onClick={() => { testChannel(record.id); api.success(`${record.name} 通道试炼已记录`); }}>{t("test")}</Button>
           <Button title="编辑该通知渠道" size="small" icon={<EditOutlined />} onClick={() => { setEditing(record); setOpen(true); }} />
           <Popconfirm title="删除该通知渠道？" onConfirm={() => deleteChannel(record.id)}><Button title="删除该通知渠道" size="small" danger icon={<DeleteOutlined />} /></Popconfirm>
         </Space>
@@ -1089,7 +1081,7 @@ function NotificationsModule() {
       {contextHolder}
       <Flex className="module-head" justify="space-between" wrap="wrap">
         <div><Title level={2}>{t("notifications")}</Title><Text className="muted">Email、Telegram、Discord、Slack、Webhook、钉钉、企业微信、飞书、Bark、Server酱、PushPlus、ntfy、Gotify、Pushover、Teams、Google Chat、Matrix 等主流渠道。</Text></div>
-        <Button title="新增 Email、Telegram、Discord、Webhook、钉钉、企业微信、飞书等通知渠道" type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setOpen(true); }}>新增渠道</Button>
+        <Button title="新铸 Email、Telegram、Discord、Webhook、钉钉、企业微信、飞书等传讯阵法" type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setOpen(true); }}>新增渠道</Button>
       </Flex>
       <Card className="yhg-card"><Table rowKey="id" dataSource={channels} columns={columns} pagination={false} /></Card>
       <ChannelDrawer open={open} editing={editing} onClose={() => setOpen(false)} />
@@ -1118,11 +1110,11 @@ function AiModule() {
   const runImport = () => {
     const parsed = parseImportedAssets(text);
     if (!parsed.length) {
-      api.warning("请先粘贴需要炼化的资产文本");
+      api.warning("请先投放待炼化的资产清单");
       return;
     }
     importAssets(parsed);
-    api.success(`已生成 ${parsed.length} 条资产`);
+    api.success(`已炼成 ${parsed.length} 枚资产火种`);
   };
 
   const fetchModels = async () => {
@@ -1134,16 +1126,16 @@ function AiModule() {
         body: JSON.stringify({ baseUrl: aiConfig.baseUrl, apiKey: aiConfig.apiKey }),
       });
       if (response.status === 401) {
-        api.error("管理密钥不正确，请先在设置中保存管理密钥");
+        api.error("管理阁令不符，请先在设置中封存管理密钥");
         return;
       }
       const payload = (await response.json()) as { models?: string[]; source?: string };
       const models = payload.models ?? [];
       models.forEach((model) => addModel(model));
-      api.success(`已${payload.source === "provider" ? "从接口" : "从本地"}同步 ${models.length} 个模型`);
+      api.success(`已${payload.source === "provider" ? "自远端" : "自本地"}召回 ${models.length} 个模型`);
     } catch {
       ["gpt-4.1", "gpt-4.1-mini", "o4-mini"].forEach((model) => addModel(model));
-      api.warning("接口暂不可用，已载入本地模型模板");
+      api.warning("模型通道暂隐，已载入本地模型火种");
     }
   };
 
@@ -1151,18 +1143,18 @@ function AiModule() {
     <div className="module-stack">
       {contextHolder}
       <Flex className="module-head" justify="space-between" wrap="wrap">
-        <div><Title level={2}>AI 炼化</Title><Text className="muted">上传文本、表格或知识库导出，交由模型炼化为可续期资产。</Text></div>
+        <div><Title level={2}>AI 炼化</Title><Text className="muted">投放文本、表格或知识库残卷，交由模型炼化为可续期火种。</Text></div>
       </Flex>
       <Row className="ai-layout" gutter={[28, 28]}>
         <Col xs={24} xl={14}>
           <Card className="yhg-card" title="AI 炼化炉">
             <Upload.Dragger beforeUpload={() => false} maxCount={1}>
               <p className="ant-upload-drag-icon"><ImportOutlined /></p>
-              <p>拖拽表格、清单或知识库导出文件到此处（当前为前端炼化示例）</p>
+              <p>将表格、清单或知识库残卷投入此炉（当前为前端炼化示例）</p>
             </Upload.Dragger>
             <TextArea className="import-textarea" rows={10} value={text} onChange={(event) => setText(event.target.value)} />
             <div className="ai-forge-actions">
-              <Button className="ai-forge-button" title="把上方文本解析为资产并加入资产管理" type="primary" icon={<RobotOutlined />} onClick={runImport}>开始炼化资产</Button>
+              <Button className="ai-forge-button" title="将上方文本炼成资产火种并收入阁中" type="primary" icon={<RobotOutlined />} onClick={runImport}>开始炼化资产</Button>
             </div>
           </Card>
         </Col>
@@ -1233,16 +1225,16 @@ function SettingsModule() {
     anchor.download = `yihuoge-export-${dayjs().format("YYYYMMDD-HHmmss")}.json`;
     anchor.click();
     URL.revokeObjectURL(url);
-    api.success("设置、资产、AI 与备份方式已一并导出");
+    api.success("阁令、火种、AI 与备份法阵已一并封存");
   };
 
   const importJson = async (file: File) => {
     try {
       const imported = JSON.parse(await file.text()) as { settings?: Partial<typeof settings> };
       if (imported.settings) updateSettings(imported.settings);
-      api.success("配置文件已读取，备份方式已合并进设置");
+      api.success("配置卷轴已读取，备份法阵已并入阁令");
     } catch {
-      api.error("配置文件不是有效数据文件");
+      api.error("此卷轴灵纹不合，无法识别为有效数据");
     }
     return false;
   };
@@ -1262,24 +1254,24 @@ function SettingsModule() {
         : [nextTarget, ...backupTargets],
     });
     setBackupOpen(false);
-    api.success("备份方式已保存");
+    api.success("备份法阵已刻录");
   };
 
   const removeBackupTarget = (id: string) => {
     updateSettings({ backupTargets: backupTargets.filter((item) => item.id !== id) });
-    api.success("备份方式已删除");
+    api.success("备份法阵已抹除");
   };
 
   const saveAdminKey = () => {
     window.localStorage.setItem(ADMIN_KEY_STORAGE, adminKey);
-    api.success("管理密钥已保存到当前浏览器");
+    api.success("管理阁令已封存于当前浏览器");
   };
 
   return (
     <div className="module-stack">
       {contextHolder}
       <Flex className="module-head" justify="space-between" wrap="wrap">
-        <div><Title level={2}>设置</Title><Text className="muted">语言、时区、偏好币种、提醒策略、通知渠道、模块顺序、主题、导入导出、AI 全局配置与备份方式。</Text></div>
+        <div><Title level={2}>设置</Title><Text className="muted">语言、时区、偏好币种、提醒策略、传讯阵法、模块顺序、主题、导入导出、AI 全局配置与备份法阵。</Text></div>
       </Flex>
       <Row gutter={[18, 18]}>
         <Col xs={24} xl={12}>
@@ -1304,8 +1296,8 @@ function SettingsModule() {
         <Col xs={24} xl={12}>
           <Card
             className="yhg-card backup-card"
-            title="备份方式"
-            extra={<Button title="新增 WebDAV、S3 或 Git 仓库 JSON 备份方式" icon={<PlusOutlined />} onClick={() => openBackupEditor()}>新增备份</Button>}
+            title="备份法阵"
+            extra={<Button title="新铸 WebDAV、S3 或 Git 仓库 JSON 备份法阵" icon={<PlusOutlined />} onClick={() => openBackupEditor()}>新增法阵</Button>}
           >
             <div className="backup-list">
               {backupTargets.map((target) => (
@@ -1328,19 +1320,19 @@ function SettingsModule() {
                   </Space>
                 </div>
               ))}
-              {!backupTargets.length && <Text className="muted">暂无备份方式，请新增 WebDAV、S3 或 Git 仓库 JSON。</Text>}
+              {!backupTargets.length && <Text className="muted">暂无备份法阵，请新铸 WebDAV、S3 或 Git 仓库 JSON。</Text>}
             </div>
             <Divider />
             <Space wrap>
               <Upload beforeUpload={importJson} showUploadList={false} accept="application/json">
-                <Button title="从 JSON 文件导入设置，包含备份方式" icon={<ImportOutlined />}>导入配置</Button>
+                <Button title="从 JSON 卷轴导入阁令，包含备份法阵" icon={<ImportOutlined />}>导入配置</Button>
               </Upload>
-              <Button title="导出全部设置、资产、通知渠道、AI 配置，并包含备份方式" onClick={exportJson}>导出数据</Button>
+              <Button title="导出全部阁令、火种、传讯阵法、AI 配置，并包含备份法阵" onClick={exportJson}>导出数据</Button>
             </Space>
           </Card>
         </Col>
       </Row>
-      <Modal open={backupOpen} title={editingBackupId ? "编辑备份方式" : "新增备份方式"} onCancel={() => setBackupOpen(false)} onOk={saveBackupTarget} okText="保存">
+      <Modal open={backupOpen} title={editingBackupId ? "编辑备份法阵" : "新增备份法阵"} onCancel={() => setBackupOpen(false)} onOk={saveBackupTarget} okText="保存">
         <Form form={backupForm} layout="vertical">
           <Form.Item name="name" label="名称" rules={[{ required: true, message: "请填写备份名称" }]}><Input placeholder="例如：网盘镜像 / 对象存储仓 / Git JSON" /></Form.Item>
           <Form.Item name="type" label="类型"><Select options={(Object.keys(backupTypeName) as BackupTarget["type"][]).map((value) => ({ value, label: backupTypeName[value] }))} /></Form.Item>
@@ -1471,7 +1463,7 @@ export default function App() {
           </div>
           <Menu mode="inline" selectedKeys={[active]} items={menuItems} onClick={({ key }) => setActive(key)} />
           <div className="side-footer">
-            <ExclamationCircleOutlined /> 自托管资产阁
+            <ExclamationCircleOutlined /> 自托管异火阁
           </div>
         </Sider>
         <Layout>
@@ -1492,13 +1484,13 @@ export default function App() {
                 <button className={settings.language === "en" ? "active" : ""} onClick={() => setLanguage("en")}>英</button>
               </div>
               <Tooltip overlayClassName="yhg-tooltip" title={t("openAssetsTip")}>
-                <Button className="top-action" icon={<ApiOutlined />} onClick={() => { setActive("assets"); api.info(settings.language === "zh" ? "已打开资产管理" : "Asset management opened"); }}>{t("topAssets")}</Button>
+                <Button className="top-action" icon={<ApiOutlined />} onClick={() => { setActive("assets"); api.info(settings.language === "zh" ? "资产火阁已开启" : "Asset forge opened"); }}>{t("topAssets")}</Button>
               </Tooltip>
               <Tooltip overlayClassName="yhg-tooltip" title={t("openSettingsTip")}>
-                <Button className="top-action" icon={<SettingOutlined />} onClick={() => { setActive("settings"); api.info(settings.language === "zh" ? "已打开设置" : "Settings opened"); }}>{t("topSettings")}</Button>
+                <Button className="top-action" icon={<SettingOutlined />} onClick={() => { setActive("settings"); api.info(settings.language === "zh" ? "阁令中枢已开启" : "Settings sanctum opened"); }}>{t("topSettings")}</Button>
               </Tooltip>
               <Tooltip overlayClassName="yhg-tooltip" title={t("openNotificationsTip")}>
-                <Button className="top-action" icon={<BellOutlined />} onClick={() => { setActive("notifications"); api.info(settings.language === "zh" ? "已打开通知渠道" : "Notifications opened"); }}>{t("topNotifications")}</Button>
+                <Button className="top-action" icon={<BellOutlined />} onClick={() => { setActive("notifications"); api.info(settings.language === "zh" ? "传讯阵法已开启" : "Notification array opened"); }}>{t("topNotifications")}</Button>
               </Tooltip>
             </Space>
           </Header>
