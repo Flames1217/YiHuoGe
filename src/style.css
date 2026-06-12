@@ -1571,3 +1571,83 @@ body::after {
   color: #ffd89a !important;
   opacity: 1;
 }
+
+/* Ant Design static Modal.confirm / Modal.success uses a portal outside the app shell.
+   Keep those portals on the YiHuoGe dark-fire theme instead of AntD's default white panel. */
+.ant-modal-root .ant-modal-mask {
+  background:
+    radial-gradient(circle at 50% 38%, rgba(245, 158, 11, 0.16), transparent 26rem),
+    rgba(3, 3, 6, 0.78) !important;
+  backdrop-filter: blur(10px);
+}
+
+.ant-modal-root .ant-modal-wrap .ant-modal .ant-modal-content,
+.ant-modal-root .ant-modal-wrap .ant-modal-confirm .ant-modal-content,
+.ant-modal-root .ant-modal-wrap .ant-modal-confirm .ant-modal-confirm-body-wrapper,
+.ant-modal-root .ant-modal-wrap .ant-modal-confirm .ant-modal-confirm-body {
+  color: #fff2d6 !important;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(245, 158, 11, 0.22), transparent 38%),
+    radial-gradient(circle at 90% 12%, rgba(139, 92, 246, 0.18), transparent 34%),
+    linear-gradient(145deg, rgba(30, 21, 14, 0.98) 0%, rgba(11, 9, 12, 0.99) 55%, rgba(5, 4, 7, 1) 100%) !important;
+  border-radius: 22px 8px 22px 8px !important;
+}
+
+.ant-modal-root .ant-modal-wrap .ant-modal .ant-modal-content {
+  border: 1px solid rgba(255, 184, 77, 0.48) !important;
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.76),
+    0 0 44px rgba(245, 158, 11, 0.12),
+    inset 0 1px 0 rgba(255, 216, 154, 0.12),
+    inset 0 0 34px rgba(245, 158, 11, 0.1) !important;
+}
+
+.ant-modal-root .ant-modal-wrap .ant-modal-confirm .ant-modal-confirm-title,
+.ant-modal-root .ant-modal-wrap .ant-modal .ant-modal-title {
+  color: #ffe2a3 !important;
+  font-family: YiHuoSerif, YiHuoNotoSans, sans-serif !important;
+  font-size: 22px !important;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 16px rgba(245, 158, 11, 0.32);
+}
+
+.ant-modal-root .ant-modal-wrap .ant-modal-confirm .ant-modal-confirm-content,
+.ant-modal-root .ant-modal-wrap .ant-modal .ant-modal-body,
+.ant-modal-root .ant-modal-wrap .ant-modal .ant-typography,
+.ant-modal-root .ant-modal-wrap .ant-modal .muted {
+  color: #ffe0aa !important;
+}
+
+.ant-modal-root .ant-modal-wrap .ant-modal-confirm .ant-modal-confirm-body > .anticon {
+  color: var(--gold) !important;
+  filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.45));
+}
+
+.ant-modal-root .ant-modal-wrap .ant-modal-confirm .ant-modal-confirm-btns .ant-btn,
+.ant-modal-root .ant-modal-wrap .ant-modal .ant-modal-footer .ant-btn {
+  color: #ffe7b5 !important;
+  background: rgba(9, 8, 11, 0.94) !important;
+  border-color: rgba(255, 184, 77, 0.42) !important;
+}
+
+.ant-modal-root .ant-modal-wrap .ant-modal-confirm .ant-modal-confirm-btns .ant-btn-primary,
+.ant-modal-root .ant-modal-wrap .ant-modal .ant-modal-footer .ant-btn-primary {
+  color: #1a0d03 !important;
+  background: linear-gradient(135deg, var(--gold), var(--gold-2)) !important;
+  border: 0 !important;
+  box-shadow: 0 10px 28px rgba(245, 158, 11, 0.3) !important;
+}
+
+.ant-modal-root .ant-modal-wrap .notify-test-head {
+  color: #241202 !important;
+  background: linear-gradient(135deg, rgba(255, 184, 77, 0.95), rgba(255, 226, 171, 0.9)) !important;
+  border-color: rgba(255, 226, 171, 0.64) !important;
+}
+
+.ant-modal-root .ant-modal-wrap .notify-test-modal pre {
+  color: #fff7e8 !important;
+  background:
+    radial-gradient(circle at 14% 0%, rgba(245, 158, 11, 0.2), transparent 42%),
+    #09080b !important;
+  border-color: rgba(255, 184, 77, 0.36) !important;
+}
