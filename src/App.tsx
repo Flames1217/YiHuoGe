@@ -134,13 +134,27 @@ const moduleName: Record<string, string> = {
 const moduleKeys = ["overview", "assets", "notifications", "ai", "settings"];
 
 const aiProviderOptions = [
-  { value: "OpenAI Compatible", label: "开放接口兼容", baseUrl: "https://api.openai.com/v1" },
+  { value: "OpenAI Compatible", label: "OpenAI Compatible", baseUrl: "https://api.openai.com/v1" },
   { value: "OpenAI", label: "OpenAI", baseUrl: "https://api.openai.com/v1" },
-  { value: "DeepSeek", label: "DeepSeek", baseUrl: "https://api.deepseek.com/v1" },
   { value: "Azure OpenAI", label: "Azure OpenAI", baseUrl: "https://{resource}.openai.azure.com/openai" },
-  { value: "Anthropic Compatible", label: "Anthropic 兼容接口", baseUrl: "https://api.anthropic.com/v1" },
-  { value: "Local OpenAI Compatible", label: "本地兼容接口", baseUrl: "http://localhost:11434/v1" },
-  { value: "Custom Compatible", label: "自定义兼容接口", baseUrl: "" },
+  { value: "Google Gemini", label: "Google Gemini", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai" },
+  { value: "Anthropic Claude", label: "Anthropic Claude", baseUrl: "https://api.anthropic.com/v1" },
+  { value: "DeepSeek", label: "DeepSeek", baseUrl: "https://api.deepseek.com/v1" },
+  { value: "xAI Grok", label: "xAI Grok", baseUrl: "https://api.x.ai/v1" },
+  { value: "Mistral AI", label: "Mistral AI", baseUrl: "https://api.mistral.ai/v1" },
+  { value: "Cohere", label: "Cohere", baseUrl: "https://api.cohere.com/v2" },
+  { value: "Groq", label: "Groq", baseUrl: "https://api.groq.com/openai/v1" },
+  { value: "OpenRouter", label: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1" },
+  { value: "Together AI", label: "Together AI", baseUrl: "https://api.together.xyz/v1" },
+  { value: "Perplexity", label: "Perplexity", baseUrl: "https://api.perplexity.ai" },
+  { value: "Fireworks AI", label: "Fireworks AI", baseUrl: "https://api.fireworks.ai/inference/v1" },
+  { value: "Alibaba DashScope / Qwen", label: "Alibaba DashScope / Qwen", baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1" },
+  { value: "Moonshot AI / Kimi", label: "Moonshot AI / Kimi", baseUrl: "https://api.moonshot.ai/v1" },
+  { value: "Zhipu AI / GLM", label: "Zhipu AI / GLM", baseUrl: "https://open.bigmodel.cn/api/paas/v4" },
+  { value: "AWS Bedrock", label: "AWS Bedrock", baseUrl: "" },
+  { value: "Ollama", label: "Ollama", baseUrl: "http://localhost:11434/v1" },
+  { value: "LM Studio", label: "LM Studio", baseUrl: "http://localhost:1234/v1" },
+  { value: "Custom OpenAI Compatible", label: "Custom OpenAI Compatible", baseUrl: "" },
 ];
 
 const timezoneOptions = [
@@ -155,21 +169,27 @@ const timezoneOptions = [
   { value: "UTC", label: "协调世界时" },
 ];
 
-const currencyOptions = [
-  { value: "CNY", label: "人民币" },
-  { value: "USD", label: "美元" },
-  { value: "EUR", label: "欧元" },
-  { value: "JPY", label: "日元" },
-  { value: "HKD", label: "港币" },
-];
-
 const currencySymbols: Record<string, string> = {
-  CNY: "¥",
+  CNY: "\u00a5",
   USD: "$",
-  EUR: "€",
-  JPY: "¥",
+  EUR: "\u20ac",
+  JPY: "\u00a5",
   HKD: "HK$",
+  GBP: "\u00a3",
+  AUD: "A$",
+  CAD: "C$",
+  SGD: "S$",
+  CHF: "CHF",
+  KRW: "\u20a9",
+  TWD: "NT$",
+  NZD: "NZ$",
+  INR: "\u20b9",
 };
+
+const currencyOptions = Object.keys(currencySymbols).map((value) => ({
+  value,
+  label: `${value} ${currencySymbols[value]}`,
+}));
 
 const currencyRatesToCny: Record<string, number> = {
   CNY: 1,
@@ -177,6 +197,15 @@ const currencyRatesToCny: Record<string, number> = {
   EUR: 7.85,
   JPY: 0.046,
   HKD: 0.93,
+  GBP: 9.2,
+  AUD: 4.75,
+  CAD: 5.28,
+  SGD: 5.38,
+  CHF: 8.1,
+  KRW: 0.0052,
+  TWD: 0.23,
+  NZD: 4.35,
+  INR: 0.087,
 };
 
 const backupTypeName: Record<BackupTarget["type"], string> = {
@@ -284,17 +313,6 @@ function whoisStatusName(status: string) {
   return map[status] ?? status;
 }
 
-function currencyName(currency: string) {
-  const map: Record<string, string> = {
-    CNY: "人民币",
-    USD: "美元",
-    EUR: "欧元",
-    JPY: "日元",
-    HKD: "港币",
-  };
-  return map[currency] ?? currency;
-}
-
 function convertCurrency(amount: number, from: string, to: string) {
   const fromRate = currencyRatesToCny[from] ?? 1;
   const toRate = currencyRatesToCny[to] ?? 1;
@@ -304,7 +322,7 @@ function convertCurrency(amount: number, from: string, to: string) {
 function formatPreferredAmount(amount: number, from: string, preferred: string) {
   const converted = convertCurrency(amount, from, preferred);
   const symbol = currencySymbols[preferred] ?? "";
-  return `${symbol}${converted.toFixed(2)} ${currencyName(preferred)}`;
+  return `${symbol}${converted.toFixed(2)}`;
 }
 
 function parseImportedAssets(text: string): Asset[] {
@@ -476,7 +494,7 @@ function OverviewModule({
       <Row gutter={[18, 18]}>
         <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricAssets")} value={assets.length} prefix={<AppstoreOutlined />} /></Card></Col>
         <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricUrgent")} value={urgent.length} styles={{ content: { color: "#ffb84d" } }} prefix={<ThunderboltOutlined />} /></Card></Col>
-        <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricBudget")} value={monthlyCost} precision={2} prefix={<DatabaseOutlined />} suffix={currencyName(settings.currency)} /></Card></Col>
+        <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricBudget")} value={monthlyCost} precision={2} prefix={<DatabaseOutlined />} suffix={currencySymbols[settings.currency] ?? settings.currency} /></Card></Col>
         <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricChannels")} value={channels.filter((item) => item.enabled).length} suffix={`/ ${channels.length}`} prefix={<BellOutlined />} /></Card></Col>
       </Row>
 
@@ -619,7 +637,7 @@ function AssetDrawer({
         <Button title="仅域名类型可用：查询 WHOIS 并把到期日写入续期日期" icon={<GlobalOutlined />} onClick={fillWhois}>查询 WHOIS 并填续期日</Button>
         <Row gutter={12}>
           <Col span={12}><Form.Item name="price" label={t("price")}><InputNumber min={0} style={{ width: "100%" }} /></Form.Item></Col>
-          <Col span={12}><Form.Item name="currency" label="货币"><Select options={[{ value: "CNY", label: "人民币" }, { value: "USD", label: "美元" }, { value: "EUR", label: "欧元" }, { value: "JPY", label: "日元" }, { value: "HKD", label: "港币" }]} /></Form.Item></Col>
+          <Col span={12}><Form.Item name="currency" label="货币"><Select showSearch options={currencyOptions} /></Form.Item></Col>
         </Row>
         <Form.Item name="url" label="服务商链接"><Input placeholder="https://..." /></Form.Item>
         <Form.Item name="tags" label="标签"><Select mode="tags" tokenSeparators={[","]} /></Form.Item>
@@ -856,6 +874,12 @@ function AiModule() {
   const [modelInput, setModelInput] = useState("");
   const [api, contextHolder] = message.useMessage();
 
+  useEffect(() => {
+    if (aiConfig.provider === "\u5f00\u653e\u63a5\u53e3\u517c\u5bb9") {
+      updateAiConfig({ provider: "OpenAI Compatible" });
+    }
+  }, [aiConfig.provider, updateAiConfig]);
+
   const runImport = () => {
     const parsed = parseImportedAssets(text);
     if (!parsed.length) {
@@ -895,7 +919,7 @@ function AiModule() {
         <div><Title level={2}>AI 炼化</Title><Text className="muted">上传文本、表格或知识库导出，交由模型炼化为可续期资产。</Text></div>
       </Flex>
       <Row className="ai-layout" gutter={[28, 28]}>
-        <Col xs={24} xl={15}>
+        <Col xs={24} xl={14}>
           <Card className="yhg-card" title="AI 炼化炉">
             <Upload.Dragger beforeUpload={() => false} maxCount={1}>
               <p className="ant-upload-drag-icon"><ImportOutlined /></p>
@@ -907,12 +931,15 @@ function AiModule() {
             </div>
           </Card>
         </Col>
-        <Col xs={24} xl={9}>
+        <Col xs={24} xl={10}>
           <Card className="yhg-card" title="炼化配置">
             <Space className="ai-config-stack" orientation="vertical" style={{ width: "100%" }}>
               <label className="field-label">模型提供方</label>
               <Select
                 showSearch
+                className="ai-provider-select"
+                popupClassName="ai-provider-dropdown"
+                popupMatchSelectWidth={560}
                 style={{ width: "100%" }}
                 value={aiConfig.provider}
                 optionFilterProp="label"
@@ -1229,13 +1256,13 @@ export default function App() {
                 <button className={settings.language === "zh" ? "active" : ""} onClick={() => setLanguage("zh")}>中文</button>
                 <button className={settings.language === "en" ? "active" : ""} onClick={() => setLanguage("en")}>英</button>
               </div>
-              <Tooltip title={t("openAssetsTip")}>
+              <Tooltip overlayClassName="yhg-tooltip" title={t("openAssetsTip")}>
                 <Button className="top-action" icon={<ApiOutlined />} onClick={() => { setActive("assets"); api.info(settings.language === "zh" ? "已打开资产管理" : "Asset management opened"); }}>{t("topAssets")}</Button>
               </Tooltip>
-              <Tooltip title={t("openSettingsTip")}>
+              <Tooltip overlayClassName="yhg-tooltip" title={t("openSettingsTip")}>
                 <Button className="top-action" icon={<SettingOutlined />} onClick={() => { setActive("settings"); api.info(settings.language === "zh" ? "已打开设置" : "Settings opened"); }}>{t("topSettings")}</Button>
               </Tooltip>
-              <Tooltip title={t("openNotificationsTip")}>
+              <Tooltip overlayClassName="yhg-tooltip" title={t("openNotificationsTip")}>
                 <Button className="top-action" icon={<BellOutlined />} onClick={() => { setActive("notifications"); api.info(settings.language === "zh" ? "已打开通知渠道" : "Notifications opened"); }}>{t("topNotifications")}</Button>
               </Tooltip>
             </Space>

@@ -7,7 +7,7 @@ export const domainsSeed: DomainRecord[] = [];
 export const channelsSeed: NotificationChannel[] = [];
 
 export const aiConfigSeed: AiConfig = {
-  provider: "开放接口兼容",
+  provider: "OpenAI Compatible",
   apiKey: "",
   baseUrl: "https://api.openai.com/v1",
   models: ["gpt-4.1", "gpt-4.1-mini", "o4-mini", "deepseek-chat"],
