@@ -1273,3 +1273,41 @@ body::after {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-height: 760px) and (min-width: 981px) {
+  .access-page {
+    padding: 28px;
+  }
+
+  .access-card {
+    min-height: calc(100dvh - 56px);
+    padding: 34px 46px;
+  }
+
+  .access-logo-ring {
+    width: 172px;
+    height: 172px;
+    margin-bottom: 14px;
+  }
+
+  .access-logo {
+    width: 136px;
+    height: 136px;
+  }
+
+  .access-card h1 {
+    font-size: clamp(70px, 7vw, 96px);
+  }
+
+  .access-mantra {
+    margin-top: 16px !important;
+  }
+
+  .access-runes {
+    margin-top: 22px;
+  }
+
+  .access-panel {
+    padding: 30px;
+  }
+}
