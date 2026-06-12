@@ -388,23 +388,43 @@ function AccessGate({
     <main className="access-page">
       {contextHolder}
       <section className="access-card">
-        <img src="/logo.png" alt="异火阁" className="access-logo" />
-        <div className="eyebrow"><LockOutlined /> {t("accessEyebrow")}</div>
-        <Title level={1}>{t("accessTitle")}</Title>
-        <Paragraph>{t("accessSubtitle")}</Paragraph>
-        <Space.Compact className="access-input">
-          <Input.Password
-            value={key}
-            onChange={(event) => setKey(event.target.value)}
-            onPressEnter={submit}
-            placeholder={t("accessPlaceholder")}
-            disabled={checking || loading}
-          />
-          <Button type="primary" loading={checking || loading} onClick={submit}>
-            {checking ? t("checking") : t("enterForge")}
-          </Button>
-        </Space.Compact>
-        <Text className="muted">{t("accessHint")}</Text>
+        <div className="access-copy">
+          <div className="access-logo-ring">
+            <img src="/logo.png" alt="异火阁" className="access-logo" />
+          </div>
+          <div className="eyebrow access-eyebrow"><LockOutlined /> {t("accessEyebrow")}</div>
+          <Title level={1}>{t("accessTitle")}</Title>
+          <Paragraph className="access-mantra">{t("accessSubtitle")}</Paragraph>
+          <div className="access-runes" aria-label="YiHuoGe capabilities">
+            <span>{t("metricAssets")}</span>
+            <span>{t("metricChannels")}</span>
+            <span>{t("aiImport")}</span>
+          </div>
+        </div>
+
+        <div className="access-panel">
+          <Text className="access-kicker">{t("accessPanelKicker")}</Text>
+          <Title level={2}>{t("accessPanelTitle")}</Title>
+          <Paragraph>{t("accessPanelDesc")}</Paragraph>
+          <Space.Compact className="access-input">
+            <Input.Password
+              value={key}
+              onChange={(event) => setKey(event.target.value)}
+              onPressEnter={submit}
+              placeholder={t("accessPlaceholder")}
+              disabled={checking || loading}
+            />
+            <Button type="primary" loading={checking || loading} onClick={submit} disabled={!key.trim()}>
+              {checking ? t("checking") : t("enterForge")}
+            </Button>
+          </Space.Compact>
+          <Text className="access-hint">{t("accessHint")}</Text>
+          <div className="access-seals" aria-hidden="true">
+            <span>炎</span>
+            <span>阁</span>
+            <span>令</span>
+          </div>
+        </div>
       </section>
     </main>
   );

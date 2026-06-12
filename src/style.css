@@ -401,64 +401,220 @@ body::after {
 }
 
 .access-page {
-  display: grid;
   min-height: 100dvh;
+  padding: clamp(28px, 5vw, 72px);
+  display: grid;
   place-items: center;
-  padding: 28px;
+  overflow: hidden;
   background:
-    radial-gradient(circle at 50% 35%, rgba(245, 158, 11, 0.2), transparent 26rem),
-    radial-gradient(circle at 62% 42%, rgba(139, 92, 246, 0.18), transparent 22rem),
+    radial-gradient(circle at 26% 34%, rgba(245, 158, 11, 0.22), transparent 28rem),
+    radial-gradient(circle at 78% 52%, rgba(139, 92, 246, 0.2), transparent 30rem),
+    linear-gradient(90deg, rgba(255, 184, 77, 0.04) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 184, 77, 0.035) 1px, transparent 1px),
     linear-gradient(135deg, #09080b, #141015 52%, #070609);
+  background-size: auto, auto, 84px 84px, 84px 84px, auto;
 }
 
 .access-card {
   position: relative;
-  width: min(560px, 100%);
-  padding: 42px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+  gap: clamp(24px, 4vw, 54px);
+  width: min(1160px, 100%);
+  min-height: min(650px, calc(100dvh - 88px));
+  padding: clamp(30px, 5vw, 64px);
   overflow: hidden;
-  text-align: center;
+  align-items: center;
   background:
-    linear-gradient(135deg, rgba(18, 18, 23, 0.94), rgba(22, 15, 14, 0.9)),
-    radial-gradient(circle at 50% 0%, rgba(255, 184, 77, 0.15), transparent 22rem);
+    radial-gradient(circle at 18% 18%, rgba(255, 184, 77, 0.18), transparent 24rem),
+    radial-gradient(circle at 92% 20%, rgba(139, 92, 246, 0.12), transparent 22rem),
+    linear-gradient(128deg, rgba(18, 18, 23, 0.95) 0 56%, rgba(36, 21, 13, 0.82) 56.3% 100%);
   border: 1px solid rgba(255, 184, 77, 0.32);
-  border-radius: 28px 10px 28px 10px;
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.52), 0 0 52px rgba(245, 158, 11, 0.12);
+  border-radius: 34px 10px 34px 10px;
+  box-shadow:
+    0 44px 120px rgba(0, 0, 0, 0.56),
+    0 0 86px rgba(245, 158, 11, 0.12),
+    inset 0 0 0 1px rgba(255, 230, 180, 0.05);
 }
 
 .access-card::before {
   position: absolute;
-  inset: 16px;
+  inset: 18px;
   pointer-events: none;
   content: "";
   border: 1px solid rgba(255, 184, 77, 0.11);
   border-radius: inherit;
+  mask-image: linear-gradient(90deg, black 0 62%, transparent 86%);
+}
+
+.access-card::after {
+  position: absolute;
+  top: -18%;
+  right: 24%;
+  width: 2px;
+  height: 138%;
+  pointer-events: none;
+  content: "";
+  background: linear-gradient(180deg, transparent, rgba(255, 184, 77, 0.56), transparent);
+  transform: rotate(18deg);
+  box-shadow: 0 0 36px rgba(245, 158, 11, 0.26);
+}
+
+.access-copy,
+.access-panel {
+  position: relative;
+  z-index: 1;
+}
+
+.access-copy {
+  display: grid;
+  justify-items: start;
+  align-content: center;
+  min-height: 470px;
 }
 
 .access-logo {
-  width: 106px;
-  height: 106px;
+  width: clamp(128px, 16vw, 188px);
+  height: clamp(128px, 16vw, 188px);
   object-fit: contain;
-  margin-bottom: 16px;
-  filter: drop-shadow(0 0 26px rgba(245, 158, 11, 0.3));
+  filter: drop-shadow(0 0 28px rgba(245, 158, 11, 0.34)) drop-shadow(0 24px 48px rgba(0, 0, 0, 0.5));
+}
+
+.access-logo-ring {
+  position: relative;
+  display: grid;
+  width: clamp(168px, 20vw, 238px);
+  height: clamp(168px, 20vw, 238px);
+  place-items: center;
+  margin-bottom: 22px;
+}
+
+.access-logo-ring::before,
+.access-logo-ring::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  border: 1px solid rgba(255, 184, 77, 0.26);
+  border-radius: 48% 52% 46% 54%;
+  box-shadow: inset 0 0 28px rgba(245, 158, 11, 0.08), 0 0 48px rgba(245, 158, 11, 0.1);
+  animation: emberMorph 7s ease-in-out infinite alternate;
+}
+
+.access-logo-ring::after {
+  inset: 18px;
+  border-color: rgba(139, 92, 246, 0.24);
+  animation-duration: 9s;
+  animation-direction: alternate-reverse;
+}
+
+.access-eyebrow {
+  margin-bottom: 18px;
 }
 
 .access-card h1 {
-  margin: 10px 0 10px;
+  margin: 0;
   color: #fff4dc;
   font-family: var(--font-display) !important;
-  font-size: clamp(48px, 8vw, 72px);
-  letter-spacing: 0.08em;
+  font-size: clamp(76px, 9vw, 124px);
+  line-height: 0.92;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 42px rgba(245, 158, 11, 0.2), 0 18px 46px rgba(0, 0, 0, 0.45);
 }
 
-.access-card p {
-  max-width: 34rem;
-  margin: 0 auto 24px;
+.access-mantra {
+  max-width: 38rem;
+  margin: 24px 0 0 !important;
   color: #ffd79a;
+  font-family: var(--font-display) !important;
+  font-size: clamp(18px, 2.2vw, 24px);
+  letter-spacing: 0.1em;
+}
+
+.access-runes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 34px;
+}
+
+.access-runes span {
+  padding: 8px 12px;
+  color: rgba(255, 237, 208, 0.78);
+  background: rgba(12, 10, 12, 0.48);
+  border: 1px solid rgba(255, 184, 77, 0.2);
+  border-radius: 999px 999px 999px 6px;
+}
+
+.access-panel {
+  align-self: center;
+  padding: clamp(28px, 3.6vw, 42px);
+  background:
+    linear-gradient(180deg, rgba(12, 11, 14, 0.9), rgba(20, 14, 12, 0.84)),
+    radial-gradient(circle at 92% 0%, rgba(255, 184, 77, 0.16), transparent 18rem);
+  border: 1px solid rgba(255, 184, 77, 0.3);
+  border-radius: 26px 8px 26px 8px;
+  box-shadow: 0 26px 82px rgba(0, 0, 0, 0.46), inset 0 0 28px rgba(245, 158, 11, 0.05);
+}
+
+.access-kicker {
+  color: var(--gold-2);
+  font-family: var(--font-number);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.access-panel h2 {
+  margin: 10px 0 10px !important;
+  color: #f7efe0 !important;
+  font-family: var(--font-display) !important;
+  font-size: clamp(32px, 4vw, 46px) !important;
+  letter-spacing: 0.12em;
+}
+
+.access-panel p {
+  margin-bottom: 24px !important;
+  color: rgba(247, 239, 224, 0.68);
 }
 
 .access-input {
-  width: min(420px, 100%);
-  margin: 0 auto 14px;
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.access-input .ant-input,
+.access-input .ant-input-affix-wrapper {
+  height: 46px;
+}
+
+.access-input .ant-btn {
+  min-width: 104px;
+  height: 46px;
+  font-weight: 900;
+}
+
+.access-hint {
+  display: block;
+  color: rgba(247, 239, 224, 0.58) !important;
+  line-height: 1.8;
+}
+
+.access-seals {
+  display: grid;
+  grid-template-columns: repeat(3, 42px);
+  gap: 10px;
+  margin-top: 30px;
+}
+
+.access-seals span {
+  display: grid;
+  height: 42px;
+  place-items: center;
+  color: rgba(255, 232, 181, 0.74);
+  font-family: var(--font-display);
+  font-size: 20px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(255, 184, 77, 0.22);
+  border-radius: 12px 3px 12px 3px;
 }
 
 .content-canvas {
@@ -1034,6 +1190,21 @@ body::after {
     grid-template-columns: 1fr;
   }
 
+  .access-card {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .access-copy {
+    justify-items: center;
+    min-height: auto;
+    text-align: center;
+  }
+
+  .access-runes {
+    justify-content: center;
+  }
+
   .hero-logo {
     width: min(300px, 78%);
   }
@@ -1054,6 +1225,35 @@ body::after {
 }
 
 @media (max-width: 720px) {
+  .access-page {
+    padding: 16px;
+  }
+
+  .access-card {
+    padding: 24px;
+    border-radius: 24px 8px 24px 8px;
+  }
+
+  .access-panel {
+    padding: 22px;
+  }
+
+  .access-card h1 {
+    font-size: clamp(56px, 20vw, 82px);
+  }
+
+  .access-input {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .access-input .ant-input-affix-wrapper,
+  .access-input .ant-btn {
+    width: 100%;
+    border-radius: 14px !important;
+  }
+
   .content-canvas {
     padding: 16px;
   }
