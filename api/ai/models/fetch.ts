@@ -55,6 +55,7 @@ async function fetchProviderModels(baseUrl: string, apiKey: string): Promise<Mod
         signal: controller.signal,
         headers: {
           Accept: "application/json",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36 YiHuoGe/1.0",
           ...(apiKey ? { Authorization: /^Bearer\s+/i.test(apiKey) ? apiKey : `Bearer ${apiKey}`, "x-api-key": apiKey.replace(/^Bearer\s+/i, "") } : {}),
           "anthropic-version": "2023-06-01",
         },
