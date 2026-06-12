@@ -1,6 +1,6 @@
 <h1>
   <img src="public/logo.png" alt="YiHuoGe" width="42" height="42" align="center">
-  YiHuoGe / 异火阁
+  异火阁 / YiHuoGe
 </h1>
 
 > 收诸般异火，掌万般续期。
