@@ -133,6 +133,16 @@ const moduleName: Record<string, string> = {
 
 const moduleKeys = ["overview", "assets", "notifications", "ai", "settings"];
 
+const aiProviderOptions = [
+  { value: "OpenAI Compatible", label: "开放接口兼容", baseUrl: "https://api.openai.com/v1" },
+  { value: "OpenAI", label: "OpenAI", baseUrl: "https://api.openai.com/v1" },
+  { value: "DeepSeek", label: "DeepSeek", baseUrl: "https://api.deepseek.com/v1" },
+  { value: "Azure OpenAI", label: "Azure OpenAI", baseUrl: "https://{resource}.openai.azure.com/openai" },
+  { value: "Anthropic Compatible", label: "Anthropic 兼容接口", baseUrl: "https://api.anthropic.com/v1" },
+  { value: "Local OpenAI Compatible", label: "本地兼容接口", baseUrl: "http://localhost:11434/v1" },
+  { value: "Custom Compatible", label: "自定义兼容接口", baseUrl: "" },
+];
+
 const timezoneOptions = [
   { value: "Asia/Shanghai", label: "亚洲/上海" },
   { value: "Asia/Tokyo", label: "亚洲/东京" },
@@ -884,22 +894,33 @@ function AiModule() {
       <Flex className="module-head" justify="space-between" wrap="wrap">
         <div><Title level={2}>AI 炼化</Title><Text className="muted">上传文本、表格或知识库导出，交由模型炼化为可续期资产。</Text></div>
       </Flex>
-      <Row gutter={[18, 18]}>
-        <Col xs={24} xl={14}>
+      <Row className="ai-layout" gutter={[28, 28]}>
+        <Col xs={24} xl={15}>
           <Card className="yhg-card" title="AI 炼化炉">
             <Upload.Dragger beforeUpload={() => false} maxCount={1}>
               <p className="ant-upload-drag-icon"><ImportOutlined /></p>
               <p>拖拽表格、清单或知识库导出文件到此处（当前为前端炼化示例）</p>
             </Upload.Dragger>
-            <TextArea className="import-textarea" rows={9} value={text} onChange={(event) => setText(event.target.value)} />
-            <Button title="把上方文本解析为资产并加入资产管理" type="primary" icon={<RobotOutlined />} onClick={runImport}>开始炼化资产</Button>
+            <TextArea className="import-textarea" rows={10} value={text} onChange={(event) => setText(event.target.value)} />
+            <div className="ai-forge-actions">
+              <Button className="ai-forge-button" title="把上方文本解析为资产并加入资产管理" type="primary" icon={<RobotOutlined />} onClick={runImport}>开始炼化资产</Button>
+            </div>
           </Card>
         </Col>
-        <Col xs={24} xl={10}>
+        <Col xs={24} xl={9}>
           <Card className="yhg-card" title="炼化配置">
-            <Space orientation="vertical" style={{ width: "100%" }}>
+            <Space className="ai-config-stack" orientation="vertical" style={{ width: "100%" }}>
               <label className="field-label">模型提供方</label>
-              <Input value={aiConfig.provider} onChange={(event) => updateAiConfig({ provider: event.target.value })} />
+              <Select
+                showSearch
+                value={aiConfig.provider}
+                optionFilterProp="label"
+                onChange={(value) => {
+                  const preset = aiProviderOptions.find((item) => item.value === value);
+                  updateAiConfig({ provider: value, ...(preset?.baseUrl ? { baseUrl: preset.baseUrl } : {}) });
+                }}
+                options={aiProviderOptions.map(({ value, label }) => ({ value, label }))}
+              />
               <label className="field-label">接口密钥</label>
               <Input.Password value={aiConfig.apiKey} autoComplete="new-password" onChange={(event) => updateAiConfig({ apiKey: event.target.value })} placeholder="sk-..." />
               <label className="field-label">接口地址</label>
