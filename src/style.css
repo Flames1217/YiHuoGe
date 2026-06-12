@@ -11,7 +11,7 @@
   --purple: #8b5cf6;
   --text: #f7efe0;
   --muted: rgba(247, 239, 224, 0.62);
-  --font-ui: "YiHuoZhongHei", "YiHuoNotoSans", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+  --font-ui: "YiHuoNotoSans", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", "PingFang SC", system-ui, sans-serif;
   --font-display: "YiHuoXingKai", "YiHuoKai", serif;
   --font-number: "DIN Alternate", "Bahnschrift", "Cascadia Mono", "Consolas", monospace;
 }
@@ -31,13 +31,13 @@
 @font-face {
   font-family: "YiHuoNotoSans";
   src: url("/fonts/NotoSansSC-VF.ttf") format("truetype");
-  font-display: swap;
+  font-display: block;
 }
 
 @font-face {
   font-family: "YiHuoKai";
   src: url("/fonts/STKAITI.TTF") format("truetype");
-  font-display: swap;
+  font-display: block;
 }
 
 * {
