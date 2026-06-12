@@ -564,7 +564,7 @@ body::after {
 }
 
 .access-panel h2 {
-  margin: 10px 0 10px !important;
+  margin: 0 0 26px !important;
   color: #f7efe0 !important;
   font-family: var(--font-display) !important;
   font-size: clamp(32px, 4vw, 46px) !important;
@@ -584,6 +584,21 @@ body::after {
 .access-input .ant-input,
 .access-input .ant-input-affix-wrapper {
   height: 46px;
+  line-height: 46px;
+  display: flex;
+  align-items: center;
+}
+
+.access-input .ant-input-affix-wrapper input.ant-input {
+  height: 44px;
+  line-height: 44px;
+  padding-top: 0;
+  padding-bottom: 0;
+  display: block;
+}
+
+.access-input input::placeholder {
+  line-height: 44px;
 }
 
 .access-input .ant-btn {
@@ -596,22 +611,25 @@ body::after {
   display: block;
   color: rgba(247, 239, 224, 0.58) !important;
   line-height: 1.8;
+  white-space: nowrap;
 }
 
 .access-seals {
-  display: grid;
-  grid-template-columns: repeat(3, 42px);
-  gap: 10px;
+  display: flex;
   margin-top: 30px;
 }
 
 .access-seals span {
-  display: grid;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 118px;
   height: 42px;
-  place-items: center;
+  padding: 0 18px;
   color: rgba(255, 232, 181, 0.74);
   font-family: var(--font-display);
   font-size: 20px;
+  letter-spacing: 0.12em;
   background: rgba(245, 158, 11, 0.08);
   border: 1px solid rgba(255, 184, 77, 0.22);
   border-radius: 12px 3px 12px 3px;

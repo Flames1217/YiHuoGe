@@ -403,9 +403,7 @@ function AccessGate({
         </div>
 
         <div className="access-panel">
-          <Text className="access-kicker">{t("accessPanelKicker")}</Text>
           <Title level={2}>{t("accessPanelTitle")}</Title>
-          <Paragraph>{t("accessPanelDesc")}</Paragraph>
           <Space.Compact className="access-input">
             <Input.Password
               value={key}
@@ -420,9 +418,7 @@ function AccessGate({
           </Space.Compact>
           <Text className="access-hint">{t("accessHint")}</Text>
           <div className="access-seals" aria-hidden="true">
-            <span>炎</span>
-            <span>阁</span>
-            <span>令</span>
+            <span>异火阁令</span>
           </div>
         </div>
       </section>
