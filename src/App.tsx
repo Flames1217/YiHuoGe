@@ -1154,6 +1154,22 @@ function AiModule() {
     }
   }, [aiConfig.provider, updateAiConfig]);
 
+  const readForgeFile = async (file: File) => {
+    try {
+      const content = (await file.text()).trim();
+      if (!content) {
+        api.warning("??????????????");
+        return false;
+      }
+      setText((current) => current.trim() ? `${current.trim()}
+${content}` : content);
+      api.success(`??? ${file.name}????????`);
+    } catch {
+      api.error("?????????? CSV ??????");
+    }
+    return false;
+  };
+
   const runImport = () => {
     const parsed = parseImportedAssets(text);
     if (!parsed.length) {
@@ -1199,7 +1215,7 @@ function AiModule() {
       <Row className="ai-layout" gutter={[28, 28]}>
         <Col xs={24} xl={14}>
           <Card className="yhg-card" title="AI 炼化炉">
-            <Upload.Dragger beforeUpload={() => false} maxCount={1}>
+            <Upload.Dragger beforeUpload={readForgeFile} maxCount={1} accept=".csv,.txt,.tsv,text/csv,text/plain">
               <p className="ant-upload-drag-icon"><ImportOutlined /></p>
               <p>将表格、清单或知识库残卷投入此炉（当前为前端炼化示例）</p>
             </Upload.Dragger>
