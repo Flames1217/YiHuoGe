@@ -962,7 +962,7 @@ function ChannelDrawer({ open, editing, onClose }: { open: boolean; editing?: No
   };
 
   const testTemplate = async () => {
-    const values = await form.validateFields();
+    const values = form.getFieldsValue(true) as NotificationChannel;
     const type = values.type ?? "Webhook";
     const template = values.template || defaultNotifyTemplate(type);
     Modal.info({
