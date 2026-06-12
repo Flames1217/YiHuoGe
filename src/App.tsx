@@ -244,11 +244,11 @@ const channelTypeName: Record<NotifyType, string> = {
   Discord: "Discord",
   Slack: "Slack",
   Webhook: "Webhook",
-  DingTalk: "DingTalk",
-  WeCom: "WeCom",
-  Feishu: "Feishu",
+  DingTalk: "\u9489\u9489",
+  WeCom: "\u4f01\u4e1a\u5fae\u4fe1",
+  Feishu: "\u98de\u4e66",
   Bark: "Bark",
-  ServerChan: "ServerChan",
+  ServerChan: "Server\u9171",
   PushPlus: "PushPlus",
   ntfy: "ntfy",
   Gotify: "Gotify",
@@ -879,8 +879,8 @@ function NotificationsModule() {
     <div className="module-stack">
       {contextHolder}
       <Flex className="module-head" justify="space-between" wrap="wrap">
-        <div><Title level={2}>{t("notifications")}</Title><Text className="muted">Email、Telegram、Discord、Slack、Webhook、DingTalk、WeCom、Feishu、Bark、ServerChan、PushPlus、ntfy、Gotify、Pushover、Teams、Google Chat、Matrix 等主流渠道。</Text></div>
-        <Button title="新增 Email、Telegram、Discord、Webhook、DingTalk 等通知渠道" type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setOpen(true); }}>新增渠道</Button>
+        <div><Title level={2}>{t("notifications")}</Title><Text className="muted">Email、Telegram、Discord、Slack、Webhook、钉钉、企业微信、飞书、Bark、Server酱、PushPlus、ntfy、Gotify、Pushover、Teams、Google Chat、Matrix 等主流渠道。</Text></div>
+        <Button title="新增 Email、Telegram、Discord、Webhook、钉钉、企业微信、飞书等通知渠道" type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setOpen(true); }}>新增渠道</Button>
       </Flex>
       <Card className="yhg-card"><Table rowKey="id" dataSource={channels} columns={columns} pagination={false} /></Card>
       <ChannelDrawer open={open} editing={editing} onClose={() => setOpen(false)} />

@@ -56,7 +56,7 @@ export const resources = {
       metricChannels: "通知阵法",
       openAssetsTip: "打开资产管理；新增域名时会自动查询 WHOIS 并填续期日",
       openSettingsTip: "打开设置；可配置时区、偏好币种与多种备份方式",
-      openNotificationsTip: "打开通知渠道；配置 Email、Telegram、Discord、Webhook 与移动推送",
+      openNotificationsTip: "打开通知渠道；配置 Email、Telegram、Discord、Webhook、钉钉、企业微信与移动推送",
     },
   },
   en: {
