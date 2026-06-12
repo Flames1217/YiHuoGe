@@ -56,7 +56,7 @@ export const resources = {
       metricChannels: "通知阵法",
       openAssetsTip: "打开资产管理；新增域名时会自动查询 WHOIS 并填续期日",
       openSettingsTip: "打开设置；可配置时区、偏好币种与多种备份方式",
-      openNotificationsTip: "打开通知渠道；配置邮件、Webhook 与移动推送",
+      openNotificationsTip: "打开通知渠道；配置 Email、Telegram、Discord、Webhook 与移动推送",
     },
   },
   en: {
@@ -113,7 +113,7 @@ export const resources = {
       metricChannels: "Channels",
       openAssetsTip: "Open asset management; domain assets can auto-fill renewal dates via WHOIS",
       openSettingsTip: "Open settings; configure timezone, currency, and backup targets",
-      openNotificationsTip: "Open notification channels; configure Email, Webhook, and mobile push",
+      openNotificationsTip: "Open notification channels; configure Email, Telegram, Discord, Webhook, and mobile push",
     },
   },
 };

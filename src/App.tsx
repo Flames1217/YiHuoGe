@@ -239,18 +239,31 @@ const themePalettes = {
 };
 
 const channelTypeName: Record<NotifyType, string> = {
-  Email: "电子邮件",
-  Telegram: "电报",
-  Discord: "群组",
-  Slack: "协作群",
-  Webhook: "网络钩子",
-  DingTalk: "钉钉",
-  WeCom: "企业微信",
-  Feishu: "飞书",
-  Bark: "手机推送",
-  ServerChan: "方糖推送",
-  PushPlus: "推送加",
-  Custom: "自定义",
+  Email: "Email",
+  Telegram: "Telegram",
+  Discord: "Discord",
+  Slack: "Slack",
+  Webhook: "Webhook",
+  DingTalk: "DingTalk",
+  WeCom: "WeCom",
+  Feishu: "Feishu",
+  Bark: "Bark",
+  ServerChan: "ServerChan",
+  PushPlus: "PushPlus",
+  ntfy: "ntfy",
+  Gotify: "Gotify",
+  Pushover: "Pushover",
+  "Microsoft Teams": "Microsoft Teams",
+  "Google Chat": "Google Chat",
+  Matrix: "Matrix",
+  Mattermost: "Mattermost",
+  "Rocket.Chat": "Rocket.Chat",
+  Signal: "Signal",
+  LINE: "LINE",
+  Pushbullet: "Pushbullet",
+  "AWS SNS": "AWS SNS",
+  Twilio: "Twilio",
+  Custom: "Custom",
 };
 
 const notifyTypes: NotifyType[] = [
@@ -265,6 +278,19 @@ const notifyTypes: NotifyType[] = [
   "Bark",
   "ServerChan",
   "PushPlus",
+  "ntfy",
+  "Gotify",
+  "Pushover",
+  "Microsoft Teams",
+  "Google Chat",
+  "Matrix",
+  "Mattermost",
+  "Rocket.Chat",
+  "Signal",
+  "LINE",
+  "Pushbullet",
+  "AWS SNS",
+  "Twilio",
   "Custom",
 ];
 
@@ -801,7 +827,7 @@ function ChannelDrawer({ open, editing, onClose }: { open: boolean; editing?: No
     <Drawer size="large" open={open} onClose={onClose} title={editing ? "编辑通知渠道" : "新增通知渠道"} extra={<Button title="保存当前通知渠道配置" type="primary" onClick={save}>保存</Button>}>
       <Form form={form} layout="vertical">
         <Form.Item name="name" label="名称" rules={[{ required: true }]}><Input /></Form.Item>
-        <Form.Item name="type" label="类型"><Select options={notifyTypes.map((value) => ({ value, label: channelTypeName[value] }))} /></Form.Item>
+        <Form.Item name="type" label="类型"><Select showSearch options={notifyTypes.map((value) => ({ value, label: channelTypeName[value] }))} /></Form.Item>
         <Form.Item name="target" label="目标地址 / Chat ID / Webhook" rules={[{ required: true }]}><Input /></Form.Item>
         <Form.Item name="secretMasked" label="密钥（仅展示掩码）"><Input placeholder="***" /></Form.Item>
         <Form.Item name="enabled" label="启用" valuePropName="checked"><Switch /></Form.Item>
@@ -853,8 +879,8 @@ function NotificationsModule() {
     <div className="module-stack">
       {contextHolder}
       <Flex className="module-head" justify="space-between" wrap="wrap">
-        <div><Title level={2}>{t("notifications")}</Title><Text className="muted">电子邮件、电报、群组协作、网络钩子、钉钉、企业微信、飞书、手机推送、方糖推送、推送加与自定义渠道。</Text></div>
-        <Button title="新增邮件、Webhook、钉钉、飞书等通知渠道" type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setOpen(true); }}>新增渠道</Button>
+        <div><Title level={2}>{t("notifications")}</Title><Text className="muted">Email、Telegram、Discord、Slack、Webhook、DingTalk、WeCom、Feishu、Bark、ServerChan、PushPlus、ntfy、Gotify、Pushover、Teams、Google Chat、Matrix 等主流渠道。</Text></div>
+        <Button title="新增 Email、Telegram、Discord、Webhook、DingTalk 等通知渠道" type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setOpen(true); }}>新增渠道</Button>
       </Flex>
       <Card className="yhg-card"><Table rowKey="id" dataSource={channels} columns={columns} pagination={false} /></Card>
       <ChannelDrawer open={open} editing={editing} onClose={() => setOpen(false)} />

@@ -15,6 +15,19 @@ export type NotifyType =
   | "Bark"
   | "ServerChan"
   | "PushPlus"
+  | "ntfy"
+  | "Gotify"
+  | "Pushover"
+  | "Microsoft Teams"
+  | "Google Chat"
+  | "Matrix"
+  | "Mattermost"
+  | "Rocket.Chat"
+  | "Signal"
+  | "LINE"
+  | "Pushbullet"
+  | "AWS SNS"
+  | "Twilio"
   | "Custom";
 
 export interface Asset {
