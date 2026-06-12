@@ -1402,7 +1402,7 @@ export default function App() {
   const [now, setNow] = useState(() => new Date());
   const [api, contextHolder] = message.useMessage();
   const [accessState, setAccessState] = useState<AccessState>(() =>
-    window.localStorage.getItem(ADMIN_KEY_STORAGE) ? "checking" : "locked",
+    window.localStorage.getItem(ADMIN_KEY_STORAGE) ? "unlocked" : "locked",
   );
   const [savedAccessKey, setSavedAccessKey] = useState(() => window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "");
 
@@ -1429,7 +1429,9 @@ export default function App() {
   useEffect(() => {
     const stored = window.localStorage.getItem(ADMIN_KEY_STORAGE);
     if (!stored) return;
-    unlock(stored);
+    setSavedAccessKey(stored);
+    setAccessState("unlocked");
+    void hydrateFromServer(stored);
   }, []);
 
   useEffect(() => {
