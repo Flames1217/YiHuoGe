@@ -372,6 +372,20 @@ body::after {
   justify-content: flex-end;
 }
 
+.ant-tooltip .ant-tooltip-inner {
+  color: #ffe7b5 !important;
+  background:
+    linear-gradient(135deg, rgba(18, 14, 12, 0.98), rgba(38, 22, 12, 0.94)),
+    radial-gradient(circle at 18% 20%, rgba(245, 158, 11, 0.2), transparent 48%) !important;
+  border: 1px solid rgba(255, 184, 77, 0.32);
+  border-radius: 12px !important;
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.46), inset 0 0 18px rgba(245, 158, 11, 0.08);
+}
+
+.ant-tooltip .ant-tooltip-arrow::before {
+  background: rgba(30, 18, 10, 0.98) !important;
+}
+
 .date-tag {
   padding: 5px 11px;
   color: #ffedd0 !important;
@@ -384,6 +398,67 @@ body::after {
   font-weight: 800;
   background: linear-gradient(135deg, var(--gold), var(--gold-2));
   box-shadow: 0 0 20px rgba(245, 158, 11, 0.24);
+}
+
+.access-page {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 28px;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(245, 158, 11, 0.2), transparent 26rem),
+    radial-gradient(circle at 62% 42%, rgba(139, 92, 246, 0.18), transparent 22rem),
+    linear-gradient(135deg, #09080b, #141015 52%, #070609);
+}
+
+.access-card {
+  position: relative;
+  width: min(560px, 100%);
+  padding: 42px;
+  overflow: hidden;
+  text-align: center;
+  background:
+    linear-gradient(135deg, rgba(18, 18, 23, 0.94), rgba(22, 15, 14, 0.9)),
+    radial-gradient(circle at 50% 0%, rgba(255, 184, 77, 0.15), transparent 22rem);
+  border: 1px solid rgba(255, 184, 77, 0.32);
+  border-radius: 28px 10px 28px 10px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.52), 0 0 52px rgba(245, 158, 11, 0.12);
+}
+
+.access-card::before {
+  position: absolute;
+  inset: 16px;
+  pointer-events: none;
+  content: "";
+  border: 1px solid rgba(255, 184, 77, 0.11);
+  border-radius: inherit;
+}
+
+.access-logo {
+  width: 106px;
+  height: 106px;
+  object-fit: contain;
+  margin-bottom: 16px;
+  filter: drop-shadow(0 0 26px rgba(245, 158, 11, 0.3));
+}
+
+.access-card h1 {
+  margin: 10px 0 10px;
+  color: #fff4dc;
+  font-family: var(--font-display) !important;
+  font-size: clamp(48px, 8vw, 72px);
+  letter-spacing: 0.08em;
+}
+
+.access-card p {
+  max-width: 34rem;
+  margin: 0 auto 24px;
+  color: #ffd79a;
+}
+
+.access-input {
+  width: min(420px, 100%);
+  margin: 0 auto 14px;
 }
 
 .content-canvas {

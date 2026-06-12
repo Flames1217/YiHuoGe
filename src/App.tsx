@@ -12,6 +12,7 @@ import {
   GlobalOutlined,
   ImportOutlined,
   LayoutOutlined,
+  LockOutlined,
   PlusOutlined,
   RobotOutlined,
   SearchOutlined,
@@ -19,7 +20,6 @@ import {
   ThunderboltOutlined,
 } from "@ant-design/icons";
 import {
-  Badge,
   Button,
   Card,
   Col,
@@ -66,6 +66,31 @@ const { Header, Sider, Content } = Layout;
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const ADMIN_KEY_STORAGE = "yihuoge-admin-key";
+
+type AccessState = "checking" | "locked" | "unlocked";
+
+async function verifyAdminKey(key: string) {
+  const response = await fetch("/api/auth/verify", {
+    method: "POST",
+    headers: key ? { "x-admin-key": key } : undefined,
+  });
+  return response.ok;
+}
+
+async function hydrateFromServer(key: string) {
+  const response = await fetch("/api/bootstrap", {
+    headers: key ? { "x-admin-key": key } : undefined,
+  });
+  if (!response.ok) return;
+  const data = await response.json();
+  useYiHuoStore.setState((state) => ({
+    assets: Array.isArray(data.assets) ? data.assets : state.assets,
+    domains: Array.isArray(data.domains) ? data.domains : state.domains,
+    channels: Array.isArray(data.channels) ? data.channels : state.channels,
+    aiConfig: data.ai ? { ...state.aiConfig, ...data.ai } : state.aiConfig,
+    settings: data.settings ? { ...state.settings, ...data.settings } : state.settings,
+  }));
+}
 
 const statusTone: Record<AssetStatus, string> = {
   healthy: "success",
@@ -338,6 +363,53 @@ function useFilteredAssets(globalSearch = "") {
   return { filtered, keyword, setKeyword, type, setType };
 }
 
+function AccessGate({
+  initialKey,
+  checking,
+  onUnlock,
+}: {
+  initialKey: string;
+  checking: boolean;
+  onUnlock: (key: string) => Promise<boolean>;
+}) {
+  const { t } = useTranslation();
+  const [key, setKey] = useState(initialKey);
+  const [loading, setLoading] = useState(false);
+  const [api, contextHolder] = message.useMessage();
+
+  const submit = async () => {
+    setLoading(true);
+    const ok = await onUnlock(key.trim());
+    setLoading(false);
+    if (!ok) api.error(t("accessError"));
+  };
+
+  return (
+    <main className="access-page">
+      {contextHolder}
+      <section className="access-card">
+        <img src="/logo.png" alt="异火阁" className="access-logo" />
+        <div className="eyebrow"><LockOutlined /> {t("accessEyebrow")}</div>
+        <Title level={1}>{t("accessTitle")}</Title>
+        <Paragraph>{t("accessSubtitle")}</Paragraph>
+        <Space.Compact className="access-input">
+          <Input.Password
+            value={key}
+            onChange={(event) => setKey(event.target.value)}
+            onPressEnter={submit}
+            placeholder={t("accessPlaceholder")}
+            disabled={checking || loading}
+          />
+          <Button type="primary" loading={checking || loading} onClick={submit}>
+            {checking ? t("checking") : t("enterForge")}
+          </Button>
+        </Space.Compact>
+        <Text className="muted">{t("accessHint")}</Text>
+      </section>
+    </main>
+  );
+}
+
 function OverviewModule({
   setActive,
   onQuickAdd,
@@ -358,28 +430,28 @@ function OverviewModule({
       <section className="hero-panel">
         <div className="hero-copy">
           <div className="eyebrow"><FireOutlined /> 异火阁</div>
-          <Title level={1}>收诸般异火，掌万般续期。</Title>
-          <Paragraph className="hero-mantra">异火现，万火臣服；续期至，诸事有凭。</Paragraph>
-          <Text className="muted">统一管理域名、云主机、云服务、智能订阅、会员订阅及续费提醒。</Text>
+          <Title level={1}>{t("heroTitle")}</Title>
+          <Paragraph className="hero-mantra">{t("heroMantra")}</Paragraph>
+          <Text className="muted">{t("heroDesc")}</Text>
           <Space wrap className="hero-actions">
             <Button title="新增一条域名、云主机、订阅或自定义资产" type="primary" icon={<PlusOutlined />} onClick={onQuickAdd}>{t("addAsset")}</Button>
             <Button title="进入 AI 炼化页，从文本或表格自动生成资产" icon={<ImportOutlined />} onClick={() => setActive("ai")}>{t("aiImport")}</Button>
           </Space>
         </div>
-        <div className="hero-visual hero-logo-stage" aria-label="异火阁标识与续期告警">
-          <img className="hero-logo" src="/logo.png" alt="异火阁" />
-          <div className="hero-logo-badge">
+        <div className="hero-visual" aria-label="异火榜续期告警">
+          <div className="flame-orb">
+            <span />
             <strong>{urgent.length}</strong>
-            <span>急焰待续</span>
+            <em>{t("urgentFlame")}</em>
           </div>
         </div>
       </section>
 
       <Row gutter={[18, 18]}>
-        <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title="资产火种" value={assets.length} prefix={<AppstoreOutlined />} /></Card></Col>
-        <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title="14 日急焰" value={urgent.length} styles={{ content: { color: "#ffb84d" } }} prefix={<ThunderboltOutlined />} /></Card></Col>
-        <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title="月度预算支出" value={monthlyCost} precision={2} prefix={<DatabaseOutlined />} suffix={currencyName(settings.currency)} /></Card></Col>
-        <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title="通知阵法" value={channels.filter((item) => item.enabled).length} suffix={`/ ${channels.length}`} prefix={<BellOutlined />} /></Card></Col>
+        <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricAssets")} value={assets.length} prefix={<AppstoreOutlined />} /></Card></Col>
+        <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricUrgent")} value={urgent.length} styles={{ content: { color: "#ffb84d" } }} prefix={<ThunderboltOutlined />} /></Card></Col>
+        <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricBudget")} value={monthlyCost} precision={2} prefix={<DatabaseOutlined />} suffix={currencyName(settings.currency)} /></Card></Col>
+        <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricChannels")} value={channels.filter((item) => item.enabled).length} suffix={`/ ${channels.length}`} prefix={<BellOutlined />} /></Card></Col>
       </Row>
 
       <Row gutter={[18, 18]}>
@@ -754,12 +826,16 @@ function AiModule() {
   const addModel = useYiHuoStore((state) => state.addModel);
   const removeModel = useYiHuoStore((state) => state.removeModel);
   const importAssets = useYiHuoStore((state) => state.importAssets);
-  const [text, setText] = useState("异火阁主域名,域名,火网注册局,2026-07-18,11.2\n开放智能接口额度,智能订阅,开放智能,2026-08-01,20");
+  const [text, setText] = useState("");
   const [modelInput, setModelInput] = useState("");
   const [api, contextHolder] = message.useMessage();
 
   const runImport = () => {
     const parsed = parseImportedAssets(text);
+    if (!parsed.length) {
+      api.warning("请先粘贴需要炼化的资产文本");
+      return;
+    }
     importAssets(parsed);
     api.success(`已生成 ${parsed.length} 条资产`);
   };
@@ -986,10 +1062,41 @@ export default function App() {
   const [quickCreateNonce, setQuickCreateNonce] = useState(0);
   const [now, setNow] = useState(() => new Date());
   const [api, contextHolder] = message.useMessage();
+  const [accessState, setAccessState] = useState<AccessState>(() =>
+    window.localStorage.getItem(ADMIN_KEY_STORAGE) ? "checking" : "locked",
+  );
+  const [savedAccessKey, setSavedAccessKey] = useState(() => window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "");
+
+  const unlock = async (key: string) => {
+    try {
+      const ok = await verifyAdminKey(key);
+      if (!ok) {
+        window.localStorage.removeItem(ADMIN_KEY_STORAGE);
+        setSavedAccessKey("");
+        setAccessState("locked");
+        return false;
+      }
+      window.localStorage.setItem(ADMIN_KEY_STORAGE, key);
+      setSavedAccessKey(key);
+      await hydrateFromServer(key);
+      setAccessState("unlocked");
+      return true;
+    } catch {
+      setAccessState("locked");
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(ADMIN_KEY_STORAGE);
+    if (!stored) return;
+    unlock(stored);
+  }, []);
 
   useEffect(() => {
     i18n.changeLanguage(settings.language);
     dayjs.locale(settings.language === "zh" ? "zh-cn" : "en");
+    document.title = settings.language === "zh" ? "异火阁-天下万火，尽纳于此" : "YiHuoGe - All Flames Gathered Here";
   }, [i18n, settings.language]);
 
   useEffect(() => {
@@ -1040,7 +1147,7 @@ export default function App() {
           colorTextBase: palette.text,
           colorBorder: `${palette.primary}44`,
           borderRadius: 14,
-          fontFamily: "YiHuoZhongHei, YiHuoNotoSans, 'Microsoft YaHei UI', 'Microsoft YaHei', system-ui, sans-serif",
+          fontFamily: "YiHuoNotoSans, 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'PingFang SC', system-ui, sans-serif",
         },
         components: {
           Layout: { siderBg: "#0b0b0f", headerBg: "rgba(11,11,15,.88)", bodyBg: "#0b0b0f" },
@@ -1050,13 +1157,16 @@ export default function App() {
       }}
     >
       {contextHolder}
+      {accessState !== "unlocked" ? (
+        <AccessGate initialKey={savedAccessKey} checking={accessState === "checking"} onUnlock={unlock} />
+      ) : (
         <Layout className={`app-shell theme-${settings.theme}`}>
         <Sider width={268} className="side-nav" breakpoint="lg" collapsedWidth={0}>
           <div className="brand-mark">
             <img className="brand-logo" src="/logo.png" alt="异火阁" />
             <div>
               <strong>异火阁</strong>
-              <span>资产阁令</span>
+              <span>{t("brandMotto")}</span>
             </div>
           </div>
           <Menu mode="inline" selectedKeys={[active]} items={menuItems} onClick={({ key }) => setActive(key)} />
@@ -1081,20 +1191,21 @@ export default function App() {
                 <button className={settings.language === "zh" ? "active" : ""} onClick={() => setLanguage("zh")}>中文</button>
                 <button className={settings.language === "en" ? "active" : ""} onClick={() => setLanguage("en")}>英</button>
               </div>
-              <Tooltip title="打开资产管理；新增域名时会自动查询 WHOIS 并填续期日">
-                <Button className="top-action" icon={<ApiOutlined />} onClick={() => { setActive("assets"); api.info("已打开资产管理"); }}>资产</Button>
+              <Tooltip title={t("openAssetsTip")}>
+                <Button className="top-action" icon={<ApiOutlined />} onClick={() => { setActive("assets"); api.info(settings.language === "zh" ? "已打开资产管理" : "Asset management opened"); }}>{t("topAssets")}</Button>
               </Tooltip>
-              <Tooltip title="打开设置；可配置时区、偏好币种与多种备份方式">
-                <Button className="top-action" icon={<SettingOutlined />} onClick={() => { setActive("settings"); api.info("已打开设置"); }}>设置</Button>
+              <Tooltip title={t("openSettingsTip")}>
+                <Button className="top-action" icon={<SettingOutlined />} onClick={() => { setActive("settings"); api.info(settings.language === "zh" ? "已打开设置" : "Settings opened"); }}>{t("topSettings")}</Button>
               </Tooltip>
-              <Tooltip title="通知渠道">
-                <Badge dot><Button className="top-action" icon={<BellOutlined />} onClick={() => { setActive("notifications"); api.info("已打开通知渠道"); }}>通知</Button></Badge>
+              <Tooltip title={t("openNotificationsTip")}>
+                <Button className="top-action" icon={<BellOutlined />} onClick={() => { setActive("notifications"); api.info(settings.language === "zh" ? "已打开通知渠道" : "Notifications opened"); }}>{t("topNotifications")}</Button>
               </Tooltip>
             </Space>
           </Header>
           <Content className="content-canvas">{module}</Content>
         </Layout>
-      </Layout>
+        </Layout>
+      )}
     </ConfigProvider>
   );
 }

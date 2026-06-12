@@ -1,5 +1,6 @@
 import cors from "cors";
 import express from "express";
+import type { Request } from "express";
 import { existsSync, readFileSync, promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -82,66 +83,20 @@ interface Database {
 }
 
 const seed: Database = {
-  assets: [
-    {
-      id: "api-domain-yihuoge",
-      name: "yihuoge.dev",
-      type: "domain",
-      provider: "Cloudflare Registrar",
-      account: "root@yihuoge.local",
-      renewalDate: "2026-07-18",
-      price: 11.2,
-      currency: "USD",
-      cycle: "yearly",
-      status: "warning",
-      tags: ["domain", "dns", "core"],
-    },
-  ],
-  domains: [
-    {
-      id: "api-domain-yihuoge",
-      name: "yihuoge.dev",
-      type: "domain",
-      provider: "Cloudflare Registrar",
-      account: "root@yihuoge.local",
-      renewalDate: "2026-07-18",
-      price: 11.2,
-      currency: "USD",
-      cycle: "yearly",
-      status: "warning",
-      tags: ["domain", "dns", "core"],
-      registrar: "Cloudflare Registrar",
-      createdAt: "2024-07-18",
-      expiresAt: "2026-07-18",
-      dns: ["aria.ns.cloudflare.com", "dax.ns.cloudflare.com"],
-      whoisStatus: ["clientTransferProhibited", "autoRenewPeriod"],
-    },
-  ],
-  channels: [
-    {
-      id: "api-email",
-      name: "阁主邮箱",
-      type: "Email",
-      enabled: true,
-      target: "renew@yihuoge.local",
-      secretMasked: "smtp://***",
-    },
-  ],
+  assets: [],
+  domains: [],
+  channels: [],
   ai: {
     provider: "OpenAI Compatible",
     baseUrl: "https://api.openai.com/v1",
-    models: ["gpt-4.1", "gpt-4.1-mini", "o4-mini"],
+    models: ["gpt-4.1-mini"],
     defaultModel: "gpt-4.1-mini",
   },
   settings: {
     language: "zh",
     timezone: "Asia/Shanghai",
     currency: "CNY",
-    backupTargets: [
-      { id: "api-backup-webdav", name: "网盘镜像", type: "WebDAV", target: "https://dav.example.local/yihuoge", enabled: true },
-      { id: "api-backup-s3", name: "对象存储仓", type: "S3", target: "s3://yihuoge-backup", enabled: false },
-      { id: "api-backup-git-json", name: "Git JSON 仓库", type: "GitJson", target: "git@example.local:yihuoge/backup-json.git:data/yihuoge.json", enabled: false },
-    ],
+    backupTargets: [],
   },
 };
 
@@ -216,13 +171,19 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "3mb" }));
 
+function hasValidAdminKey(req: Request) {
+  return !adminKey || req.header("x-admin-key") === adminKey || req.header("authorization") === `Bearer ${adminKey}`;
+}
+
 app.use((req, res, next) => {
   const protectedMethod = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method);
-  if (!adminKey || !protectedMethod) {
+  const protectedRead = req.path.startsWith("/api/bootstrap") || req.path.startsWith("/api/assets") || req.path.startsWith("/api/channels") || req.path.startsWith("/api/settings");
+  const publicPath = req.path === "/api/health" || req.path === "/api/auth/verify";
+  if (publicPath || !adminKey || (!protectedMethod && !protectedRead)) {
     next();
     return;
   }
-  if (req.header("x-admin-key") === adminKey || req.header("authorization") === `Bearer ${adminKey}`) {
+  if (hasValidAdminKey(req)) {
     next();
     return;
   }
@@ -231,6 +192,14 @@ app.use((req, res, next) => {
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, name: "YiHuoGe", time: new Date().toISOString() });
+});
+
+app.post("/api/auth/verify", (req, res) => {
+  if (hasValidAdminKey(req)) {
+    res.json({ ok: true, protected: Boolean(adminKey) });
+    return;
+  }
+  res.status(401).json({ ok: false, error: "invalid admin key" });
 });
 
 app.get("/api/bootstrap", async (_req, res) => {
