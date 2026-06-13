@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { nanoid } from "nanoid";
 import { readState, writeState } from "../api/_state.js";
 import { sendNotificationTest } from "./notify.js";
+import { lookupDomainRdap } from "./rdap.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -168,16 +169,25 @@ app.get("/api/domains", async (_req, res) => {
 
 app.get("/api/whois/:domain", async (req, res) => {
   const db = await readDb();
-  const found = db.domains.find((domain) => domain.name.toLowerCase() === req.params.domain.toLowerCase());
-  res.json(
-    found ?? {
-      name: req.params.domain,
-      registrar: "Unknown / adapter pending",
-      whoisStatus: ["lookup-adapter-not-configured"],
+  const requestedDomain = String(req.params.domain ?? "").toLowerCase();
+  const found = db.domains.find((domain) => domain.name.toLowerCase() === requestedDomain);
+  if (found?.expiresAt) {
+    res.json(found);
+    return;
+  }
+  try {
+    res.json(await lookupDomainRdap(requestedDomain));
+  } catch (error) {
+    res.status(502).json({
+      name: requestedDomain,
+      registrar: "RDAP lookup failed",
+      createdAt: "",
+      expiresAt: "",
       dns: [],
-      note: "接入 whois-json、RDAP 或 registrar API 后替换该适配器。",
-    },
-  );
+      whoisStatus: ["rdap-lookup-failed"],
+      error: error instanceof Error ? error.message : "RDAP lookup failed",
+    });
+  }
 });
 
 app.get("/api/channels", async (_req, res) => {

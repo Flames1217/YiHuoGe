@@ -358,6 +358,17 @@ function findDomainHostOption(provider?: string) {
   return domainHostingProviders.find((item) => item.value === provider);
 }
 
+function inferDomainHostOption(dns: string[] = []) {
+  const nameservers = dns.map((item) => item.toLowerCase()).join(" ");
+  if (nameservers.includes("cloudflare.com")) return findDomainHostOption("Cloudflare DNS");
+  if (nameservers.includes("alidns.com") || nameservers.includes("hichina.com")) return findDomainHostOption("\u963f\u91cc\u4e91 DNS");
+  if (nameservers.includes("dnspod")) return findDomainHostOption("\u817e\u8baf\u4e91 DNSPod") ?? findDomainHostOption("DNSPod \u56fd\u9645\u7248");
+  if (nameservers.includes("huaweicloud-dns")) return findDomainHostOption("\u534e\u4e3a\u4e91 DNS");
+  if (nameservers.includes("registrar-servers.com")) return findDomainHostOption("Namecheap DNS");
+  if (nameservers.includes("domaincontrol.com")) return findDomainHostOption("GoDaddy DNS");
+  return undefined;
+}
+
 function assetManageUrl(asset: Asset) {
   return asset.url || asset.providerUrl || findProviderOption(asset.type, asset.provider)?.url || "";
 }
@@ -996,6 +1007,11 @@ function AssetDrawer({
         provider: whois.registrar,
         notes: buildWhoisNotes(whois, form.getFieldValue("notes")),
       };
+      const hostOption = inferDomainHostOption(whois.dns);
+      if (hostOption) {
+        patch.hostProvider = hostOption.value;
+        patch.hostUrl = hostOption.url;
+      }
       form.setFieldsValue(patch);
       api.success("WHOIS 占验已成，到期灵纹已刻入续期日");
     } catch {
