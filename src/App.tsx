@@ -885,6 +885,14 @@ function AssetsModule({
     api.success(`已纳入 ${parsed.length} 枚资产火种`);
   };
 
+  const runBatchDelete = () => {
+    const ids = selectedIds.map(String);
+    if (!ids.length) return;
+    ids.forEach((id) => deleteAsset(id));
+    setSelectedIds([]);
+    api.success(`已删除 ${ids.length} 枚资产火种`);
+  };
+
   const columns: ColumnsType<Asset> = [
     {
       title: "名称",
@@ -935,9 +943,24 @@ function AssetsModule({
               <Radio.Button value="table">{t("table")}</Radio.Button>
               <Radio.Button value="card">{t("card")}</Radio.Button>
             </Radio.Group>
-            <Tooltip title="批量操作占位：导出、标记、删除">
-              <Button title="对已勾选资产执行批量操作" disabled={!selectedIds.length}>批量操作 {selectedIds.length || ""}</Button>
-            </Tooltip>
+            <Popconfirm
+              title={`确认删除已选 ${selectedIds.length} 枚火种？`}
+              okText="删除"
+              cancelText="取消"
+              okButtonProps={{ danger: true }}
+              disabled={!selectedIds.length}
+              onConfirm={runBatchDelete}
+            >
+              <Button
+                className="batch-delete-button"
+                title="删除已勾选资产"
+                danger
+                disabled={!selectedIds.length}
+                icon={<DeleteOutlined />}
+              >
+                批量删除 {selectedIds.length || ""}
+              </Button>
+            </Popconfirm>
           </Space>
         </Flex>
         {view === "table" ? (
@@ -1227,6 +1250,7 @@ function AiModule({ onForgeDone }: { onForgeDone?: () => void }) {
   const [text, setText] = useState("");
   const [modelInput, setModelInput] = useState("");
   const [forging, setForging] = useState(false);
+  const [testingModel, setTestingModel] = useState(false);
   const [api, contextHolder] = message.useMessage();
 
   useEffect(() => {
@@ -1269,7 +1293,10 @@ function AiModule({ onForgeDone }: { onForgeDone?: () => void }) {
       if (!assets.length) throw new Error("\u672a\u70bc\u6210\u53ef\u5165\u5e93\u7684\u8d44\u4ea7");
       useYiHuoStore.setState((state) => ({ assets: [...assets, ...state.assets] }));
       setText("");
-      onForgeDone?.();
+      api.success({
+        content: `炼化成功：${assets.length} 枚火种已入库，正在前往异火库`,
+        duration: 4,
+      });
       Modal.success({
         className: "yhg-themed-modal",
         rootClassName: "yhg-themed-modal-root",
@@ -1283,8 +1310,15 @@ function AiModule({ onForgeDone }: { onForgeDone?: () => void }) {
           </div>
         ),
       });
-      api.success(`\u70bc\u5316\u6210\u529f\uff1a${assets.length} \u679a\u706b\u79cd\u5df2\u5165\u5f02\u706b\u5e93`);
+      window.setTimeout(() => onForgeDone?.(), 650);
     } catch (error) {
+      Modal.error({
+        className: "yhg-themed-modal",
+        rootClassName: "yhg-themed-modal-root",
+        title: "炼化失败",
+        okText: "知道了",
+        content: <Text>{error instanceof Error ? error.message : "AI 炼化失败"}</Text>,
+      });
       api.error(error instanceof Error ? error.message : "AI \u70bc\u5316\u5931\u8d25");
     } finally {
       setForging(false);
@@ -1314,6 +1348,48 @@ function AiModule({ onForgeDone }: { onForgeDone?: () => void }) {
       api.success(`已自远端召回 ${models.length} 个模型${payload.endpoint ? `，通道：${payload.endpoint}` : ""}`);
     } catch (error) {
       api.error(error instanceof Error ? error.message : "模型列表召回失败");
+    }
+  };
+
+  const testSelectedModel = async () => {
+    if (!aiConfig.defaultModel) {
+      api.warning("请先选择或加入一个默认模型");
+      return;
+    }
+    setTestingModel(true);
+    try {
+      const adminKey = window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "";
+      const response = await fetch("/api/ai/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(adminKey ? { "x-admin-key": adminKey } : {}) },
+        body: JSON.stringify({ model: aiConfig.defaultModel }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { ok?: boolean; model?: string; endpoint?: string; content?: string; error?: string };
+      if (!response.ok || !payload.ok) throw new Error(payload.error || `模型测试失败 ${response.status}`);
+      Modal.success({
+        className: "yhg-themed-modal",
+        rootClassName: "yhg-themed-modal-root",
+        title: "模型测试成功",
+        okText: "知道了",
+        content: (
+          <div className="notify-test-modal">
+            <div className="notify-test-head"><RobotOutlined /><span>{payload.model || aiConfig.defaultModel}</span></div>
+            <pre>{`通道：${payload.endpoint || aiConfig.baseUrl}\n回复：${payload.content || "异火阁模型通道正常"}`}</pre>
+          </div>
+        ),
+      });
+      api.success(`模型可用：${payload.model || aiConfig.defaultModel}`);
+    } catch (error) {
+      Modal.error({
+        className: "yhg-themed-modal",
+        rootClassName: "yhg-themed-modal-root",
+        title: "模型测试失败",
+        okText: "知道了",
+        content: <Text>{error instanceof Error ? error.message : "模型测试失败"}</Text>,
+      });
+      api.error(error instanceof Error ? error.message : "模型测试失败");
+    } finally {
+      setTestingModel(false);
     }
   };
 
@@ -1359,7 +1435,10 @@ function AiModule({ onForgeDone }: { onForgeDone?: () => void }) {
               <label className="field-label">接口地址</label>
               <Input value={aiConfig.baseUrl} onChange={(event) => updateAiConfig({ baseUrl: event.target.value })} />
               <label className="field-label">默认模型</label>
-              <Select style={{ width: "100%" }} value={aiConfig.defaultModel} onChange={(value) => updateAiConfig({ defaultModel: value })} options={aiConfig.models.map((model) => ({ value: model, label: model }))} />
+              <Space.Compact style={{ width: "100%" }}>
+                <Select style={{ width: "100%" }} value={aiConfig.defaultModel} onChange={(value) => updateAiConfig({ defaultModel: value })} options={aiConfig.models.map((model) => ({ value: model, label: model }))} />
+                <Button title="测试当前默认模型是否可用" loading={testingModel} onClick={testSelectedModel}>测试模型</Button>
+              </Space.Compact>
             </Space>
           </Card>
           <Card className="yhg-card ai-model-card" title={t("modelManage")}>
@@ -1367,6 +1446,7 @@ function AiModule({ onForgeDone }: { onForgeDone?: () => void }) {
               <Input value={modelInput} placeholder="输入模型名后回车/加入" onPressEnter={() => { if (modelInput.trim()) { addModel(modelInput.trim()); setModelInput(""); } }} onChange={(event) => setModelInput(event.target.value)} />
               <Button title="把输入框中的模型名加入列表" onClick={() => { if (modelInput.trim()) { addModel(modelInput.trim()); setModelInput(""); } }}>加入</Button>
               <Button title="从后端接口同步可用模型列表" onClick={fetchModels}>获取列表</Button>
+              <Button title="测试当前默认模型是否可正常回复" loading={testingModel} onClick={testSelectedModel}>测试</Button>
             </Space.Compact>
             <div className="model-list">
               {aiConfig.models.map((model) => (
