@@ -2490,7 +2490,23 @@ body .ant-select-dropdown .ant-select-item-option.ant-select-item-option-selecte
 body .asset-table .ant-table-content,
 body .asset-table .ant-table-body,
 body .asset-table .ant-table-container {
+  max-height: none !important;
+  overflow: visible !important;
   overflow-x: hidden !important;
+  overflow-y: visible !important;
+}
+
+body .asset-table.ant-table-wrapper,
+body .asset-table .ant-spin-nested-loading,
+body .asset-table .ant-spin-container,
+body .asset-table .ant-table {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+body .yhg-card:has(.asset-table),
+body .yhg-card:has(.asset-table) > .ant-card-body {
+  overflow: visible !important;
 }
 
 body .asset-table .ant-table-tbody > tr {

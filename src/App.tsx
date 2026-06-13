@@ -1,5 +1,4 @@
 import {
-  ApiOutlined,
   AppstoreOutlined,
   BellOutlined,
   CalendarOutlined,
@@ -171,6 +170,16 @@ const assetTypeName: Record<AssetType, string> = {
   custom: "自定义",
 };
 
+const assetTypeNameEn: Record<AssetType, string> = {
+  domain: "Domain",
+  vps: "VPS",
+  hosting: "Hosting",
+  cloud: "Hosting",
+  ai: "AI subscription",
+  membership: "Membership",
+  custom: "Custom",
+};
+
 const assetCycles: Asset["cycle"][] = ["daily", "weekly", "monthly", "quarterly", "semiannual", "yearly", "biennial", "triennial", "lifetime", "custom"];
 
 const cycleName: Record<Asset["cycle"], string> = {
@@ -186,7 +195,26 @@ const cycleName: Record<Asset["cycle"], string> = {
   custom: "自定",
 };
 
-const assetCycleOptions = assetCycles.map((value) => ({ value, label: cycleName[value] }));
+const cycleNameEn: Record<Asset["cycle"], string> = {
+  daily: "Daily",
+  weekly: "Weekly",
+  monthly: "Monthly",
+  quarterly: "Quarterly",
+  semiannual: "Semiannual",
+  yearly: "Yearly",
+  biennial: "Biennial",
+  triennial: "Triennial",
+  lifetime: "Permanent",
+  custom: "Custom",
+};
+
+function assetTypeLabel(type: AssetType, language: Language) {
+  return language === "en" ? assetTypeNameEn[type] : assetTypeName[type];
+}
+
+function cycleLabel(cycle: Asset["cycle"], language: Language) {
+  return language === "en" ? cycleNameEn[cycle] : cycleName[cycle];
+}
 
 const moduleName: Record<string, string> = {
   overview: "阁内总览",
@@ -846,13 +874,14 @@ function statusLabel(status: AssetStatus, t: (key: string) => string) {
   return <Tag className={`flame-tag flame-${status}`} color={statusTone[status]} icon={status === "healthy" ? <CheckCircleOutlined /> : <FireOutlined />}>{t(status)}</Tag>;
 }
 
-function dayUnit(date: string, cycle?: Asset["cycle"]) {
-  if (cycle === "lifetime") return "永久有效";
-  return `${daysUntil(date)} 天`;
+function dayUnit(date: string, cycle: Asset["cycle"] | undefined, language: Language) {
+  if (cycle === "lifetime") return language === "en" ? "Permanent" : "永久有效";
+  const days = daysUntil(date, cycle);
+  return language === "en" ? `${days} days` : `${days} 天`;
 }
 
-function renewalText(asset: Asset) {
-  return asset.cycle === "lifetime" ? "永久有效" : asset.renewalDate;
+function renewalText(asset: Asset, language: Language) {
+  return asset.cycle === "lifetime" ? (language === "en" ? "Permanent" : "永久有效") : asset.renewalDate;
 }
 
 function isWhoisUsable(whois: { registrar?: string; expiresAt?: string; whoisStatus?: string[] }) {
@@ -1185,8 +1214,8 @@ function OverviewModule({
                 .map((asset) => (
                   <button className="timeline-row" key={asset.id} onClick={() => setActive("assets")}>
                     <span>{asset.name}</span>
-                    <Tag color={asset.cycle === "lifetime" ? "green" : daysUntil(asset.renewalDate, asset.cycle) <= 14 ? "error" : "gold"}>{dayUnit(asset.renewalDate, asset.cycle)}</Tag>
-                    <Text>{renewalText(asset)}</Text>
+                    <Tag color={asset.cycle === "lifetime" ? "green" : daysUntil(asset.renewalDate, asset.cycle) <= 14 ? "error" : "gold"}>{dayUnit(asset.renewalDate, asset.cycle, settings.language)}</Tag>
+                    <Text>{renewalText(asset, settings.language)}</Text>
                   </button>
                 ))}
             </div>
@@ -1223,7 +1252,8 @@ function AssetDrawer({
   const addAsset = useYiHuoStore((state) => state.addAsset);
   const updateAsset = useYiHuoStore((state) => state.updateAsset);
   const assets = useYiHuoStore((state) => state.assets);
-  const preferredCurrency = useYiHuoStore((state) => state.settings.currency);
+  const settings = useYiHuoStore((state) => state.settings);
+  const preferredCurrency = settings.currency;
   const [api, contextHolder] = message.useMessage();
   const [whoisLoading, setWhoisLoading] = useState(false);
   const watchedType = normalizeAssetType(Form.useWatch("type", form) ?? editing?.type ?? "domain");
@@ -1339,7 +1369,7 @@ function AssetDrawer({
       <Form form={form} layout="vertical">
         <Form.Item name="name" label="名称" rules={[{ required: true }]}><Input placeholder="例如：yihuoge.dev / 开放智能接口额度" /></Form.Item>
         <Row gutter={12}>
-          <Col span={12}><Form.Item name="type" label="类型"><Select options={assetTypes.map((value) => ({ value, label: assetTypeName[value] }))} onChange={(nextType: AssetType) => {
+          <Col span={12}><Form.Item name="type" label={t("type")}><Select options={assetTypes.map((value) => ({ value, label: assetTypeLabel(value, settings.language) }))} onChange={(nextType: AssetType) => {
             const normalized = normalizeAssetType(nextType);
             const nextProvider = providerCatalog[normalized][0];
             form.setFieldsValue({ type: normalized, provider: nextProvider.value, providerUrl: nextProvider.url, url: nextProvider.url ?? "", hostProvider: undefined, hostUrl: undefined });
@@ -1356,7 +1386,7 @@ function AssetDrawer({
         <Form.Item name="account" label="账号 / 标识（可选）" tooltip="可填登录邮箱、账号、实例 ID 或 IP；域名没有独立账号时留空即可。"><Input placeholder="登录账号、邮箱、实例 ID 或 IP，可空" /></Form.Item>
         <Row gutter={12}>
           <Col span={12}><Form.Item name="renewalDate" label="续期日期" rules={[{ required: watchedCycle !== "lifetime", message: "永久资产无需填写续期日期" }]}><Input type="date" disabled={watchedCycle === "lifetime"} placeholder={watchedCycle === "lifetime" ? "永久有效" : undefined} /></Form.Item></Col>
-          <Col span={12}><Form.Item name="cycle" label="周期"><Select options={assetCycleOptions} onChange={(cycle: Asset["cycle"]) => {
+          <Col span={12}><Form.Item name="cycle" label={settings.language === "en" ? "Cycle" : "周期"}><Select options={assetCycles.map((value) => ({ value, label: cycleLabel(value, settings.language) }))} onChange={(cycle: Asset["cycle"]) => {
             if (cycle === "lifetime") form.setFieldValue("renewalDate", "");
             if (cycle !== "lifetime" && !form.getFieldValue("renewalDate")) form.setFieldValue("renewalDate", dayjs().add(1, "year").format("YYYY-MM-DD"));
           }} /></Form.Item></Col>
@@ -1388,7 +1418,8 @@ function AssetsModule({
   const addAsset = useYiHuoStore((state) => state.addAsset);
   const deleteAsset = useYiHuoStore((state) => state.deleteAsset);
   const importAssets = useYiHuoStore((state) => state.importAssets);
-  const preferredCurrency = useYiHuoStore((state) => state.settings.currency);
+  const settings = useYiHuoStore((state) => state.settings);
+  const preferredCurrency = settings.currency;
   const hydrating = useYiHuoStore((state) => state.hydrating);
   const [view, setView] = useState<ViewMode>("table");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -1400,6 +1431,7 @@ function AssetsModule({
   const [importText, setImportText] = useState("");
   const [api, contextHolder] = message.useMessage();
   const [columnWidths, setColumnWidths] = useState<Record<AssetColumnKey, number>>(() => loadAssetColumnWidths());
+  const sortedFiltered = useMemo(() => filtered.slice().sort((a, b) => a.name.localeCompare(b.name)), [filtered]);
 
   const startColumnResize = (event: ReactMouseEvent<HTMLElement>, key: AssetColumnKey, minWidth = 96) => {
     event.preventDefault();
@@ -1472,7 +1504,7 @@ function AssetsModule({
 
   const cloneAsset = (asset: Asset) => {
     addAsset({
-      name: `${asset.name} 副本`,
+      name: `${asset.name}${settings.language === "en" ? " copy" : " 副本"}`,
       type: normalizeAssetType(asset.type),
       provider: asset.provider,
       providerUrl: asset.providerUrl,
@@ -1492,10 +1524,11 @@ function AssetsModule({
 
   const columns: ColumnsType<Asset> = [
     {
-      title: columnTitle("name", "名称", 220),
+      title: columnTitle("name", t("name"), 220),
       dataIndex: "name",
       key: "name",
       width: columnWidths.name,
+      defaultSortOrder: "ascend",
       sorter: (a, b) => a.name.localeCompare(b.name),
       render: (value: string, record) => (
         <Space orientation="vertical" size={0}>
@@ -1505,15 +1538,15 @@ function AssetsModule({
       ),
     },
     {
-      title: columnTitle("type", "类型", 110),
+      title: columnTitle("type", t("type"), 110),
       dataIndex: "type",
       key: "type",
       width: columnWidths.type,
-      filters: assetTypes.map((item) => ({ text: assetTypeName[item], value: item })),
+      filters: assetTypes.map((item) => ({ text: assetTypeLabel(item, settings.language), value: item })),
       onFilter: (value, record) => normalizeAssetType(record.type) === value,
       render: (value: AssetType) => {
         const normalized = normalizeAssetType(value);
-        return <Tag color={typeTone[normalized]}>{assetTypeName[normalized]}</Tag>;
+        return <Tag color={typeTone[normalized]}>{assetTypeLabel(normalized, settings.language)}</Tag>;
       },
     },
     {
@@ -1525,12 +1558,12 @@ function AssetsModule({
       render: (value: string, record) => (
         <Space direction="vertical" size={0}>
           <Text>{value}</Text>
-          {normalizeAssetType(record.type) === "domain" && record.hostProvider ? <Text className="muted asset-subline">托管：{record.hostProvider}</Text> : null}
+          {normalizeAssetType(record.type) === "domain" && record.hostProvider ? <Text className="muted asset-subline">{t("hostPrefix")}：{record.hostProvider}</Text> : null}
         </Space>
       ),
     },
     {
-      title: columnTitle("renewalDate", "续期日", 160),
+      title: columnTitle("renewalDate", t("renewalDate"), 160),
       dataIndex: "renewalDate",
       key: "renewalDate",
       width: columnWidths.renewalDate,
@@ -1539,7 +1572,7 @@ function AssetsModule({
         if (a.cycle !== "lifetime" && b.cycle === "lifetime") return -1;
         return dayjs(a.renewalDate).valueOf() - dayjs(b.renewalDate).valueOf();
       },
-      render: (value: string, record) => <Space><CalendarOutlined />{renewalText(record)}<Tag color={record.cycle === "lifetime" ? "green" : "orange"}>{dayUnit(value, record.cycle)}</Tag></Space>,
+      render: (value: string, record) => <Space><CalendarOutlined />{renewalText(record, settings.language)}<Tag color={record.cycle === "lifetime" ? "green" : "orange"}>{dayUnit(value, record.cycle, settings.language)}</Tag></Space>,
     },
     {
       title: columnTitle("price", t("price"), 110),
@@ -1548,17 +1581,17 @@ function AssetsModule({
       render: (_, record) => formatPreferredAmount(record.price, record.currency, preferredCurrency),
     },
     {
-      title: columnTitle("manage", "管理地址", 130),
+      title: columnTitle("manage", t("manageUrl"), 130),
       key: "manage",
       width: columnWidths.manage,
       render: (_, record) => {
         const manageUrl = assetManageUrl(record);
         const hostUrl = normalizeAssetType(record.type) === "domain" ? assetHostManageUrl(record) : "";
-        if (!manageUrl && !hostUrl) return <Text className="muted">未填</Text>;
+        if (!manageUrl && !hostUrl) return <Text className="muted">{t("notFilled")}</Text>;
         return (
           <Space direction="vertical" size={0}>
-            {manageUrl ? <a className="asset-manage-link" href={manageUrl} target="_blank" rel="noreferrer">服务商后台</a> : null}
-            {hostUrl ? <a className="asset-manage-link asset-subline" href={hostUrl} target="_blank" rel="noreferrer">托管后台</a> : null}
+            {manageUrl ? <a className="asset-manage-link" href={manageUrl} target="_blank" rel="noreferrer">{t("providerConsole")}</a> : null}
+            {hostUrl ? <a className="asset-manage-link asset-subline" href={hostUrl} target="_blank" rel="noreferrer">{t("hostConsole")}</a> : null}
           </Space>
         );
       },
@@ -1583,9 +1616,9 @@ function AssetsModule({
     <div className="module-stack">
       {contextHolder}
       <Flex className="module-head" justify="space-between" gap={16} wrap="wrap">
-        <div><Title level={2}>{t("assets")}</Title><Text className="muted">主流平台先入阁，冷门火种亦可自铸；支持搜寻、筛选、排序、分页与批量圈选。</Text></div>
+        <div><Title level={2}>{t("assets")}</Title><Text className="muted">{t("assetsDesc")}</Text></div>
         <Space wrap>
-          <Button title="进入 AI 炼化炉，将文本或表格炼成资产火种" icon={<RobotOutlined />} onClick={goAi}>AI 炼化</Button>
+          <Button title={t("aiImport")} icon={<RobotOutlined />} onClick={goAi}>{t("aiImport")}</Button>
           <Button title="投放表格文本，批量纳火入阁" icon={<ImportOutlined />} onClick={() => setImportOpen(true)}>{t("import")}</Button>
           <Button title="手动收录一枚火种；WHOIS 可在编辑抽屉中手动占验" type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setDrawerOpen(true); }}>{t("addAsset")}</Button>
         </Space>
@@ -1594,13 +1627,13 @@ function AssetsModule({
         <Flex justify="space-between" gap={12} wrap="wrap" className="toolbar-row">
           <Input className="search-input" prefix={<SearchOutlined />} placeholder={t("search")} value={keyword} onChange={(event) => setKeyword(event.target.value)} />
           <Space wrap>
-            <Select value={type} onChange={setType} options={[{ value: "all", label: t("all") }, ...assetTypes.map((value) => ({ value, label: assetTypeName[value] }))]} />
+            <Select value={type} onChange={setType} options={[{ value: "all", label: t("all") }, ...assetTypes.map((value) => ({ value, label: assetTypeLabel(value, settings.language) }))]} />
             <Radio.Group value={view} onChange={(event) => setView(event.target.value)}>
               <Radio.Button value="table">{t("table")}</Radio.Button>
               <Radio.Button value="card">{t("card")}</Radio.Button>
             </Radio.Group>
             <Popconfirm
-              title={`确认删除已选 ${selectedIds.length} 枚火种？`}
+              title={t("selectedDeleteTitle", { count: selectedIds.length })}
               okText="删除"
               cancelText="取消"
               okButtonProps={{ danger: true }}
@@ -1614,7 +1647,7 @@ function AssetsModule({
                 disabled={!selectedIds.length}
                 icon={<DeleteOutlined />}
               >
-                批量删除 {selectedIds.length || ""}
+                {t("batchDelete")} {selectedIds.length || ""}
               </Button>
             </Popconfirm>
           </Space>
@@ -1622,23 +1655,23 @@ function AssetsModule({
         {hydrating ? (
           <div className="summon-panel">
             <SummonLoading title="异火库" />
-            <Text className="muted">正在连接数据库，火种尚未归位，请稍候。</Text>
+            <Text className="muted">{t("databaseLoading")}</Text>
           </div>
         ) : view === "table" ? (
           <Table
             rowKey="id"
             className="asset-table"
             columns={columns}
-            dataSource={filtered}
+            dataSource={sortedFiltered}
             tableLayout="fixed"
             showSorterTooltip={{ rootClassName: "yhg-sorter-tooltip" }}
             pagination={{
               current: tablePage,
               pageSize: tablePageSize,
-              total: filtered.length,
+              total: sortedFiltered.length,
               showSizeChanger: true,
               pageSizeOptions: ["10", "20", "50", "100"],
-              showTotal: (total) => `共 ${total} 枚火种`,
+              showTotal: (total) => t("totalFlames", { count: total }),
               onChange: (page, size) => {
                 setTablePage(page);
                 setTablePageSize(size);
@@ -1656,18 +1689,18 @@ function AssetsModule({
           />
         ) : (
           <Row gutter={[16, 16]}>
-            {filtered.map((asset) => (
+            {sortedFiltered.map((asset) => (
               <Col xs={24} md={12} xl={8} key={asset.id}>
-                <Card className="asset-card" actions={[<Tooltip title="编辑资产" key="edit"><EditOutlined onClick={() => { setEditing(asset); setDrawerOpen(true); }} /></Tooltip>, <Tooltip title="克隆资产" key="clone"><CopyOutlined onClick={() => cloneAsset(asset)} /></Tooltip>, <Tooltip title="删除资产" key="delete"><DeleteOutlined onClick={() => deleteAsset(asset.id)} /></Tooltip>]}>
+                <Card className="asset-card" actions={[<Tooltip title={t("editAsset")} key="edit"><EditOutlined onClick={() => { setEditing(asset); setDrawerOpen(true); }} /></Tooltip>, <Tooltip title={t("cloneAsset")} key="clone"><CopyOutlined onClick={() => cloneAsset(asset)} /></Tooltip>, <Tooltip title={t("deleteAsset")} key="delete"><DeleteOutlined onClick={() => deleteAsset(asset.id)} /></Tooltip>]}>
                   <Flex justify="space-between" align="start">
                     <Title level={4}>{asset.name}</Title>
                     {statusLabel(asset.status, t)}
                   </Flex>
-                  <Space wrap><Tag color={typeTone[normalizeAssetType(asset.type)]}>{assetTypeName[normalizeAssetType(asset.type)]}</Tag><Tag>{asset.provider}</Tag>{asset.hostProvider ? <Tag>托管：{asset.hostProvider}</Tag> : null}</Space>
+                  <Space wrap><Tag color={typeTone[normalizeAssetType(asset.type)]}>{assetTypeLabel(normalizeAssetType(asset.type), settings.language)}</Tag><Tag>{asset.provider}</Tag>{asset.hostProvider ? <Tag>{t("hostPrefix")}：{asset.hostProvider}</Tag> : null}</Space>
                   <Divider />
-                  <Text className="muted">续期：{renewalText(asset)} · {dayUnit(asset.renewalDate, asset.cycle)}</Text>
+                  <Text className="muted">{t("renewal")}：{renewalText(asset, settings.language)} · {dayUnit(asset.renewalDate, asset.cycle, settings.language)}</Text>
                   <br />
-                  <Text>{formatPreferredAmount(asset.price, asset.currency, preferredCurrency)} / {cycleName[asset.cycle]}</Text>
+                  <Text>{formatPreferredAmount(asset.price, asset.currency, preferredCurrency)} / {cycleLabel(asset.cycle, settings.language)}</Text>
                 </Card>
               </Col>
             ))}
@@ -2239,7 +2272,7 @@ export default function App() {
   const [globalSearch, setGlobalSearch] = useState("");
   const [quickCreateNonce, setQuickCreateNonce] = useState(0);
   const [now, setNow] = useState(() => new Date());
-  const [api, contextHolder] = message.useMessage();
+  const [, contextHolder] = message.useMessage();
   const [accessState, setAccessState] = useState<AccessState>(() =>
     window.localStorage.getItem(ADMIN_KEY_STORAGE) ? "unlocked" : "locked",
   );
@@ -2378,15 +2411,6 @@ export default function App() {
                 <button className={settings.language === "zh" ? "active" : ""} onClick={() => setLanguage("zh")}>中文</button>
                 <button className={settings.language === "en" ? "active" : ""} onClick={() => setLanguage("en")}>英</button>
               </div>
-              <span className="top-action-tip" data-tooltip={t("openAssetsTip")}>
-                <Button className="top-action" icon={<ApiOutlined />} onClick={() => { setActive("assets"); api.info(settings.language === "zh" ? "资产火阁已开启" : "Asset forge opened"); }}>{t("topAssets")}</Button>
-              </span>
-              <span className="top-action-tip" data-tooltip={t("openNotificationsTip")}>
-                <Button className="top-action" icon={<BellOutlined />} onClick={() => { setActive("notifications"); api.info(settings.language === "zh" ? "传讯阵法已开启" : "Notification array opened"); }}>{t("topNotifications")}</Button>
-              </span>
-              <span className="top-action-tip" data-tooltip={t("openSettingsTip")}>
-                <Button className="top-action" icon={<SettingOutlined />} onClick={() => { setActive("settings"); api.info(settings.language === "zh" ? "阁令中枢已开启" : "Settings sanctum opened"); }}>{t("topSettings")}</Button>
-              </span>
             </Space>
           </Header>
           <Content className="content-canvas">{module}</Content>
