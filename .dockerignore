@@ -1,0 +1,12 @@
+.git
+.github
+node_modules
+dist
+.env
+.env.*
+*.log
+npm-debug.log*
+data/*.sqlite
+data/*.sqlite-*
+data/*.db
+data/*.json

@@ -624,6 +624,16 @@ app.put("/api/settings", async (req, res) => {
   res.json(db.settings);
 });
 
+const distDir = path.join(rootDir, "dist");
+const indexHtml = path.join(distDir, "index.html");
+
+if (existsSync(indexHtml)) {
+  app.use(express.static(distDir));
+  app.get(/^(?!\/api(?:\/|$)).*/, (_req, res) => {
+    res.sendFile(indexHtml);
+  });
+}
+
 export default app;
 
 if (!process.env.VERCEL) {
