@@ -1,25 +1,22 @@
-<h1>
-  <img src="public/logo.png" alt="YiHuoGe" width="42" height="42" align="center">
-  异火阁 / YiHuoGe
-</h1>
+# 异火阁 / YiHuoGe
 
 > 收诸般异火，掌万般续期。
 
-异火阁是一个现代化、自托管资产仪表盘，用于管理域名、云主机、云服务、AI 订阅、会员订阅、通知渠道、续期提醒、AI 炼化导入与备份配置。
+异火阁是一个自托管资产续期管理面板，用来管理域名、VPS、虚拟主机、AI 订阅、会员订阅和自定义资产；支持通知渠道、续期提醒、AI 炼化导入、批量操作和结构化数据库存储。
 
-## ✨ 功能
+## 功能概览
 
-- 🧾 资产管理：列表/卡片、搜索、筛选、排序、分页、批量导入
-- 🌐 域名资产：新增域名时自动调用 WHOIS/RDAP 适配器并填入续期日
-- 🔔 通知渠道：Email、Telegram、Discord、Slack、Webhook、钉钉、企业微信、飞书、Bark、ServerChan、PushPlus、自定义
-- 🤖 AI 炼化：从文本/CSV/表格内容解析生成资产
-- 🧠 模型管理：手动添加、删除、默认模型选择、从 OpenAI-compatible `/models` 获取列表
-- 🕰️ 时间偏好：时区选择生效，顶部时间精确到秒，农历常显
-- 💾 存储适配：结构化表存储，支持 MySQL/TiDB/MariaDB、PostgreSQL、SQLite 与 Cloudflare D1
-- 🛡️ 管理密钥：写操作与模型获取接口受 `YIHUOGE_ADMIN_KEY` 保护
-- 📦 备份方式：WebDAV、S3/R2/MinIO、本地导出与自定义外部存储；备份配置会随导出数据一起导出
+- **资产管理**：列表/卡片视图、搜索、筛选、排序、分页、批量删除、克隆资产。
+- **资产类型**：域名、VPS、虚拟主机、AI订阅、会员订阅、自定义。
+- **服务商后台**：不同资产类型使用各自服务商列表；点击管理可进入服务商后台。域名额外支持托管商/DNS 后台。
+- **域名 WHOIS/RDAP**：可尝试占验域名到期日；未配置真实适配器时不会用假结果覆盖数据。
+- **通知渠道**：Email、Telegram、Discord、Slack、Webhook、钉钉、企业微信、飞书、Bark、ServerChan、PushPlus、ntfy、Gotify、Pushover、Teams、Google Chat、Matrix、Mattermost、Rocket.Chat、Signal、LINE、AWS SNS、Twilio、自定义等。
+- **AI 炼化**：把 CSV、JSON、表格文本或资产清单炼化成资产数据；内置提示词会按项目字段解析类型、服务商、托管商、续期日、价格等。
+- **模型管理**：支持 OpenAI Compatible 接口，手动添加模型、获取 `/models` 列表、测试默认模型。
+- **主题界面**：暗色异火风格，统一顶部按钮、表格、筛选、下拉、悬停、弹窗等配色。
+- **数据库存储**：结构化表存储，支持 MySQL/TiDB/MariaDB、PostgreSQL、SQLite、Cloudflare D1。
 
-## 🚀 快速开始
+## 快速开始
 
 ```bash
 npm install
@@ -33,8 +30,13 @@ npm run dev:full
 http://localhost:5173
 ```
 
+本地 API 默认：
 
-## 🔐 环境变量
+```text
+http://localhost:8787
+```
+
+## 环境变量
 
 `.env.local` 示例：
 
@@ -43,77 +45,88 @@ YIHUOGE_ADMIN_KEY=change-me-to-a-long-random-secret
 MYSQL_URL=mysql://USER:PASSWORD@HOST:4000/yihuoge
 ```
 
-> 不要把 `.env.local` 提交到仓库。
+说明：
 
-## 🗄️ 存储与备份方案
+- `YIHUOGE_ADMIN_KEY`：管理密钥。写操作、模型列表获取、AI 炼化等接口会校验该密钥。
+- `MYSQL_URL`：统一数据库连接变量。虽然名字叫 MySQL，但 MySQL/MariaDB/Postgres/SQLite 都走这个变量。
+- 未配置 `MYSQL_URL` 时，默认使用 SQLite：`data/yihuoge.sqlite`。
+- 不要提交 `.env.local`。
 
-### 存储方式
+## 数据库存储
 
-| 方式 | 适合场景 | 状态 |
+### 支持的数据库
+
+| 数据库 | 连接方式 | 说明 |
 | --- | --- | --- |
-| MySQL / TiDB | Vercel、Docker、VPS、长期生产使用 | 默认接入 |
-| MariaDB | Docker、VPS、自托管数据库 | MySQL 兼容 |
-| PostgreSQL | 自托管、云数据库、结构化扩展 | 已支持，继续使用 `MYSQL_URL=postgres://...` |
-| SQLite | 单机 Docker、轻量私有部署 | 已支持，`MYSQL_URL=sqlite://data/yihuoge.sqlite`；未配置时默认使用 SQLite |
-| Cloudflare D1 | Cloudflare Pages / Workers | 已支持，绑定 `YIHUOGE_D1` / `DB` 即可 |
-| 自定义适配器 | 其他数据库或对象存储 | 预留扩展 |
+| MySQL / TiDB | `MYSQL_URL=mysql://USER:PASSWORD@HOST:PORT/DATABASE` | 推荐生产使用；现有 TiDB Cloud 也走这个格式。 |
+| MariaDB | `MYSQL_URL=mariadb://USER:PASSWORD@HOST:PORT/DATABASE` | 使用 MySQL 协议兼容连接。 |
+| PostgreSQL | `MYSQL_URL=postgres://USER:PASSWORD@HOST:PORT/DATABASE` | 也支持 `postgresql://...`。 |
+| SQLite | `MYSQL_URL=sqlite://data/yihuoge.sqlite` | 单机/本地/轻量部署；未配置时默认启用。 |
+| Cloudflare D1 | 绑定 `YIHUOGE_D1`、`DB` 或 `D1` | 适合 Cloudflare Workers/Pages Functions 环境。 |
 
-### 备份方式
+### 自动建表
 
-| 方式 | 说明 |
+第一次启动或第一次访问 API 时会自动创建表。你可以先格式化数据库，再打开应用添加资产测试。
+
+当前表结构：
+
+| 表名 | 用途 |
 | --- | --- |
-| WebDAV | 适合 NAS、坚果云、Nextcloud、Alist 等 |
-| S3 / R2 / MinIO | 适合对象存储、跨区域备份、长期归档 |
-| 本地导出 JSON | 适合手动备份、迁移、离线留档 |
-| 自定义外部存储 | 适合接入自有备份网关或企业内部存储 |
+| `yh_assets` | 资产主表：名称、类型、服务商、服务商后台、托管商、续期日、价格、标签、备注等。 |
+| `yh_domains` | 域名扩展表：注册商、创建日、到期日、DNS、WHOIS 状态等。 |
+| `yh_channels` | 通知渠道表：渠道类型、目标、密钥掩码、配置 JSON、模板、测试时间等。 |
+| `yh_ai_config` | AI 配置表：provider、apiKey、baseUrl、models、defaultModel。 |
+| `yh_settings` | 应用设置表：语言、时区、货币、提醒天数、模块顺序、备份目标等。 |
 
-备份内容包含：资产、通知渠道、全局设置、AI 炼化配置、模型列表、备份目标与备份策略。敏感密钥建议优先放在部署平台环境变量中。
+### 旧数据迁移
 
-## ☁️ 部署
+如果旧数据库里存在早期的单行状态数据，MySQL/TiDB 首次读取时会尝试迁移到新结构化表。
 
-### ▲ Vercel
+## 备份与导入
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Flames1217/YiHuoGe&env=YIHUOGE_ADMIN_KEY,MYSQL_URL&envDescription=YiHuoGe%20requires%20an%20admin%20key%20and%20a%20MySQL%2FTiDB%20connection%20URL.)
+- 支持本地导出 JSON，用于离线备份或迁移。
+- 备份目标只保留 WebDAV、S3/R2/MinIO 和自定义外部存储，避免和主数据库结构冲突。
 
-1. 推送到 GitHub。
-2. 点击按钮导入项目。
-3. 设置环境变量：
+## AI 炼化说明
+
+AI 炼化会把用户提供的 CSV、JSON、表格文本或资产清单转成资产数据。
+
+内置提示词要求模型输出以下核心字段：
+
+```text
+name,type,provider,providerUrl,hostProvider,hostUrl,account,
+renewalDate,price,currency,cycle,url,tags,notes
+```
+
+类型只能是：
+
+```text
+domain / vps / hosting / ai / membership / custom
+```
+
+注意：
+
+- 不会默认添加“AI炼化”标签。
+- 密码、Token、API Key、Secret 不会明文写入资产备注。
+- AI 炼化成功后会写入数据库，并跳转回异火库查看结果。
+
+## 部署
+
+### Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Flames1217/YiHuoGe&env=YIHUOGE_ADMIN_KEY,MYSQL_URL&envDescription=YiHuoGe%20requires%20an%20admin%20key%20and%20a%20database%20connection%20URL.)
+
+1. Fork 或导入仓库。
+2. 设置环境变量：
    - `YIHUOGE_ADMIN_KEY`
    - `MYSQL_URL`
-4. Framework 选择 `Vite`，Output Directory 为 `dist`。
-5. 部署完成后访问生产域名。
+3. Framework 选择 `Vite`。
+4. Build Command：`npm run build`
+5. Output Directory：`dist`
 
-### 🟦 Netlify
+Vercel 推荐使用 MySQL/TiDB/MariaDB/PostgreSQL 连接。SQLite 不适合 Vercel 无状态文件系统长期保存。
 
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/Flames1217/YiHuoGe)
-
-> 前端可直接部署；服务端能力需要改成 Netlify Functions 或单独部署。
-
-- Build command: `npm run build`
-- Publish directory: `dist`
-- 必填环境变量：`YIHUOGE_ADMIN_KEY`、`MYSQL_URL`
-
-### 🟧 Cloudflare Pages
-
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Flames1217/YiHuoGe)
-
-> 前端可部署到 Pages；服务端能力建议迁移到 Hono/Workers Routes，并继续使用 TiDB/MySQL HTTP 或 Serverless 连接方案。
-
-- Build command: `npm run build`
-- Output directory: `dist`
-- 必填环境变量：`YIHUOGE_ADMIN_KEY`、`MYSQL_URL`
-
-### 🦕 Deno Deploy
-
-[![Deploy on Deno](https://deno.com/button)](https://dash.deno.com/new?url=https://github.com/Flames1217/YiHuoGe)
-
-> 前端可作为静态站点部署；服务端能力建议迁移为 Deno/Hono 入口后再接入 MySQL/TiDB。
-
-- Build command: `npm run build`
-- Static directory: `dist`
-- 必填环境变量：`YIHUOGE_ADMIN_KEY`、`MYSQL_URL`
-
-### 🐳 Docker / 手动服务器
+### Docker / VPS / 本地服务器
 
 ```bash
 npm install
@@ -121,39 +134,66 @@ npm run build
 npm run dev:full
 ```
 
-静态文件在 `dist/`，可由 Nginx/Caddy 托管；服务端入口为 `server/index.ts`。
+或分别启动：
 
-## 📁 项目结构
+```bash
+npm run dev
+npm run api
+```
+
+生产部署时可用 Nginx/Caddy 托管 `dist/`，并把 API 服务反代到 `server/index.ts` 启动的端口。
+
+### Cloudflare
+
+Cloudflare 场景建议使用 D1：
+
+- 绑定 D1 数据库为 `YIHUOGE_D1`、`DB` 或 `D1`。
+- 前端可部署到 Cloudflare Pages。
+- 服务端入口需要放在 Workers/Pages Functions 环境中，D1 绑定存在时会优先使用 D1。
+
+## 项目结构
 
 ```text
 YiHuoGe/
-|-- api/                    # Vercel Functions
-|   |-- [...path].ts          # Express-compatible server entry
-|   |-- ai/models/fetch.ts    # Model list function
-|   `-- whois/[domain].ts     # Domain WHOIS demo adapter
-|-- docs/                   # Docs and preview image
-|-- public/                 # Fonts and static assets
-|-- server/                 # Local Express server
-|-- src/                    # React frontend source
-|   |-- data/                # Seed data
-|   |-- utils/               # Date, lunar, status helpers
-|   |-- App.tsx              # Main UI and modules
-|   |-- store.ts             # Zustand store
-|   |-- style.css            # YiHuoGe theme styles
-|   `-- types.ts             # Type definitions
-|-- .env.example            # Environment variable example
-|-- vercel.json             # Vercel config
-`-- package.json            # Scripts and dependencies
+|-- api/                       # Vercel Functions / serverless API
+|   |-- _state.ts               # 数据库存储适配器与自动建表逻辑
+|   |-- [...path].ts            # Express-compatible API 入口
+|   |-- ai/                     # AI 配置、模型测试、AI 炼化
+|   `-- whois/[domain].ts       # WHOIS/RDAP 示例适配器
+|-- data/                      # 本地 SQLite/种子数据目录
+|-- docs/                      # 架构说明
+|-- public/                    # 字体、Logo、静态资源
+|-- server/                    # 本地 Express API
+|-- src/                       # React 前端
+|   |-- data/                   # 前端默认配置
+|   |-- utils/                  # 日期、农历、状态工具
+|   |-- App.tsx                 # 主界面和模块
+|   |-- store.ts                # Zustand 状态管理
+|   |-- style.css               # 异火阁主题样式
+|   `-- types.ts                # 类型定义
+|-- .env.example               # 环境变量示例
+|-- vercel.json                # Vercel 配置
+`-- package.json               # 脚本与依赖
 ```
 
-## 🧩 技术栈
+## 技术栈
 
-- React + TypeScript + Vite
+- React 19 + TypeScript + Vite
 - Ant Design + Zustand + i18next
 - Express / Vercel Functions
-- MySQL / TiDB Cloud
-- Lunar.js / dayjs
+- MySQL2 / pg / sqlite / Cloudflare D1
+- dayjs + lunar-javascript
 
-## 📄 License
+## 常用命令
+
+```bash
+npm run dev        # 只启动前端
+npm run api        # 只启动本地 API
+npm run dev:full   # 同时启动前端和 API
+npm run build      # 类型检查并构建生产包
+npm run preview    # 预览 dist
+```
+
+## License
 
 MIT
