@@ -2,6 +2,7 @@ export type Language = "zh" | "en";
 
 export type AssetType = "domain" | "vps" | "hosting" | "cloud" | "ai" | "membership" | "custom";
 export type AssetStatus = "healthy" | "warning" | "critical" | "expired";
+export type AssetCycle = "daily" | "weekly" | "monthly" | "quarterly" | "semiannual" | "yearly" | "biennial" | "triennial" | "lifetime" | "custom";
 export type ViewMode = "table" | "card";
 export type NotifyType =
   | "Email"
@@ -42,7 +43,7 @@ export interface Asset {
   renewalDate: string;
   price: number;
   currency: string;
-  cycle: "monthly" | "yearly" | "custom";
+  cycle: AssetCycle;
   status: AssetStatus;
   url?: string;
   tags: string[];

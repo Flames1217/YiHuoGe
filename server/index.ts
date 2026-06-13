@@ -32,6 +32,7 @@ const adminKey = process.env.YIHUOGE_ADMIN_KEY ?? "";
 
 type AssetType = "domain" | "vps" | "hosting" | "cloud" | "ai" | "membership" | "custom";
 type AssetStatus = "healthy" | "warning" | "critical" | "expired";
+type AssetCycle = "daily" | "weekly" | "monthly" | "quarterly" | "semiannual" | "yearly" | "biennial" | "triennial" | "lifetime" | "custom";
 
 interface Asset {
   id: string;
@@ -45,7 +46,7 @@ interface Asset {
   renewalDate: string;
   price: number;
   currency: string;
-  cycle: "monthly" | "yearly" | "custom";
+  cycle: AssetCycle;
   status: AssetStatus;
   url?: string;
   tags: string[];
@@ -357,6 +358,44 @@ function splitAssetCsvLine(line: string) {
   return cells;
 }
 
+
+function normalizeCycle(value: unknown): AssetCycle {
+  const raw = String(value ?? "").trim().toLowerCase();
+  const aliases: Record<string, AssetCycle> = {
+    day: "daily",
+    daily: "daily",
+    "\u65e5\u4ed8": "daily",
+    week: "weekly",
+    weekly: "weekly",
+    "\u5468\u4ed8": "weekly",
+    month: "monthly",
+    monthly: "monthly",
+    "\u6708\u4ed8": "monthly",
+    quarter: "quarterly",
+    quarterly: "quarterly",
+    "\u5b63\u4ed8": "quarterly",
+    semiannual: "semiannual",
+    halfyear: "semiannual",
+    "\u534a\u5e74\u4ed8": "semiannual",
+    year: "yearly",
+    yearly: "yearly",
+    annual: "yearly",
+    "\u5e74\u4ed8": "yearly",
+    biennial: "biennial",
+    "\u4e24\u5e74\u4ed8": "biennial",
+    triennial: "triennial",
+    "\u4e09\u5e74\u4ed8": "triennial",
+    lifetime: "lifetime",
+    permanent: "lifetime",
+    "\u7ec8\u8eab": "lifetime",
+    custom: "custom",
+    "\u81ea\u5b9a": "custom",
+    "\u81ea\u5b9a\u4e49": "custom",
+  };
+  if (["daily", "weekly", "monthly", "quarterly", "semiannual", "yearly", "biennial", "triennial", "lifetime", "custom"].includes(raw)) return raw as AssetCycle;
+  return aliases[raw] ?? "custom";
+}
+
 function normalizeAssetDate(value?: string) {
   const raw = String(value ?? "").trim();
   if (!raw) return new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
@@ -394,7 +433,7 @@ function normalizeImportedAsset(item: Record<string, any>, index: number): Asset
     renewalDate,
     price: Number(item.price ?? item["\u4ef7\u683c"] ?? item["\u8d39\u7528"] ?? 0) || 0,
     currency: String(item.currency ?? item["\u8d27\u5e01"] ?? "CNY"),
-    cycle: ["monthly", "yearly", "custom"].includes(item.cycle) ? item.cycle : "custom",
+    cycle: normalizeCycle(item.cycle ?? item["\u5468\u671f"] ?? item["\u4ed8\u8d39\u5468\u671f"] ?? item["\u8ba1\u8d39\u5468\u671f"]),
     status: "healthy",
     url,
     tags: Array.isArray(item.tags) ? item.tags.filter((tag: string) => tag !== "AI\u70bc\u5316") : [],
@@ -448,34 +487,27 @@ async function aiForgeAssets(text: string, ai: Database["ai"]): Promise<Asset[]>
   const baseUrl = String(ai.baseUrl ?? "").replace(/\/+$/, "");
   const apiKey = String((ai as any).apiKey ?? "");
   const model = ai.defaultModel || ai.models?.[0];
-  if (!baseUrl || !apiKey || !model) throw new Error("AI \u70bc\u5316\u914d\u7f6e\u4e0d\u5b8c\u6574");
+  if (!baseUrl || !apiKey || !model) throw new Error("AI forge config is incomplete");
   const body = JSON.stringify({
     model,
     temperature: 0.05,
     response_format: { type: "json_object" },
     messages: [
-      { role: "system", content: `?????????????????????? CSV?TSV?JSON????????/???/?????????????? Asset ???
-
-??? Asset ???
-- name: string?????????????????
-- type: ??? domain/vps/hosting/ai/membership/custom???=>domain?VPS/???/?????/IP=>vps?????/????/cPanel/Plesk/????=>hosting?OpenAI/Claude/Gemini/API/??=>ai???/??/SaaS=>membership?????=>custom?
-- provider: string????/???/??/????
-- providerUrl: string??????????????/???/console/login/dashboard URL??? url???????????????? providerUrl?
-- hostProvider: string??????????DNS/???/???/Nameserver ???????
-- hostUrl: string?????????????????
-- account: string?????????????? ID ? IP???????
-- renewalDate: YYYY-MM-DD?????/???/expiration/expire/next billing date ????????????
-- price: number???/??/amount/cost??? 0?
-- currency: string?CNY/USD/HKD/JPY/EUR ???? CNY?
-- cycle: monthly/yearly/custom???=>monthly???=>yearly??? custom?
-- tags: string[]???????AI????????????????????
-- notes: string??????????????????????????API Key?Token?Secret ???
-
-???
-1. ?????????????????????????? custom?
-2. ????? JSON?{"assets":[...]}??? Markdown??????
-3. ??????????? notes????????????????` },
-      { role: "user", content: text.slice(0, 30000) },
+      { role: "system", content: `You are the built-in YiHuoGe asset forge agent. Convert the user's COMPLETE raw CSV/TSV/JSON/table text/export into normalized assets.
+Project asset schema:
+- name: asset name, domain, product, instance name, subscription name.
+- type: only domain/vps/hosting/ai/membership/custom. Domains => domain; VPS/cloud servers/dedicated servers/IP instances => vps; virtual hosting/shared hosting/cPanel/Plesk/light app servers => hosting; OpenAI/Claude/Gemini/API/model subscription => ai; membership/SaaS/subscription => membership; uncertain => custom.
+- provider: registrar, cloud vendor, SaaS provider, platform, or custom provider.
+- providerUrl: provider console/login/dashboard URL when present.
+- hostProvider/hostUrl: for domain DNS/hosting/nameserver provider and its console URL.
+- account: login email/account/instance ID/IP if present; leave empty if a domain has no independent account.
+- renewalDate: YYYY-MM-DD from expiry/expiration/next billing/renewal date; infer only when explicit enough.
+- price/currency/cycle: price number, currency such as CNY/USD/HKD/JPY/EUR, cycle only daily/weekly/monthly/quarterly/semiannual/yearly/biennial/triennial/lifetime/custom.
+- url: management console URL if it is the main management address.
+- tags: do not invent decorative tags; never add decorative AI tags automatically.
+- notes: keep useful non-sensitive context; never return raw password/token/secret/API key.
+Return strict JSON only: {"assets":[...]}. Do not use Markdown. Preserve as many usable rows as possible; do not split or summarize the raw file before reasoning over it.` },
+      { role: "user", content: text },
     ],
   });
   let lastError = "";
@@ -510,14 +542,14 @@ async function aiTestModel(ai: Database["ai"], modelOverride?: string): Promise<
   const baseUrl = String(ai.baseUrl ?? "").replace(/\/+$/, "");
   const apiKey = String((ai as any).apiKey ?? "");
   const model = modelOverride || ai.defaultModel || ai.models?.[0];
-  if (!baseUrl || !apiKey || !model) throw new Error("AI ?????????");
+  if (!baseUrl || !apiKey || !model) throw new Error("AI model test config is incomplete");
   const body = JSON.stringify({
     model,
     temperature: 0,
     max_tokens: 80,
     messages: [
-      { role: "system", content: "?????????????????????????????????" },
-      { role: "user", content: "???????????" },
+      { role: "system", content: "Reply with a short JSON object proving this model is reachable." },
+      { role: "user", content: "Return {\"ok\":true}." },
     ],
   });
   let lastError = "";
@@ -539,9 +571,9 @@ async function aiTestModel(ai: Database["ai"], modelOverride?: string): Promise<
     }
     const data = raw ? JSON.parse(raw) : {};
     const content = String(data.choices?.[0]?.message?.content ?? data.output_text ?? data.output?.[0]?.content?.[0]?.text ?? "").trim();
-    return { endpoint, model, content: content || "?????????" };
+    return { endpoint, model, content: content || "model reachable" };
   }
-  throw new Error(`AI ???????${lastError || "???????"}`);
+  throw new Error(`AI model test failed: ${lastError || "no endpoint responded"}`);
 }
 
 app.post("/api/ai/test", async (req, res) => {
@@ -551,7 +583,7 @@ app.post("/api/ai/test", async (req, res) => {
     const result = await aiTestModel(db.ai, model);
     res.json({ ok: true, ...result });
   } catch (error) {
-    res.status(500).json({ ok: false, error: error instanceof Error ? error.message : "AI ??????" });
+    res.status(500).json({ ok: false, error: error instanceof Error ? error.message : "AI model test failed" });
   }
 });
 app.post("/api/ai/import", async (req, res) => {

@@ -55,7 +55,7 @@ import zhCN from "antd/locale/zh_CN";
 import dayjs from "dayjs";
 import "dayjs/locale/zh-cn";
 import { useEffect, useMemo, useState } from "react";
-import type { Key } from "react";
+import type { Key, MouseEvent as ReactMouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import "./i18n";
 import { useYiHuoStore } from "./store";
@@ -66,6 +66,34 @@ const { Header, Sider, Content } = Layout;
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const ADMIN_KEY_STORAGE = "yihuoge-admin-key";
+const ASSET_COLUMN_WIDTHS_STORAGE = "yihuoge-asset-column-widths";
+
+type AssetColumnKey = "name" | "type" | "provider" | "renewalDate" | "price" | "manage" | "action";
+
+const defaultAssetColumnWidths: Record<AssetColumnKey, number> = {
+  name: 420,
+  type: 130,
+  provider: 170,
+  renewalDate: 270,
+  price: 130,
+  manage: 170,
+  action: 150,
+};
+
+function loadAssetColumnWidths(): Record<AssetColumnKey, number> {
+  if (typeof window === "undefined") return defaultAssetColumnWidths;
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(ASSET_COLUMN_WIDTHS_STORAGE) || "{}") as Partial<Record<AssetColumnKey, number>>;
+    return { ...defaultAssetColumnWidths, ...Object.fromEntries(Object.entries(saved).filter(([, value]) => Number.isFinite(value) && Number(value) >= 80)) } as Record<AssetColumnKey, number>;
+  } catch {
+    return defaultAssetColumnWidths;
+  }
+}
+
+function persistAssetColumnWidths(widths: Record<AssetColumnKey, number>) {
+  if (typeof window !== "undefined") window.localStorage.setItem(ASSET_COLUMN_WIDTHS_STORAGE, JSON.stringify(widths));
+}
+
 
 type AccessState = "checking" | "locked" | "unlocked";
 
@@ -119,11 +147,22 @@ const assetTypeName: Record<AssetType, string> = {
   custom: "自定义",
 };
 
+const assetCycles: Asset["cycle"][] = ["daily", "weekly", "monthly", "quarterly", "semiannual", "yearly", "biennial", "triennial", "lifetime", "custom"];
+
 const cycleName: Record<Asset["cycle"], string> = {
+  daily: "日付",
+  weekly: "周付",
   monthly: "月付",
+  quarterly: "季付",
+  semiannual: "半年付",
   yearly: "年付",
+  biennial: "两年付",
+  triennial: "三年付",
+  lifetime: "终身",
   custom: "自定",
 };
+
+const assetCycleOptions = assetCycles.map((value) => ({ value, label: cycleName[value] }));
 
 const moduleName: Record<string, string> = {
   overview: "阁内总览",
@@ -623,6 +662,43 @@ function normalizeAssetDate(value?: string) {
   return parsed.isValid() ? parsed.format("YYYY-MM-DD") : dayjs().add(1, "year").format("YYYY-MM-DD");
 }
 
+function normalizeAssetCycle(value: unknown): Asset["cycle"] {
+  const raw = String(value ?? "").trim().toLowerCase();
+  const aliases: Record<string, Asset["cycle"]> = {
+    day: "daily",
+    daily: "daily",
+    "日付": "daily",
+    week: "weekly",
+    weekly: "weekly",
+    "周付": "weekly",
+    month: "monthly",
+    monthly: "monthly",
+    "月付": "monthly",
+    quarter: "quarterly",
+    quarterly: "quarterly",
+    "季付": "quarterly",
+    semiannual: "semiannual",
+    halfyear: "semiannual",
+    "半年付": "semiannual",
+    year: "yearly",
+    yearly: "yearly",
+    annual: "yearly",
+    "年付": "yearly",
+    biennial: "biennial",
+    "两年付": "biennial",
+    triennial: "triennial",
+    "三年付": "triennial",
+    lifetime: "lifetime",
+    permanent: "lifetime",
+    "终身": "lifetime",
+    custom: "custom",
+    "自定": "custom",
+    "自定义": "custom",
+  };
+  if ((assetCycles as string[]).includes(raw)) return raw as Asset["cycle"];
+  return aliases[raw] ?? "custom";
+}
+
 function inferAssetType(row: Record<string, string>, fallback?: string): AssetType {
   const raw = [fallback, row["\u7c7b\u578b"], row["\u7c7b\u522b"], row["\u8d44\u4ea7\u7c7b\u578b"], row["\u57df\u540d"] ? "\u57df\u540d" : ""].filter(Boolean).join(" ");
   const chineseTypeMap: Array<[RegExp, AssetType]> = [
@@ -659,7 +735,7 @@ function normalizeImportedAsset(item: Partial<Asset> & Record<string, unknown>, 
     renewalDate,
     price,
     currency: String(item.currency ?? row["\u8d27\u5e01"] ?? "CNY"),
-    cycle: (item.cycle === "monthly" || item.cycle === "yearly" || item.cycle === "custom" ? item.cycle : "custom") as Asset["cycle"],
+    cycle: normalizeAssetCycle(item.cycle ?? row["\u5468\u671f"] ?? row["\u4ed8\u8d39\u5468\u671f"] ?? row["\u8ba1\u8d39\u5468\u671f"]),
     status: "healthy",
     url,
     tags: Array.isArray(item.tags) ? item.tags.filter((tag) => tag !== "AI\u70bc\u5316") : [],
@@ -910,8 +986,7 @@ function AssetDrawer({
     try {
       const whois = await lookupDomainWhois(name);
       if (!isWhoisUsable(whois)) {
-        form.setFieldsValue({ notes: buildWhoisNotes(whois, form.getFieldValue("notes")) });
-        api.warning("WHOIS/RDAP 适配器未配置或未返回有效到期日，已保留当前服务商和续期日");
+        api.info("WHOIS/RDAP 未接入真实适配器，未改写服务商、托管商和续期日");
         return;
       }
       const patch: Partial<Asset> = {
@@ -935,25 +1010,6 @@ function AssetDrawer({
       hostUrl: normalizeAssetType(values.type) === "domain" ? values.hostUrl || findDomainHostOption(values.hostProvider)?.url : undefined,
       tags: Array.isArray(values.tags) ? values.tags.filter((tag) => tag !== "AI炼化") : [],
     };
-    if (values.type === "domain" && values.name) {
-      try {
-        const whois = await lookupDomainWhois(values.name);
-        if (isWhoisUsable(whois)) {
-          values = {
-            ...values,
-            renewalDate: whois.expiresAt || values.renewalDate,
-            provider: whois.registrar || values.provider,
-            notes: buildWhoisNotes(whois, values.notes),
-          };
-          api.success("域名 WHOIS 已验真，续期日已按到期灵纹写入");
-        } else {
-          values = { ...values, notes: buildWhoisNotes(whois, values.notes) };
-          api.warning("WHOIS 未配置或结果无效，已按当前表单内容保存");
-        }
-      } catch {
-        api.warning("WHOIS 占验未成，已依当前续期日封存");
-      }
-    }
     if (editing) {
       updateAsset({ ...editing, ...values });
       api.success("资产火种已重铸");
@@ -965,10 +1021,10 @@ function AssetDrawer({
   };
 
   return (
-    <Drawer size="large" open={open} onClose={onClose} title={editing ? "编辑资产" : t("addAsset")} extra={<Button title="封存当前资产；域名类型会尝试 WHOIS，但不会用无效结果覆盖表单" type="primary" onClick={submit}>保存</Button>}>
+    <Drawer size="large" open={open} onClose={onClose} title={editing ? "编辑资产" : t("addAsset")} extra={<Button title="封存当前资产；WHOIS 仅在点击占验按钮时手动执行" type="primary" onClick={submit}>保存</Button>}>
       {contextHolder}
       <Form form={form} layout="vertical">
-        <Form.Item name="name" label="名称" rules={[{ required: true }]}><Input onBlur={fillWhois} placeholder="例如：yihuoge.dev / 开放智能接口额度" /></Form.Item>
+        <Form.Item name="name" label="名称" rules={[{ required: true }]}><Input placeholder="例如：yihuoge.dev / 开放智能接口额度" /></Form.Item>
         <Row gutter={12}>
           <Col span={12}><Form.Item name="type" label="类型"><Select options={assetTypes.map((value) => ({ value, label: assetTypeName[value] }))} onChange={(nextType: AssetType) => {
             const normalized = normalizeAssetType(nextType);
@@ -993,9 +1049,9 @@ function AssetDrawer({
         <Form.Item name="account" label="账号 / 标识（可选）" tooltip="可填登录邮箱、账号、实例 ID 或 IP；域名没有独立账号时留空即可。"><Input placeholder="登录账号、邮箱、实例 ID 或 IP，可空" /></Form.Item>
         <Row gutter={12}>
           <Col span={12}><Form.Item name="renewalDate" label="续期日期" rules={[{ required: true }]}><Input type="date" /></Form.Item></Col>
-          <Col span={12}><Form.Item name="cycle" label="周期"><Select options={(["monthly", "yearly", "custom"] as Asset["cycle"][]).map((value) => ({ value, label: cycleName[value] }))} /></Form.Item></Col>
+          <Col span={12}><Form.Item name="cycle" label="周期"><Select options={assetCycleOptions} /></Form.Item></Col>
         </Row>
-        <Button title="仅域名火种可用：占验 WHOIS 并把到期灵纹写入续期日" icon={<GlobalOutlined />} onClick={fillWhois}>占验 WHOIS 并刻续期日</Button>
+        <Button title="手动查询 WHOIS/RDAP；未接入真实适配器时不会改写任何字段" icon={<GlobalOutlined />} onClick={fillWhois}>占验 WHOIS 并刻续期日</Button>
         <Row gutter={12}>
           <Col span={12}><Form.Item name="price" label={t("price")}><InputNumber min={0} style={{ width: "100%" }} /></Form.Item></Col>
           <Col span={12}><Form.Item name="currency" label="货币"><Select showSearch options={currencyOptions} /></Form.Item></Col>
@@ -1032,6 +1088,39 @@ function AssetsModule({
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState("");
   const [api, contextHolder] = message.useMessage();
+  const [columnWidths, setColumnWidths] = useState<Record<AssetColumnKey, number>>(() => loadAssetColumnWidths());
+
+  const startColumnResize = (event: ReactMouseEvent<HTMLSpanElement>, key: AssetColumnKey, minWidth = 96) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const startX = event.clientX;
+    const startWidth = columnWidths[key] ?? defaultAssetColumnWidths[key];
+    const onMove = (moveEvent: MouseEvent) => {
+      const nextWidth = Math.max(minWidth, startWidth + moveEvent.clientX - startX);
+      setColumnWidths((current) => {
+        const next = { ...current, [key]: nextWidth };
+        persistAssetColumnWidths(next);
+        return next;
+      });
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.body.classList.remove("is-resizing-column");
+    };
+    document.body.classList.add("is-resizing-column");
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
+
+  const columnTitle = (key: AssetColumnKey, label: string, minWidth = 96) => (
+    <span className="resizable-column-title">
+      <span>{label}</span>
+      <span className="column-resize-handle" title="拖拽调整列宽" onMouseDown={(event) => startColumnResize(event, key, minWidth)} />
+    </span>
+  );
+
+  const tableScrollX = Object.values(columnWidths).reduce((total, width) => total + width, 0) + 64;
 
   useEffect(() => {
     if (quickCreateNonce) {
@@ -1086,23 +1175,35 @@ function AssetsModule({
 
   const columns: ColumnsType<Asset> = [
     {
-      title: "名称",
+      title: columnTitle("name", "名称", 220),
       dataIndex: "name",
+      key: "name",
+      width: columnWidths.name,
       sorter: (a, b) => a.name.localeCompare(b.name),
       render: (value: string, record) => (
         <Space orientation="vertical" size={0}>
           <Text strong>{value}</Text>
-          <Space size={4}>{record.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)}</Space>
+          <Space size={4}>{(record.tags ?? []).map((tag) => <Tag key={tag}>{tag}</Tag>)}</Space>
         </Space>
       ),
     },
-    { title: "类型", dataIndex: "type", filters: assetTypes.map((item) => ({ text: assetTypeName[item], value: item })), onFilter: (value, record) => normalizeAssetType(record.type) === value, render: (value: AssetType) => {
-      const normalized = normalizeAssetType(value);
-      return <Tag color={typeTone[normalized]}>{assetTypeName[normalized]}</Tag>;
-    } },
     {
-      title: t("provider"),
+      title: columnTitle("type", "类型", 110),
+      dataIndex: "type",
+      key: "type",
+      width: columnWidths.type,
+      filters: assetTypes.map((item) => ({ text: assetTypeName[item], value: item })),
+      onFilter: (value, record) => normalizeAssetType(record.type) === value,
+      render: (value: AssetType) => {
+        const normalized = normalizeAssetType(value);
+        return <Tag color={typeTone[normalized]}>{assetTypeName[normalized]}</Tag>;
+      },
+    },
+    {
+      title: columnTitle("provider", t("provider"), 130),
       dataIndex: "provider",
+      key: "provider",
+      width: columnWidths.provider,
       sorter: (a, b) => a.provider.localeCompare(b.provider),
       render: (value: string, record) => (
         <Space direction="vertical" size={0}>
@@ -1111,21 +1212,40 @@ function AssetsModule({
         </Space>
       ),
     },
-    { title: "续期日", dataIndex: "renewalDate", sorter: (a, b) => dayjs(a.renewalDate).valueOf() - dayjs(b.renewalDate).valueOf(), render: (value: string) => <Space><CalendarOutlined />{value}<Tag color="orange">{dayUnit(value)}</Tag></Space> },
-    { title: t("price"), render: (_, record) => formatPreferredAmount(record.price, record.currency, preferredCurrency) },
-    { title: "管理地址", render: (_, record) => {
-      const manageUrl = assetManageUrl(record);
-      const hostUrl = normalizeAssetType(record.type) === "domain" ? assetHostManageUrl(record) : "";
-      if (!manageUrl && !hostUrl) return <Text className="muted">未填</Text>;
-      return (
-        <Space direction="vertical" size={0}>
-          {manageUrl ? <a className="asset-manage-link" href={manageUrl} target="_blank" rel="noreferrer">服务商后台</a> : null}
-          {hostUrl ? <a className="asset-manage-link asset-subline" href={hostUrl} target="_blank" rel="noreferrer">托管后台</a> : null}
-        </Space>
-      );
-    } },
     {
-      title: t("action"),
+      title: columnTitle("renewalDate", "续期日", 160),
+      dataIndex: "renewalDate",
+      key: "renewalDate",
+      width: columnWidths.renewalDate,
+      sorter: (a, b) => dayjs(a.renewalDate).valueOf() - dayjs(b.renewalDate).valueOf(),
+      render: (value: string) => <Space><CalendarOutlined />{value}<Tag color="orange">{dayUnit(value)}</Tag></Space>,
+    },
+    {
+      title: columnTitle("price", t("price"), 110),
+      key: "price",
+      width: columnWidths.price,
+      render: (_, record) => formatPreferredAmount(record.price, record.currency, preferredCurrency),
+    },
+    {
+      title: columnTitle("manage", "管理地址", 130),
+      key: "manage",
+      width: columnWidths.manage,
+      render: (_, record) => {
+        const manageUrl = assetManageUrl(record);
+        const hostUrl = normalizeAssetType(record.type) === "domain" ? assetHostManageUrl(record) : "";
+        if (!manageUrl && !hostUrl) return <Text className="muted">未填</Text>;
+        return (
+          <Space direction="vertical" size={0}>
+            {manageUrl ? <a className="asset-manage-link" href={manageUrl} target="_blank" rel="noreferrer">服务商后台</a> : null}
+            {hostUrl ? <a className="asset-manage-link asset-subline" href={hostUrl} target="_blank" rel="noreferrer">托管后台</a> : null}
+          </Space>
+        );
+      },
+    },
+    {
+      title: columnTitle("action", t("action"), 120),
+      key: "action",
+      width: columnWidths.action,
       render: (_, record) => (
         <Space>
           <Button title="编辑这条资产" size="small" icon={<EditOutlined />} onClick={() => { setEditing(record); setDrawerOpen(true); }} />
@@ -1146,7 +1266,7 @@ function AssetsModule({
         <Space wrap>
           <Button title="进入 AI 炼化炉，将文本或表格炼成资产火种" icon={<RobotOutlined />} onClick={goAi}>AI 炼化</Button>
           <Button title="投放表格文本，批量纳火入阁" icon={<ImportOutlined />} onClick={() => setImportOpen(true)}>{t("import")}</Button>
-          <Button title="手动收录一枚火种；域名类型会自动尝试 WHOIS 占验" type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setDrawerOpen(true); }}>{t("addAsset")}</Button>
+          <Button title="手动收录一枚火种；WHOIS 可在编辑抽屉中手动占验" type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setDrawerOpen(true); }}>{t("addAsset")}</Button>
         </Space>
       </Flex>
       <Card className="yhg-card">
@@ -1181,14 +1301,17 @@ function AssetsModule({
         {view === "table" ? (
           <Table
             rowKey="id"
+            className="asset-table"
             columns={columns}
             dataSource={filtered}
+            tableLayout="fixed"
+            scroll={{ x: tableScrollX }}
             pagination={{
               current: tablePage,
               pageSize: tablePageSize,
               total: filtered.length,
               showSizeChanger: true,
-              pageSizeOptions: ["5", "10", "20", "50"],
+              pageSizeOptions: ["5", "10", "20", "50", "100"],
               showTotal: (total) => `共 ${total} 枚火种`,
               onChange: (page, size) => {
                 setTablePage(page);
@@ -1476,13 +1599,13 @@ function AiModule({ onForgeDone }: { onForgeDone?: () => void }) {
 
   const readForgeFile = async (file: File) => {
     try {
-      const content = (await file.text()).trim();
-      if (!content) {
+      const content = await file.text();
+      if (!content.trim()) {
         api.warning("此卷为空，未感知到可炼化内容");
         return false;
       }
-      setText((current) => current.trim() ? `${current.trim()}\n${content}` : content);
-      api.success(`已读取 ${file.name}，可开始炼化资产`);
+      setText((current) => current.trim() ? `${current}\n\n${content}` : content);
+      api.success(`已按原文读取 ${file.name}，将整份内容交给模型炼化`);
     } catch {
       api.error("残卷读取失败，请换成 CSV 或纯文本清单");
     }
@@ -1585,7 +1708,7 @@ function AiModule({ onForgeDone }: { onForgeDone?: () => void }) {
               <p className="ant-upload-drag-icon"><ImportOutlined /></p>
               <p>将表格、清单或知识库残卷投入此炉，交由所选模型炼化</p>
             </Upload.Dragger>
-            <TextArea className="import-textarea" rows={10} value={text} onChange={(event) => setText(event.target.value)} />
+            <TextArea className="import-textarea" rows={10} wrap="off" value={text} onChange={(event) => setText(event.target.value)} />
             <div className="ai-forge-actions">
               <Button className="ai-forge-button" title="将上方文本炼成资产火种并收入阁中" type="primary" icon={<RobotOutlined />} loading={forging} onClick={runImport}>开始炼化资产</Button>
             </div>

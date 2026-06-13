@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import { hasValidAdminKey, readState, writeState } from "../_state.js";
 
 type AssetType = "domain" | "vps" | "hosting" | "ai" | "membership" | "custom";
+type AssetCycle = "daily" | "weekly" | "monthly" | "quarterly" | "semiannual" | "yearly" | "biennial" | "triennial" | "lifetime" | "custom";
 
 function splitCsvLine(line: string) {
   const cells: string[] = [];
@@ -45,6 +46,44 @@ function inferType(row: Record<string, any>, fallback?: string): AssetType {
   return "custom";
 }
 
+
+function normalizeCycle(value: unknown): AssetCycle {
+  const raw = String(value ?? "").trim().toLowerCase();
+  const aliases: Record<string, AssetCycle> = {
+    day: "daily",
+    daily: "daily",
+    "\u65e5\u4ed8": "daily",
+    week: "weekly",
+    weekly: "weekly",
+    "\u5468\u4ed8": "weekly",
+    month: "monthly",
+    monthly: "monthly",
+    "\u6708\u4ed8": "monthly",
+    quarter: "quarterly",
+    quarterly: "quarterly",
+    "\u5b63\u4ed8": "quarterly",
+    semiannual: "semiannual",
+    halfyear: "semiannual",
+    "\u534a\u5e74\u4ed8": "semiannual",
+    year: "yearly",
+    yearly: "yearly",
+    annual: "yearly",
+    "\u5e74\u4ed8": "yearly",
+    biennial: "biennial",
+    "\u4e24\u5e74\u4ed8": "biennial",
+    triennial: "triennial",
+    "\u4e09\u5e74\u4ed8": "triennial",
+    lifetime: "lifetime",
+    permanent: "lifetime",
+    "\u7ec8\u8eab": "lifetime",
+    custom: "custom",
+    "\u81ea\u5b9a": "custom",
+    "\u81ea\u5b9a\u4e49": "custom",
+  };
+  if (["daily", "weekly", "monthly", "quarterly", "semiannual", "yearly", "biennial", "triennial", "lifetime", "custom"].includes(raw)) return raw as AssetCycle;
+  return aliases[raw] ?? "custom";
+}
+
 function normalizeAsset(item: Record<string, any>, index: number) {
   const name = String(item.name ?? item["名称"] ?? item["域名"] ?? item["产品"] ?? item["实例名"] ?? item["管理后台"] ?? `炼化资产 ${index + 1}`).trim();
   const provider = String(item.provider ?? item["服务商"] ?? item["平台"] ?? item["注册商"] ?? item["地区"] ?? "自定义").trim();
@@ -66,7 +105,7 @@ function normalizeAsset(item: Record<string, any>, index: number) {
     renewalDate,
     price: Number(item.price ?? item["价格"] ?? item["费用"] ?? item["金额"] ?? item.cost ?? 0) || 0,
     currency: String(item.currency ?? item["货币"] ?? "CNY"),
-    cycle: ["monthly", "yearly", "custom"].includes(item.cycle) ? item.cycle : "custom",
+    cycle: normalizeCycle(item.cycle ?? item["\u5468\u671f"] ?? item["\u4ed8\u8d39\u5468\u671f"] ?? item["\u8ba1\u8d39\u5468\u671f"]),
     status: "healthy",
     url,
     tags: Array.isArray(item.tags) ? item.tags.filter((tag: string) => tag !== "AI炼化") : [],
@@ -138,13 +177,22 @@ async function aiForge(text: string, ai: Record<string, any>) {
     messages: [
       {
         role: "system",
-        content: `你是“异火阁”的资产炼化器。把用户提供的 CSV、TSV、JSON、表格文本、域名/服务器/订阅导出数据映射成异火阁 Asset。
-Asset 字段：name,type,provider,account,renewalDate,price,currency,cycle,url,tags,notes。
-type 只能是 domain/vps/hosting/ai/membership/custom。域名=>domain；VPS/云主机/独立服务器/IP=>vps；虚拟主机/共享主机/cPanel/Plesk/轻量应用=>hosting；OpenAI/Claude/Gemini/API/模型=>ai；会员/订阅/SaaS=>membership；无法判断=>custom。
-renewalDate 必须是 YYYY-MM-DD；管理后台/控制台/console/login/dashboard 写入 url；域名若有 DNS/托管商/解析商，写入 hostProvider/hostUrl；密码/token/secret 不要明文返回，只在 notes 说明已忽略敏感列；不要默认添加“AI炼化”标签。
-只返回严格 JSON：{"assets":[...]}，不要 Markdown。`,
+        content: `You are the built-in YiHuoGe asset forge agent. Convert the user's COMPLETE raw CSV/TSV/JSON/table text/export into normalized assets.
+Project asset schema:
+- name: asset name, domain, product, instance name, subscription name.
+- type: only domain/vps/hosting/ai/membership/custom. Domains => domain; VPS/cloud servers/dedicated servers/IP instances => vps; virtual hosting/shared hosting/cPanel/Plesk/light app servers => hosting; OpenAI/Claude/Gemini/API/model subscription => ai; membership/SaaS/subscription => membership; uncertain => custom.
+- provider: registrar, cloud vendor, SaaS provider, platform, or custom provider.
+- providerUrl: provider console/login/dashboard URL when present.
+- hostProvider/hostUrl: for domain DNS/hosting/nameserver provider and its console URL.
+- account: login email/account/instance ID/IP if present; leave empty if a domain has no independent account.
+- renewalDate: YYYY-MM-DD from expiry/expiration/next billing/renewal date; infer only when explicit enough.
+- price/currency/cycle: price number, currency such as CNY/USD/HKD/JPY/EUR, cycle only daily/weekly/monthly/quarterly/semiannual/yearly/biennial/triennial/lifetime/custom.
+- url: management console URL if it is the main management address.
+- tags: do not invent decorative tags; never add decorative AI tags automatically.
+- notes: keep useful non-sensitive context; never return raw password/token/secret/API key.
+Return strict JSON only: {"assets":[...]}. Do not use Markdown. Preserve as many usable rows as possible; do not split or summarize the raw file before reasoning over it.`,
       },
-      { role: "user", content: text.slice(0, 30000) },
+      { role: "user", content: text },
     ],
   });
 

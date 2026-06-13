@@ -108,6 +108,9 @@ domain / vps / hosting / ai / membership / custom
 
 - 不会默认添加“AI炼化”标签。
 - 密码、Token、API Key、Secret 不会明文写入资产备注。
+- AI 炼化上传 CSV/TSV/TXT 时会保留整份原文交给模型，不在前端预切分或摘要。
+- `cycle` 支持：`daily`、`weekly`、`monthly`、`quarterly`、`semiannual`、`yearly`、`biennial`、`triennial`、`lifetime`、`custom`。
+- 资产列表表头列宽支持拖拽调整，并保存在当前浏览器 `localStorage`。
 - AI 炼化成功后会写入数据库，并跳转回异火库查看结果。
 
 ## 部署
