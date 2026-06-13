@@ -21,6 +21,7 @@ import {
   ThunderboltOutlined,
 } from "@ant-design/icons";
 import {
+  AutoComplete,
   Button,
   Card,
   Col,
@@ -1200,6 +1201,23 @@ function AssetDrawer({
   const activeProviderOptions = providerOptionsFor(watchedType, [watchedProvider, editing?.provider]);
   const activeHostProviderOptions = domainHostOptionsFor([watchedHostProvider, editing?.hostProvider]);
 
+  const applyProviderChoice = (provider?: string) => {
+    const option = findProviderOption(watchedType, provider);
+    form.setFieldsValue({
+      provider,
+      providerUrl: option?.url,
+      url: option?.url || form.getFieldValue("url"),
+    });
+  };
+
+  const applyHostProviderChoice = (provider?: string) => {
+    const option = findDomainHostOption(provider);
+    form.setFieldsValue({
+      hostProvider: provider,
+      hostUrl: option?.url,
+    });
+  };
+
   useEffect(() => {
     if (open) {
       form.setFieldsValue(
@@ -1294,18 +1312,12 @@ function AssetDrawer({
             const nextProvider = providerCatalog[normalized][0];
             form.setFieldsValue({ type: normalized, provider: nextProvider.value, providerUrl: nextProvider.url, url: nextProvider.url ?? "", hostProvider: undefined, hostUrl: undefined });
           }} /></Form.Item></Col>
-          <Col span={12}><Form.Item name="provider" label={t("provider")}><Select showSearch options={activeProviderOptions} onChange={(provider: string) => {
-            const option = findProviderOption(watchedType, provider);
-            form.setFieldsValue({ providerUrl: option?.url, url: option?.url || form.getFieldValue("url") });
-          }} /></Form.Item></Col>
+          <Col span={12}><Form.Item name="provider" label={t("provider")}><AutoComplete options={activeProviderOptions} placeholder="选择或输入服务商" filterOption={(input, option) => String(option?.label ?? option?.value ?? "").toLowerCase().includes(input.toLowerCase())} onChange={applyProviderChoice} onSelect={applyProviderChoice} /></Form.Item></Col>
         </Row>
         <Form.Item name="providerUrl" hidden><Input /></Form.Item>
         {watchedType === "domain" ? (
           <Row gutter={12}>
-            <Col span={12}><Form.Item name="hostProvider" label="托管商"><Select allowClear showSearch placeholder="DNS/托管服务商，可不填" options={activeHostProviderOptions} onChange={(provider?: string) => {
-              const option = findDomainHostOption(provider);
-              form.setFieldsValue({ hostUrl: option?.url });
-            }} /></Form.Item></Col>
+            <Col span={12}><Form.Item name="hostProvider" label="托管商"><AutoComplete allowClear options={activeHostProviderOptions} placeholder="选择或输入 DNS/托管服务商，可不填" filterOption={(input, option) => String(option?.label ?? option?.value ?? "").toLowerCase().includes(input.toLowerCase())} onChange={applyHostProviderChoice} onSelect={applyHostProviderChoice} /></Form.Item></Col>
             <Col span={12}><Form.Item name="hostUrl" label="托管后台"><Input placeholder="https://dash.cloudflare.com/..." /></Form.Item></Col>
           </Row>
         ) : null}
