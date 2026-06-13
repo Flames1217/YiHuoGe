@@ -49,6 +49,8 @@ function persistAi(aiConfig: AiConfig) {
 }
 
 interface YiHuoState {
+  hydrating: boolean;
+  hydrated: boolean;
   assets: Asset[];
   domains: DomainRecord[];
   channels: NotificationChannel[];
@@ -71,6 +73,8 @@ interface YiHuoState {
 }
 
 export const useYiHuoStore = create<YiHuoState>((set) => ({
+  hydrating: false,
+  hydrated: false,
   assets: assetsSeed.map((asset) => ({ ...asset, status: statusByDate(asset.renewalDate) })),
   domains: domainsSeed.map((domain) => ({ ...domain, status: statusByDate(domain.expiresAt) })),
   channels: channelsSeed,

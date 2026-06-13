@@ -106,18 +106,23 @@ async function verifyAdminKey(key: string) {
 }
 
 async function hydrateFromServer(key: string) {
-  const response = await fetch("/api/bootstrap", {
-    headers: key ? { "x-admin-key": key } : undefined,
-  });
-  if (!response.ok) return;
-  const data = await response.json();
-  useYiHuoStore.setState((state) => ({
-    assets: Array.isArray(data.assets) ? data.assets : state.assets,
-    domains: Array.isArray(data.domains) ? data.domains : state.domains,
-    channels: Array.isArray(data.channels) ? data.channels : state.channels,
-    aiConfig: data.ai ? { ...state.aiConfig, ...data.ai } : state.aiConfig,
-    settings: data.settings ? { ...state.settings, ...data.settings } : state.settings,
-  }));
+  useYiHuoStore.setState({ hydrating: true });
+  try {
+    const response = await fetch("/api/bootstrap", {
+      headers: key ? { "x-admin-key": key } : undefined,
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    useYiHuoStore.setState((state) => ({
+      assets: Array.isArray(data.assets) ? data.assets : state.assets,
+      domains: Array.isArray(data.domains) ? data.domains : state.domains,
+      channels: Array.isArray(data.channels) ? data.channels : state.channels,
+      aiConfig: data.ai ? { ...state.aiConfig, ...data.ai } : state.aiConfig,
+      settings: data.settings ? { ...state.settings, ...data.settings } : state.settings,
+    }));
+  } finally {
+    useYiHuoStore.setState({ hydrating: false, hydrated: true });
+  }
 }
 
 const statusTone: Record<AssetStatus, string> = {
@@ -253,24 +258,56 @@ type ProviderOption = { value: string; label: string; url?: string };
 
 const providerCatalog: Record<AssetType, ProviderOption[]> = {
   domain: [
-    { value: "阿里云", label: "阿里云", url: "https://dc.console.aliyun.com/" },
-    { value: "腾讯云", label: "腾讯云", url: "https://console.cloud.tencent.com/domain" },
-    { value: "华为云", label: "华为云", url: "https://console.huaweicloud.com/domain/" },
-    { value: "西部数码", label: "西部数码", url: "https://www.west.cn/Manager/" },
-    { value: "新网", label: "新网", url: "https://www.xinnet.com/user/" },
+    { value: "\u963f\u91cc\u4e91", label: "\u963f\u91cc\u4e91", url: "https://dc.console.aliyun.com/" },
+    { value: "\u817e\u8baf\u4e91", label: "\u817e\u8baf\u4e91", url: "https://console.cloud.tencent.com/domain" },
+    { value: "\u534e\u4e3a\u4e91", label: "\u534e\u4e3a\u4e91", url: "https://console.huaweicloud.com/domain/" },
+    { value: "\u897f\u90e8\u6570\u7801", label: "\u897f\u90e8\u6570\u7801", url: "https://www.west.cn/Manager/" },
+    { value: "\u65b0\u7f51", label: "\u65b0\u7f51", url: "https://www.xinnet.com/user/" },
+    { value: "\u6613\u540d\u4e2d\u56fd", label: "\u6613\u540d\u4e2d\u56fd", url: "https://www.ename.net/" },
+    { value: "\u7231\u540d\u7f51", label: "\u7231\u540d\u7f51", url: "https://www.22.cn/" },
+    { value: "\u805a\u540d\u7f51", label: "\u805a\u540d\u7f51", url: "https://www.juming.com/" },
+    { value: "Gname", label: "Gname", url: "https://www.gname.com/" },
+    { value: "22.cn", label: "22.cn", url: "https://www.22.cn/" },
+    { value: "Spaceship", label: "Spaceship", url: "https://www.spaceship.com/application/domain-list-application/" },
     { value: "Cloudflare Registrar", label: "Cloudflare Registrar", url: "https://dash.cloudflare.com/" },
     { value: "Namecheap", label: "Namecheap", url: "https://ap.www.namecheap.com/domains/list/" },
-    { value: "Namesilo", label: "Namesilo", url: "https://www.namesilo.com/account_domains.php" },
-    { value: "Dynadot", label: "Dynadot", url: "https://www.dynadot.com/account/domain/manage" },
     { value: "GoDaddy", label: "GoDaddy", url: "https://dcc.godaddy.com/domains" },
     { value: "Porkbun", label: "Porkbun", url: "https://porkbun.com/account/domains" },
-    { value: "自定义", label: "自定义" },
+    { value: "Dynadot", label: "Dynadot", url: "https://www.dynadot.com/account/domain/manage" },
+    { value: "NameSilo", label: "NameSilo", url: "https://www.namesilo.com/account_domains.php" },
+    { value: "Gandi", label: "Gandi", url: "https://admin.gandi.net/domain" },
+    { value: "OVHcloud", label: "OVHcloud", url: "https://www.ovh.com/manager/" },
+    { value: "IONOS", label: "IONOS", url: "https://my.ionos.com/domains" },
+    { value: "Hostinger", label: "Hostinger", url: "https://hpanel.hostinger.com/domains" },
+    { value: "Squarespace Domains", label: "Squarespace Domains", url: "https://domains.squarespace.com/" },
+    { value: "Tucows / OpenSRS", label: "Tucows / OpenSRS", url: "https://manage.opensrs.com/" },
+    { value: "Hover", label: "Hover", url: "https://www.hover.com/control_panel" },
+    { value: "Enom", label: "Enom", url: "https://www.enom.com/apilogin.aspx" },
+    { value: "MarkMonitor", label: "MarkMonitor", url: "https://www.markmonitor.com/" },
+    { value: "Network Solutions", label: "Network Solutions", url: "https://www.networksolutions.com/manage-it/index.jsp" },
+    { value: "Register.com", label: "Register.com", url: "https://www.register.com/my-account/login" },
+    { value: "Domain.com", label: "Domain.com", url: "https://www.domain.com/controlpanel/login" },
+    { value: "Bluehost Domains", label: "Bluehost Domains", url: "https://my.bluehost.com/hosting/app" },
+    { value: "DreamHost Domains", label: "DreamHost Domains", url: "https://panel.dreamhost.com/" },
+    { value: "Sav", label: "Sav", url: "https://www.sav.com/account/domain" },
+    { value: "Hexonet / CentralNic", label: "Hexonet / CentralNic", url: "https://centralnicreseller.com/" },
+    { value: "Key-Systems", label: "Key-Systems", url: "https://www.key-systems.net/" },
+    { value: "101domain", label: "101domain", url: "https://www.101domain.com/account.htm" },
+    { value: "EuroDNS", label: "EuroDNS", url: "https://www.eurodns.com/account" },
+    { value: "Internet.bs", label: "Internet.bs", url: "https://internetbs.net/en/domain-name-registrations/" },
+    { value: "WebNIC", label: "WebNIC", url: "https://www.webnic.cc/" },
+    { value: "REG.RU", label: "REG.RU", url: "https://www.reg.com/" },
+    { value: "RU-CENTER", label: "RU-CENTER", url: "https://www.nic.ru/" },
+    { value: "GMO / Onamae", label: "GMO / Onamae", url: "https://www.onamae.com/" },
+    { value: "Netim", label: "Netim", url: "https://www.netim.com/" },
+    { value: "\u81ea\u5b9a\u4e49", label: "\u81ea\u5b9a\u4e49" },
   ],
   vps: [
-    { value: "阿里云 ECS", label: "阿里云 ECS", url: "https://ecs.console.aliyun.com/" },
-    { value: "腾讯云 CVM", label: "腾讯云 CVM", url: "https://console.cloud.tencent.com/cvm" },
-    { value: "华为云 ECS", label: "华为云 ECS", url: "https://console.huaweicloud.com/ecm/" },
+    { value: "\u963f\u91cc\u4e91 ECS", label: "\u963f\u91cc\u4e91 ECS", url: "https://ecs.console.aliyun.com/" },
+    { value: "\u817e\u8baf\u4e91 CVM", label: "\u817e\u8baf\u4e91 CVM", url: "https://console.cloud.tencent.com/cvm" },
+    { value: "\u534e\u4e3a\u4e91 ECS", label: "\u534e\u4e3a\u4e91 ECS", url: "https://console.huaweicloud.com/ecm/" },
     { value: "AWS EC2", label: "AWS EC2", url: "https://console.aws.amazon.com/ec2/" },
+    { value: "AWS Lightsail", label: "AWS Lightsail", url: "https://lightsail.aws.amazon.com/" },
     { value: "Google Compute Engine", label: "Google Compute Engine", url: "https://console.cloud.google.com/compute/instances" },
     { value: "Azure Virtual Machines", label: "Azure Virtual Machines", url: "https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.Compute%2FVirtualMachines" },
     { value: "Oracle Cloud", label: "Oracle Cloud", url: "https://cloud.oracle.com/compute/instances" },
@@ -279,39 +316,98 @@ const providerCatalog: Record<AssetType, ProviderOption[]> = {
     { value: "Linode / Akamai", label: "Linode / Akamai", url: "https://cloud.linode.com/linodes" },
     { value: "Hetzner", label: "Hetzner", url: "https://console.hetzner.cloud/projects" },
     { value: "Contabo", label: "Contabo", url: "https://my.contabo.com/" },
-    { value: "自定义", label: "自定义" },
+    { value: "OVHcloud VPS", label: "OVHcloud VPS", url: "https://www.ovh.com/manager/" },
+    { value: "Scaleway", label: "Scaleway", url: "https://console.scaleway.com/" },
+    { value: "UpCloud", label: "UpCloud", url: "https://hub.upcloud.com/" },
+    { value: "Kamatera", label: "Kamatera", url: "https://console.kamatera.com/" },
+    { value: "Leaseweb", label: "Leaseweb", url: "https://secure.leaseweb.com/" },
+    { value: "Gcore", label: "Gcore", url: "https://accounts.gcore.com/" },
+    { value: "Equinix Metal", label: "Equinix Metal", url: "https://console.equinix.com/" },
+    { value: "IBM Cloud", label: "IBM Cloud", url: "https://cloud.ibm.com/resources" },
+    { value: "RackNerd", label: "RackNerd", url: "https://my.racknerd.com/clientarea.php" },
+    { value: "BandwagonHost", label: "BandwagonHost", url: "https://bwh81.net/clientarea.php" },
+    { value: "DMIT", label: "DMIT", url: "https://www.dmit.io/clientarea.php" },
+    { value: "GreenCloudVPS", label: "GreenCloudVPS", url: "https://greencloudvps.com/billing/clientarea.php" },
+    { value: "HostHatch", label: "HostHatch", url: "https://cloud.hosthatch.com/" },
+    { value: "BuyVM", label: "BuyVM", url: "https://manage.buyvm.net/" },
+    { value: "\u81ea\u5b9a\u4e49", label: "\u81ea\u5b9a\u4e49" },
   ],
   hosting: [
-    { value: "阿里云虚拟主机", label: "阿里云虚拟主机", url: "https://wanwang.aliyun.com/hosting/" },
-    { value: "腾讯云轻量应用服务器", label: "腾讯云轻量应用服务器", url: "https://console.cloud.tencent.com/lighthouse/instance" },
-    { value: "西部数码虚拟主机", label: "西部数码虚拟主机", url: "https://www.west.cn/Manager/" },
+    { value: "\u963f\u91cc\u4e91\u865a\u62df\u4e3b\u673a", label: "\u963f\u91cc\u4e91\u865a\u62df\u4e3b\u673a", url: "https://wanwang.aliyun.com/hosting/" },
+    { value: "\u817e\u8baf\u4e91\u8f7b\u91cf\u5e94\u7528\u670d\u52a1\u5668", label: "\u817e\u8baf\u4e91\u8f7b\u91cf\u5e94\u7528\u670d\u52a1\u5668", url: "https://console.cloud.tencent.com/lighthouse/instance" },
+    { value: "\u897f\u90e8\u6570\u7801\u865a\u62df\u4e3b\u673a", label: "\u897f\u90e8\u6570\u7801\u865a\u62df\u4e3b\u673a", url: "https://www.west.cn/Manager/" },
+    { value: "Vercel", label: "Vercel", url: "https://vercel.com/dashboard" },
+    { value: "Netlify", label: "Netlify", url: "https://app.netlify.com/" },
+    { value: "Cloudflare Pages", label: "Cloudflare Pages", url: "https://dash.cloudflare.com/" },
+    { value: "GitHub Pages", label: "GitHub Pages", url: "https://github.com/" },
+    { value: "Render", label: "Render", url: "https://dashboard.render.com/" },
+    { value: "Railway", label: "Railway", url: "https://railway.app/dashboard" },
+    { value: "Fly.io", label: "Fly.io", url: "https://fly.io/dashboard" },
     { value: "Hostinger", label: "Hostinger", url: "https://hpanel.hostinger.com/" },
     { value: "SiteGround", label: "SiteGround", url: "https://tools.siteground.com/" },
     { value: "Bluehost", label: "Bluehost", url: "https://my.bluehost.com/" },
     { value: "DreamHost", label: "DreamHost", url: "https://panel.dreamhost.com/" },
+    { value: "HostGator", label: "HostGator", url: "https://portal.hostgator.com/" },
+    { value: "A2 Hosting", label: "A2 Hosting", url: "https://my.a2hosting.com/" },
+    { value: "InMotion Hosting", label: "InMotion Hosting", url: "https://secure1.inmotionhosting.com/" },
+    { value: "Kinsta", label: "Kinsta", url: "https://my.kinsta.com/" },
+    { value: "WP Engine", label: "WP Engine", url: "https://my.wpengine.com/" },
+    { value: "Cloudways", label: "Cloudways", url: "https://platform.cloudways.com/" },
     { value: "cPanel", label: "cPanel" },
     { value: "Plesk", label: "Plesk" },
-    { value: "宝塔面板", label: "宝塔面板" },
-    { value: "自定义", label: "自定义" },
+    { value: "DirectAdmin", label: "DirectAdmin" },
+    { value: "\u5b9d\u5854\u9762\u677f", label: "\u5b9d\u5854\u9762\u677f" },
+    { value: "\u81ea\u5b9a\u4e49", label: "\u81ea\u5b9a\u4e49" },
   ],
   cloud: [
-    { value: "阿里云虚拟主机", label: "阿里云虚拟主机", url: "https://wanwang.aliyun.com/hosting/" },
-    { value: "腾讯云轻量应用服务器", label: "腾讯云轻量应用服务器", url: "https://console.cloud.tencent.com/lighthouse/instance" },
-    { value: "自定义", label: "自定义" },
+    { value: "\u963f\u91cc\u4e91", label: "\u963f\u91cc\u4e91", url: "https://home.console.aliyun.com/" },
+    { value: "\u817e\u8baf\u4e91", label: "\u817e\u8baf\u4e91", url: "https://console.cloud.tencent.com/" },
+    { value: "\u534e\u4e3a\u4e91", label: "\u534e\u4e3a\u4e91", url: "https://console.huaweicloud.com/" },
+    { value: "AWS", label: "AWS", url: "https://console.aws.amazon.com/" },
+    { value: "Google Cloud", label: "Google Cloud", url: "https://console.cloud.google.com/" },
+    { value: "Microsoft Azure", label: "Microsoft Azure", url: "https://portal.azure.com/" },
+    { value: "Oracle Cloud", label: "Oracle Cloud", url: "https://cloud.oracle.com/" },
+    { value: "Cloudflare", label: "Cloudflare", url: "https://dash.cloudflare.com/" },
+    { value: "Vercel", label: "Vercel", url: "https://vercel.com/dashboard" },
+    { value: "Netlify", label: "Netlify", url: "https://app.netlify.com/" },
+    { value: "DigitalOcean", label: "DigitalOcean", url: "https://cloud.digitalocean.com/" },
+    { value: "Linode / Akamai", label: "Linode / Akamai", url: "https://cloud.linode.com/" },
+    { value: "OVHcloud", label: "OVHcloud", url: "https://www.ovh.com/manager/" },
+    { value: "\u706b\u5c71\u5f15\u64ce", label: "\u706b\u5c71\u5f15\u64ce", url: "https://console.volcengine.com/" },
+    { value: "UCloud", label: "UCloud", url: "https://console.ucloud.cn/" },
+    { value: "\u4e03\u725b\u4e91", label: "\u4e03\u725b\u4e91", url: "https://portal.qiniu.com/" },
+    { value: "\u53c8\u62cd\u4e91", label: "\u53c8\u62cd\u4e91", url: "https://console.upyun.com/" },
+    { value: "\u81ea\u5b9a\u4e49", label: "\u81ea\u5b9a\u4e49" },
   ],
   ai: [
     { value: "OpenAI", label: "OpenAI", url: "https://platform.openai.com/" },
     { value: "Anthropic Claude", label: "Anthropic Claude", url: "https://console.anthropic.com/" },
     { value: "Google Gemini", label: "Google Gemini", url: "https://aistudio.google.com/" },
     { value: "DeepSeek", label: "DeepSeek", url: "https://platform.deepseek.com/" },
-    { value: "智谱 AI", label: "智谱 AI", url: "https://open.bigmodel.cn/" },
-    { value: "Moonshot / Kimi", label: "Moonshot / Kimi", url: "https://platform.moonshot.cn/" },
-    { value: "通义千问", label: "通义千问", url: "https://bailian.console.aliyun.com/" },
-    { value: "火山方舟", label: "火山方舟", url: "https://console.volcengine.com/ark" },
-    { value: "硅基流动", label: "硅基流动", url: "https://cloud.siliconflow.cn/" },
+    { value: "xAI", label: "xAI", url: "https://console.x.ai/" },
+    { value: "Groq", label: "Groq", url: "https://console.groq.com/" },
+    { value: "Mistral AI", label: "Mistral AI", url: "https://console.mistral.ai/" },
+    { value: "Cohere", label: "Cohere", url: "https://dashboard.cohere.com/" },
+    { value: "Perplexity", label: "Perplexity", url: "https://www.perplexity.ai/settings/api" },
     { value: "OpenRouter", label: "OpenRouter", url: "https://openrouter.ai/settings/keys" },
+    { value: "Together AI", label: "Together AI", url: "https://api.together.xyz/settings/api-keys" },
+    { value: "Fireworks AI", label: "Fireworks AI", url: "https://fireworks.ai/account/api-keys" },
+    { value: "Replicate", label: "Replicate", url: "https://replicate.com/account/api-tokens" },
+    { value: "Hugging Face", label: "Hugging Face", url: "https://huggingface.co/settings/tokens" },
+    { value: "Azure OpenAI", label: "Azure OpenAI", url: "https://portal.azure.com/" },
+    { value: "AWS Bedrock", label: "AWS Bedrock", url: "https://console.aws.amazon.com/bedrock/" },
+    { value: "Vertex AI", label: "Vertex AI", url: "https://console.cloud.google.com/vertex-ai" },
+    { value: "\u667a\u8c31 AI", label: "\u667a\u8c31 AI", url: "https://open.bigmodel.cn/" },
+    { value: "Moonshot / Kimi", label: "Moonshot / Kimi", url: "https://platform.moonshot.cn/" },
+    { value: "\u901a\u4e49\u5343\u95ee / \u767e\u70bc", label: "\u901a\u4e49\u5343\u95ee / \u767e\u70bc", url: "https://bailian.console.aliyun.com/" },
+    { value: "\u817e\u8baf\u6df7\u5143", label: "\u817e\u8baf\u6df7\u5143", url: "https://console.cloud.tencent.com/hunyuan" },
+    { value: "\u767e\u5ea6\u5343\u5e06", label: "\u767e\u5ea6\u5343\u5e06", url: "https://console.bce.baidu.com/qianfan/" },
+    { value: "\u706b\u5c71\u65b9\u821f", label: "\u706b\u5c71\u65b9\u821f", url: "https://console.volcengine.com/ark" },
+    { value: "\u7845\u57fa\u6d41\u52a8", label: "\u7845\u57fa\u6d41\u52a8", url: "https://cloud.siliconflow.cn/" },
+    { value: "MiniMax", label: "MiniMax", url: "https://platform.minimaxi.com/" },
+    { value: "Baichuan AI", label: "Baichuan AI", url: "https://platform.baichuan-ai.com/" },
     { value: "NewAPI / SharedChat", label: "NewAPI / SharedChat" },
-    { value: "自定义", label: "自定义" },
+    { value: "\u81ea\u5b9a\u4e49", label: "\u81ea\u5b9a\u4e49" },
   ],
   membership: [
     { value: "GitHub", label: "GitHub", url: "https://github.com/settings/billing" },
@@ -324,25 +420,65 @@ const providerCatalog: Record<AssetType, ProviderOption[]> = {
     { value: "Microsoft 365", label: "Microsoft 365", url: "https://admin.microsoft.com/" },
     { value: "Google Workspace", label: "Google Workspace", url: "https://admin.google.com/" },
     { value: "Adobe", label: "Adobe", url: "https://account.adobe.com/plans" },
-    { value: "自定义", label: "自定义" },
+    { value: "Slack", label: "Slack", url: "https://slack.com/account/billing" },
+    { value: "Discord Nitro", label: "Discord Nitro", url: "https://discord.com/billing" },
+    { value: "Zoom", label: "Zoom", url: "https://zoom.us/billing" },
+    { value: "Dropbox", label: "Dropbox", url: "https://www.dropbox.com/account/plan" },
+    { value: "1Password", label: "1Password", url: "https://my.1password.com/billing" },
+    { value: "Bitwarden", label: "Bitwarden", url: "https://vault.bitwarden.com/#/settings/subscription" },
+    { value: "Atlassian", label: "Atlassian", url: "https://admin.atlassian.com/" },
+    { value: "Linear", label: "Linear", url: "https://linear.app/settings/billing" },
+    { value: "Canva", label: "Canva", url: "https://www.canva.com/settings/billing-and-plans" },
+    { value: "Apple Developer", label: "Apple Developer", url: "https://developer.apple.com/account/" },
+    { value: "ChatGPT", label: "ChatGPT", url: "https://chatgpt.com/#pricing" },
+    { value: "Claude", label: "Claude", url: "https://claude.ai/settings/billing" },
+    { value: "Cursor", label: "Cursor", url: "https://cursor.com/settings" },
+    { value: "Windsurf", label: "Windsurf", url: "https://windsurf.com/account" },
+    { value: "Midjourney", label: "Midjourney", url: "https://www.midjourney.com/account/" },
+    { value: "X Premium", label: "X Premium", url: "https://x.com/settings/subscription" },
+    { value: "YouTube Premium", label: "YouTube Premium", url: "https://www.youtube.com/paid_memberships" },
+    { value: "Spotify", label: "Spotify", url: "https://www.spotify.com/account/subscription/" },
+    { value: "Netflix", label: "Netflix", url: "https://www.netflix.com/account" },
+    { value: "\u81ea\u5b9a\u4e49", label: "\u81ea\u5b9a\u4e49" },
   ],
   custom: [
-    { value: "自定义", label: "自定义" },
-    { value: "代码仓库", label: "代码仓库" },
-    { value: "静态托管", label: "静态托管" },
-    { value: "内部系统", label: "内部系统" },
+    { value: "\u81ea\u5b9a\u4e49", label: "\u81ea\u5b9a\u4e49" },
+    { value: "\u4ee3\u7801\u4ed3\u5e93", label: "\u4ee3\u7801\u4ed3\u5e93" },
+    { value: "\u9759\u6001\u6258\u7ba1", label: "\u9759\u6001\u6258\u7ba1" },
+    { value: "\u5bf9\u8c61\u5b58\u50a8", label: "\u5bf9\u8c61\u5b58\u50a8" },
+    { value: "\u6570\u636e\u5e93", label: "\u6570\u636e\u5e93" },
+    { value: "CDN", label: "CDN" },
+    { value: "\u76d1\u63a7\u544a\u8b66", label: "\u76d1\u63a7\u544a\u8b66" },
+    { value: "\u5185\u90e8\u7cfb\u7edf", label: "\u5185\u90e8\u7cfb\u7edf" },
   ],
 };
 
 const domainHostingProviders: ProviderOption[] = [
   { value: "Cloudflare DNS", label: "Cloudflare DNS", url: "https://dash.cloudflare.com/" },
-  { value: "阿里云 DNS", label: "阿里云 DNS", url: "https://dns.console.aliyun.com/" },
-  { value: "腾讯云 DNSPod", label: "腾讯云 DNSPod", url: "https://console.dnspod.cn/dns/list" },
-  { value: "华为云 DNS", label: "华为云 DNS", url: "https://console.huaweicloud.com/dns/" },
-  { value: "DNSPod 国际版", label: "DNSPod 国际版", url: "https://www.dnspod.com/" },
+  { value: "\u963f\u91cc\u4e91 DNS", label: "\u963f\u91cc\u4e91 DNS", url: "https://dns.console.aliyun.com/" },
+  { value: "\u817e\u8baf\u4e91 DNSPod", label: "\u817e\u8baf\u4e91 DNSPod", url: "https://console.dnspod.cn/dns/list" },
+  { value: "\u534e\u4e3a\u4e91 DNS", label: "\u534e\u4e3a\u4e91 DNS", url: "https://console.huaweicloud.com/dns/" },
+  { value: "DNSPod \u56fd\u9645\u7248", label: "DNSPod \u56fd\u9645\u7248", url: "https://www.dnspod.com/" },
+  { value: "AWS Route 53", label: "AWS Route 53", url: "https://console.aws.amazon.com/route53/" },
+  { value: "Google Cloud DNS", label: "Google Cloud DNS", url: "https://console.cloud.google.com/net-services/dns" },
+  { value: "Azure DNS", label: "Azure DNS", url: "https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.Network%2Fdnszones" },
+  { value: "DigitalOcean DNS", label: "DigitalOcean DNS", url: "https://cloud.digitalocean.com/networking/domains" },
+  { value: "Linode / Akamai DNS", label: "Linode / Akamai DNS", url: "https://cloud.linode.com/domains" },
   { value: "Namecheap DNS", label: "Namecheap DNS", url: "https://ap.www.namecheap.com/domains/list/" },
   { value: "GoDaddy DNS", label: "GoDaddy DNS", url: "https://dcc.godaddy.com/manage/dns" },
-  { value: "自定义", label: "自定义" },
+  { value: "Porkbun DNS", label: "Porkbun DNS", url: "https://porkbun.com/account/domains" },
+  { value: "NameSilo DNS", label: "NameSilo DNS", url: "https://www.namesilo.com/account_domains.php" },
+  { value: "Spaceship DNS", label: "Spaceship DNS", url: "https://www.spaceship.com/application/domain-list-application/" },
+  { value: "OVHcloud DNS", label: "OVHcloud DNS", url: "https://www.ovh.com/manager/" },
+  { value: "Hetzner DNS", label: "Hetzner DNS", url: "https://dns.hetzner.com/" },
+  { value: "ClouDNS", label: "ClouDNS", url: "https://www.cloudns.net/" },
+  { value: "NS1 / IBM NS1", label: "NS1 / IBM NS1", url: "https://my.nsone.net/" },
+  { value: "Hurricane Electric DNS", label: "Hurricane Electric DNS", url: "https://dns.he.net/" },
+  { value: "Bunny DNS", label: "Bunny DNS", url: "https://dash.bunny.net/dns" },
+  { value: "FreeDNS", label: "FreeDNS", url: "https://freedns.afraid.org/" },
+  { value: "\u767e\u5ea6\u667a\u80fd\u4e91 DNS", label: "\u767e\u5ea6\u667a\u80fd\u4e91 DNS", url: "https://console.bce.baidu.com/bcd/" },
+  { value: "\u706b\u5c71\u5f15\u64ce DNS", label: "\u706b\u5c71\u5f15\u64ce DNS", url: "https://console.volcengine.com/dns" },
+  { value: "\u81ea\u5b9a\u4e49", label: "\u81ea\u5b9a\u4e49" },
 ];
 
 function normalizeAssetType(type?: string): AssetType {
@@ -354,11 +490,75 @@ function findProviderOption(type: AssetType | string | undefined, provider?: str
   return providerCatalog[normalized].find((item) => item.value === provider) ?? providerCatalog.custom.find((item) => item.value === provider);
 }
 
+function uniqueProviderOptions(options: ProviderOption[]) {
+  const seen = new Set<string>();
+  return options.filter((option) => {
+    if (seen.has(option.value)) return false;
+    seen.add(option.value);
+    return true;
+  });
+}
+
+function providerOptionsFor(type: AssetType | string | undefined, dynamicProviders: Array<string | undefined> = []) {
+  const normalized = normalizeAssetType(type);
+  const base = providerCatalog[normalized] ?? providerCatalog.custom;
+  const dynamic = dynamicProviders
+    .filter((provider): provider is string => Boolean(provider?.trim()))
+    .map((provider) => findProviderOption(normalized, provider) ?? { value: provider, label: provider });
+  return uniqueProviderOptions([...dynamic, ...base]);
+}
+
+function providerFromWhois(registrar?: string) {
+  const raw = registrar?.trim();
+  if (!raw) return undefined;
+  const text = raw.toLowerCase();
+  const aliases: Array<[string[], string]> = [
+    [["spaceship"], "Spaceship"],
+    [["cloudflare"], "Cloudflare Registrar"],
+    [["namecheap"], "Namecheap"],
+    [["godaddy"], "GoDaddy"],
+    [["porkbun"], "Porkbun"],
+    [["dynadot"], "Dynadot"],
+    [["namesilo"], "NameSilo"],
+    [["gandi"], "Gandi"],
+    [["ovh"], "OVHcloud"],
+    [["ionos", "1&1"], "IONOS"],
+    [["hostinger"], "Hostinger"],
+    [["squarespace", "google domains"], "Squarespace Domains"],
+    [["tucows", "opensrs"], "Tucows / OpenSRS"],
+    [["hover"], "Hover"],
+    [["enom"], "Enom"],
+    [["markmonitor"], "MarkMonitor"],
+    [["network solutions"], "Network Solutions"],
+    [["register.com"], "Register.com"],
+    [["domain.com"], "Domain.com"],
+    [["bluehost"], "Bluehost Domains"],
+    [["dreamhost"], "DreamHost Domains"],
+    [["sav.com", "sav "], "Sav"],
+    [["centralnic", "hexonet"], "Hexonet / CentralNic"],
+    [["unstoppable"], "Unstoppable Domains"],
+    [["alibaba", "aliyun", "hichina"], "阿里云"],
+    [["tencent"], "腾讯云"],
+    [["huawei"], "华为云"],
+    [["west.cn"], "西部数码"],
+    [["xinnet"], "新网"],
+  ];
+  const matched = aliases.find(([needles]) => needles.some((needle) => text.includes(needle)));
+  return matched ? findProviderOption("domain", matched[1]) ?? { value: matched[1], label: matched[1] } : { value: raw, label: raw };
+}
+
 function findDomainHostOption(provider?: string) {
   return domainHostingProviders.find((item) => item.value === provider);
 }
 
-function inferDomainHostOption(dns: string[] = []) {
+function domainHostOptionsFor(dynamicProviders: Array<string | undefined> = []) {
+  const dynamic = dynamicProviders
+    .filter((provider): provider is string => Boolean(provider?.trim()))
+    .map((provider) => findDomainHostOption(provider) ?? { value: provider, label: provider });
+  return uniqueProviderOptions([...dynamic, ...domainHostingProviders]);
+}
+
+function inferDomainHostOption(dns: string[] = []): ProviderOption | undefined {
   const nameservers = dns.map((item) => item.toLowerCase()).join(" ");
   if (nameservers.includes("cloudflare.com")) return findDomainHostOption("Cloudflare DNS");
   if (nameservers.includes("alidns.com") || nameservers.includes("hichina.com")) return findDomainHostOption("\u963f\u91cc\u4e91 DNS");
@@ -366,6 +566,15 @@ function inferDomainHostOption(dns: string[] = []) {
   if (nameservers.includes("huaweicloud-dns")) return findDomainHostOption("\u534e\u4e3a\u4e91 DNS");
   if (nameservers.includes("registrar-servers.com")) return findDomainHostOption("Namecheap DNS");
   if (nameservers.includes("domaincontrol.com")) return findDomainHostOption("GoDaddy DNS");
+  if (nameservers.includes("dnshe.com")) return { value: "DNSHE", label: "DNSHE" };
+  const firstNs = dns.find((item) => item.includes("."));
+  const match = firstNs?.toLowerCase().match(/(?:^|\.)((?:[a-z0-9-]+\.)+[a-z]{2,})$/);
+  const host = match?.[1]?.replace(/^ns\d*\./, "").replace(/^dns\d*\./, "");
+  const brand = host?.split(".").at(-2);
+  if (brand) {
+    const guessed = `${brand.charAt(0).toUpperCase()}${brand.slice(1)} DNS`;
+    return { value: guessed, label: guessed };
+  }
   return undefined;
 }
 
@@ -607,16 +816,6 @@ function statusLabel(status: AssetStatus, t: (key: string) => string) {
 
 function dayUnit(date: string) {
   return `${daysUntil(date)} 天`;
-}
-
-function whoisStatusName(status: string) {
-  const map: Record<string, string> = {
-    clientTransferProhibited: "禁止转移",
-    autoRenewPeriod: "自动续期宽限",
-    "lookup-adapter-not-configured": "WHOIS/RDAP 适配器未配置",
-    ok: "正常",
-  };
-  return map[status] ?? status;
 }
 
 function isWhoisUsable(whois: { registrar?: string; expiresAt?: string; whoisStatus?: string[] }) {
@@ -869,6 +1068,18 @@ function AccessGate({
   );
 }
 
+function SummonLoading({ title = "异火火种" }: { title?: string }) {
+  return (
+    <div className="summon-loading">
+      <div className="summon-sigil" aria-hidden="true"><FireOutlined /></div>
+      <div>
+        <Text className="muted">{title}</Text>
+        <div className="summon-text">正在结印召唤异火…</div>
+      </div>
+    </div>
+  );
+}
+
 function OverviewModule({
   setActive,
   onQuickAdd,
@@ -880,6 +1091,7 @@ function OverviewModule({
   const assets = useYiHuoStore((state) => state.assets);
   const channels = useYiHuoStore((state) => state.channels);
   const settings = useYiHuoStore((state) => state.settings);
+  const hydrating = useYiHuoStore((state) => state.hydrating);
   const urgent = assets.filter((asset) => daysUntil(asset.renewalDate) <= 14);
   const monthlyCost = assets.reduce((sum, asset) => sum + convertCurrency(asset.price, asset.currency, settings.currency), 0);
   const healthPercent = Math.round((assets.filter((asset) => asset.status === "healthy").length / Math.max(assets.length, 1)) * 100);
@@ -907,7 +1119,7 @@ function OverviewModule({
       </section>
 
       <Row gutter={[18, 18]}>
-        <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricAssets")} value={assets.length} prefix={<AppstoreOutlined />} /></Card></Col>
+        <Col xs={24} md={12} xl={6}><Card className="metric-card">{hydrating ? <SummonLoading title={t("metricAssets")} /> : <Statistic title={t("metricAssets")} value={assets.length} prefix={<AppstoreOutlined />} />}</Card></Col>
         <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricUrgent")} value={urgent.length} styles={{ content: { color: "#ffb84d" } }} prefix={<ThunderboltOutlined />} /></Card></Col>
         <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricBudget")} value={monthlyCost} precision={2} prefix={<DatabaseOutlined />} suffix={currencySymbols[settings.currency] ?? settings.currency} /></Card></Col>
         <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricChannels")} value={channels.filter((item) => item.enabled).length} suffix={`/ ${channels.length}`} prefix={<BellOutlined />} /></Card></Col>
@@ -964,8 +1176,12 @@ function AssetDrawer({
   const updateAsset = useYiHuoStore((state) => state.updateAsset);
   const preferredCurrency = useYiHuoStore((state) => state.settings.currency);
   const [api, contextHolder] = message.useMessage();
+  const [whoisLoading, setWhoisLoading] = useState(false);
   const watchedType = normalizeAssetType(Form.useWatch("type", form) ?? editing?.type ?? "domain");
-  const activeProviderOptions = providerCatalog[watchedType] ?? providerCatalog.custom;
+  const watchedProvider = Form.useWatch("provider", form) ?? editing?.provider;
+  const watchedHostProvider = Form.useWatch("hostProvider", form) ?? editing?.hostProvider;
+  const activeProviderOptions = providerOptionsFor(watchedType, [watchedProvider, editing?.provider]);
+  const activeHostProviderOptions = domainHostOptionsFor([watchedHostProvider, editing?.hostProvider]);
 
   useEffect(() => {
     if (open) {
@@ -985,37 +1201,48 @@ function AssetDrawer({
     }
   }, [editing, form, open, preferredCurrency]);
 
-  const buildWhoisNotes = (whois: Awaited<ReturnType<typeof lookupDomainWhois>>, currentNotes?: string) => [
-    currentNotes,
-    whois.createdAt ? `WHOIS 创建日期：${whois.createdAt}` : "",
-    whois.dns?.length ? `DNS：${whois.dns.join("、")}` : "",
-    whois.whoisStatus?.length ? `状态：${whois.whoisStatus.map(whoisStatusName).join("、")}` : "",
-  ].filter(Boolean).join("\n");
-
   const fillWhois = async () => {
     const name = form.getFieldValue("name");
     const type = normalizeAssetType(form.getFieldValue("type"));
-    if (type !== "domain" || !name) return;
+    if (type !== "domain") {
+      api.info("WHOIS 只适用于域名资产，请先把类型切换为“域名”");
+      return;
+    }
+    if (!name?.trim()) {
+      api.warning("请先填写域名名称，再进行 WHOIS 查询");
+      return;
+    }
+    const hideLoading = api.loading("正在查询 WHOIS/RDAP，并准备同步注册商、托管商和续期日…", 0);
+    setWhoisLoading(true);
     try {
       const whois = await lookupDomainWhois(name);
       if (!isWhoisUsable(whois)) {
+        hideLoading();
         api.info("WHOIS/RDAP 未接入真实适配器，未改写服务商、托管商和续期日");
         return;
       }
+      const whoisProvider = providerFromWhois(whois.registrar);
+      const hostOption = inferDomainHostOption(whois.dns);
       const patch: Partial<Asset> = {
         renewalDate: whois.expiresAt,
-        provider: whois.registrar,
-        notes: buildWhoisNotes(whois, form.getFieldValue("notes")),
+        provider: whoisProvider?.value ?? whois.registrar,
+        providerUrl: whoisProvider?.url,
+        url: whoisProvider?.url || form.getFieldValue("url"),
       };
-      const hostOption = inferDomainHostOption(whois.dns);
       if (hostOption) {
         patch.hostProvider = hostOption.value;
         patch.hostUrl = hostOption.url;
       }
       form.setFieldsValue(patch);
-      api.success("WHOIS 占验已成，到期灵纹已刻入续期日");
+      if (patch.provider) form.setFieldValue("provider", patch.provider);
+      if (patch.hostProvider) form.setFieldValue("hostProvider", patch.hostProvider);
+      hideLoading();
+      api.success(`WHOIS 完成：已同步注册商${hostOption ? "、托管商" : ""}和续期日`);
     } catch {
-      api.warning("WHOIS 灵镜暂隐，请手动校准续期日");
+      hideLoading();
+      api.warning("WHOIS 查询失败，请稍后重试或手动校准续期日");
+    } finally {
+      setWhoisLoading(false);
     }
   };
 
@@ -1057,7 +1284,7 @@ function AssetDrawer({
         <Form.Item name="providerUrl" hidden><Input /></Form.Item>
         {watchedType === "domain" ? (
           <Row gutter={12}>
-            <Col span={12}><Form.Item name="hostProvider" label="托管商"><Select allowClear showSearch placeholder="DNS/托管服务商，可不填" options={domainHostingProviders} onChange={(provider?: string) => {
+            <Col span={12}><Form.Item name="hostProvider" label="托管商"><Select allowClear showSearch placeholder="DNS/托管服务商，可不填" options={activeHostProviderOptions} onChange={(provider?: string) => {
               const option = findDomainHostOption(provider);
               form.setFieldsValue({ hostUrl: option?.url });
             }} /></Form.Item></Col>
@@ -1069,7 +1296,7 @@ function AssetDrawer({
           <Col span={12}><Form.Item name="renewalDate" label="续期日期" rules={[{ required: true }]}><Input type="date" /></Form.Item></Col>
           <Col span={12}><Form.Item name="cycle" label="周期"><Select options={assetCycleOptions} /></Form.Item></Col>
         </Row>
-        <Button title="手动查询 WHOIS/RDAP；未接入真实适配器时不会改写任何字段" icon={<GlobalOutlined />} onClick={fillWhois}>占验 WHOIS 并刻续期日</Button>
+        <Button title="查询 WHOIS/RDAP，并同步注册商、托管商和续期日；不会自动改写备注" icon={<GlobalOutlined />} onClick={fillWhois} loading={whoisLoading} disabled={watchedType !== "domain"}>占验 WHOIS 并同步资产信息</Button>
         <Row gutter={12}>
           <Col span={12}><Form.Item name="price" label={t("price")}><InputNumber min={0} style={{ width: "100%" }} /></Form.Item></Col>
           <Col span={12}><Form.Item name="currency" label="货币"><Select showSearch options={currencyOptions} /></Form.Item></Col>
@@ -1097,6 +1324,7 @@ function AssetsModule({
   const deleteAsset = useYiHuoStore((state) => state.deleteAsset);
   const importAssets = useYiHuoStore((state) => state.importAssets);
   const preferredCurrency = useYiHuoStore((state) => state.settings.currency);
+  const hydrating = useYiHuoStore((state) => state.hydrating);
   const [view, setView] = useState<ViewMode>("table");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Asset>();
@@ -1108,7 +1336,7 @@ function AssetsModule({
   const [api, contextHolder] = message.useMessage();
   const [columnWidths, setColumnWidths] = useState<Record<AssetColumnKey, number>>(() => loadAssetColumnWidths());
 
-  const startColumnResize = (event: ReactMouseEvent<HTMLSpanElement>, key: AssetColumnKey, minWidth = 96) => {
+  const startColumnResize = (event: ReactMouseEvent<HTMLElement>, key: AssetColumnKey, minWidth = 96) => {
     event.preventDefault();
     event.stopPropagation();
     const startX = event.clientX;
@@ -1134,7 +1362,15 @@ function AssetsModule({
   const columnTitle = (key: AssetColumnKey, label: string, minWidth = 96) => (
     <span className="resizable-column-title">
       <span>{label}</span>
-      <span className="column-resize-handle" title="拖拽调整列宽" onMouseDown={(event) => startColumnResize(event, key, minWidth)} />
+      <span
+        className="column-resize-handle"
+        title="拖拽调整列宽"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+        onMouseDown={(event) => startColumnResize(event, key, minWidth)}
+      />
     </span>
   );
 
@@ -1316,13 +1552,19 @@ function AssetsModule({
             </Popconfirm>
           </Space>
         </Flex>
-        {view === "table" ? (
+        {hydrating ? (
+          <div className="summon-panel">
+            <SummonLoading title="异火库" />
+            <Text className="muted">正在连接数据库，火种尚未归位，请稍候。</Text>
+          </div>
+        ) : view === "table" ? (
           <Table
             rowKey="id"
             className="asset-table"
             columns={columns}
             dataSource={filtered}
             tableLayout="fixed"
+            showSorterTooltip={{ rootClassName: "yhg-sorter-tooltip" }}
             scroll={{ x: tableScrollX }}
             pagination={{
               current: tablePage,
@@ -2018,13 +2260,20 @@ export default function App() {
           colorBgBase: palette.bg,
           colorTextBase: palette.text,
           colorBorder: `${palette.primary}44`,
+          colorBgSpotlight: "rgba(13, 10, 9, 0.98)",
           borderRadius: 14,
           fontFamily: "YiHuoNotoSans, 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'PingFang SC', system-ui, sans-serif",
         },
         components: {
           Layout: { siderBg: "#0b0b0f", headerBg: "rgba(11,11,15,.88)", bodyBg: "#0b0b0f" },
           Card: { colorBgContainer: "rgba(24,26,32,.82)" },
-          Table: { colorBgContainer: "rgba(18,18,23,.72)", headerBg: "rgba(245,158,11,.12)" },
+          Table: {
+            colorBgContainer: "rgba(18,18,23,.72)",
+            headerBg: "rgba(14,13,17,.92)",
+            headerSortActiveBg: "rgba(14,13,17,.92)",
+            headerSortHoverBg: "rgba(24,18,13,.96)",
+            bodySortBg: "transparent",
+          },
         },
       }}
     >

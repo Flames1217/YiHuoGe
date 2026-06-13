@@ -17,6 +17,7 @@ export default async function handler(req: any, res: any) {
       return { ...asset, ...req.body, id };
     });
     if (!found) db.assets.unshift({ ...req.body, id });
+    if (req.body?.type && req.body.type !== "domain") db.domains = db.domains.filter((domain) => domain.id !== id);
     await writeState(db);
     res.status(200).json(db.assets.find((asset) => asset.id === id));
     return;
@@ -24,6 +25,7 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === "DELETE") {
     db.assets = db.assets.filter((asset) => asset.id !== id);
+    db.domains = db.domains.filter((domain) => domain.id !== id);
     await writeState(db);
     res.status(204).end();
     return;

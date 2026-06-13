@@ -151,6 +151,7 @@ app.post("/api/assets", async (req, res) => {
 app.put("/api/assets/:id", async (req, res) => {
   const db = await readDb();
   db.assets = db.assets.map((asset) => (asset.id === req.params.id ? { ...asset, ...req.body, id: asset.id } : asset));
+  if (req.body?.type && req.body.type !== "domain") db.domains = db.domains.filter((domain) => domain.id !== req.params.id);
   await writeDb(db);
   res.json(db.assets.find((asset) => asset.id === req.params.id));
 });
@@ -158,6 +159,7 @@ app.put("/api/assets/:id", async (req, res) => {
 app.delete("/api/assets/:id", async (req, res) => {
   const db = await readDb();
   db.assets = db.assets.filter((asset) => asset.id !== req.params.id);
+  db.domains = db.domains.filter((domain) => domain.id !== req.params.id);
   await writeDb(db);
   res.status(204).send();
 });
@@ -171,7 +173,8 @@ app.get("/api/whois/:domain", async (req, res) => {
   const db = await readDb();
   const requestedDomain = String(req.params.domain ?? "").toLowerCase();
   const found = db.domains.find((domain) => domain.name.toLowerCase() === requestedDomain);
-  if (found?.expiresAt) {
+  const cachedRegistrar = found?.registrar?.trim().toLowerCase();
+  if (found?.expiresAt && cachedRegistrar && !["自定义", "rdap registrar", "rdap lookup failed"].includes(cachedRegistrar)) {
     res.json(found);
     return;
   }

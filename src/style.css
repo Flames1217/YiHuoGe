@@ -2287,6 +2287,87 @@ body .ant-tooltip .ant-tooltip-arrow::after {
   background: rgba(13, 10, 9, 0.98) !important;
 }
 
+/* Asset table final pass:
+   - sortable headers no longer get the yellow active block;
+   - resize hit-area is pinned to the real cell divider, not to the title text;
+   - sorter tooltip uses the same dark-fire surface instead of AntD gray. */
+body .asset-table .ant-table-thead > tr > th,
+body .asset-table .ant-table-thead > tr > th.ant-table-column-sort,
+body .asset-table .ant-table-thead th.ant-table-column-has-sorters,
+body .asset-table .ant-table-thead th.ant-table-column-has-sorters:hover,
+body .asset-table .ant-table-thead th.ant-table-column-sort:hover,
+body .asset-table .ant-table-thead .ant-table-column-sorters,
+body .asset-table .ant-table-thead .ant-table-column-sorters:hover {
+  color: #ffe7b5 !important;
+  background: rgba(14, 13, 17, 0.92) !important;
+  background-image: none !important;
+}
+
+body .asset-table .ant-table-thead > tr > th:hover {
+  color: #fff7e8 !important;
+  background: rgba(24, 18, 13, 0.96) !important;
+}
+
+body .asset-table .ant-table-thead > tr > th {
+  position: relative;
+}
+
+body .asset-table .ant-table-column-title,
+body .asset-table .resizable-column-title {
+  position: static !important;
+}
+
+body .asset-table .column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -1px;
+  bottom: 0;
+  width: 16px;
+  z-index: 6;
+  cursor: col-resize;
+  border-right: 0 !important;
+  background: transparent !important;
+}
+
+body .asset-table .column-resize-handle::after {
+  position: absolute;
+  top: 28%;
+  right: 0;
+  bottom: 28%;
+  width: 1px;
+  content: "";
+  background: rgba(255, 184, 77, 0.24);
+  transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+
+body .asset-table .column-resize-handle:hover::after,
+body.is-resizing-column .asset-table .column-resize-handle::after {
+  background: var(--gold);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.42);
+}
+
+body .yhg-sorter-tooltip.ant-tooltip,
+body .yhg-sorter-tooltip.ant-tooltip-placement-top,
+body .yhg-sorter-tooltip.ant-tooltip-placement-bottom,
+body .yhg-sorter-tooltip.ant-tooltip-placement-left,
+body .yhg-sorter-tooltip.ant-tooltip-placement-right {
+  --antd-arrow-background-color: rgba(13, 10, 9, 0.98) !important;
+  --ant-tooltip-color-bg-spotlight: rgba(13, 10, 9, 0.98) !important;
+}
+
+body .yhg-sorter-tooltip .ant-tooltip-inner,
+body .yhg-sorter-tooltip.ant-tooltip .ant-tooltip-inner {
+  color: #fff2d6 !important;
+  background: linear-gradient(135deg, rgba(20, 14, 9, 0.98), rgba(45, 25, 9, 0.96)) !important;
+  border: 1px solid rgba(255, 184, 77, 0.46) !important;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.58), 0 0 22px rgba(245, 158, 11, 0.18) !important;
+}
+
+body .yhg-sorter-tooltip .ant-tooltip-arrow::before,
+body .yhg-sorter-tooltip .ant-tooltip-arrow::after {
+  background: rgba(13, 10, 9, 0.98) !important;
+}
+
 /* Notification drawer fixes:
    - static Modal.success must not expose AntD's white content surface around the themed body;
    - Select dropdown rows should have one unified background layer, not row + inner-content double fills. */
@@ -2340,4 +2421,64 @@ body .ant-select-dropdown .ant-select-item-option-selected .ant-select-item-opti
 body .ant-select-dropdown .ant-select-item-option-active .ant-select-item-option-content,
 body .ant-select-dropdown .ant-select-item-option-selected .ant-select-item-option-content {
   background: transparent !important;
+}
+
+/* Select popup final override: hover/selected color belongs to the row only.
+   AntD also paints inner content/state nodes, which creates the visible double background. */
+body .ant-select-dropdown .ant-select-item-option .ant-select-item-option-content,
+body .ant-select-dropdown .ant-select-item-option .ant-select-item-option-state,
+body .ant-select-dropdown .ant-select-item-option.ant-select-item-option-active .ant-select-item-option-content,
+body .ant-select-dropdown .ant-select-item-option.ant-select-item-option-active:not(.ant-select-item-option-selected) .ant-select-item-option-content,
+body .ant-select-dropdown .ant-select-item-option.ant-select-item-option-selected .ant-select-item-option-content {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+body .ant-select-dropdown .ant-select-item-option.ant-select-item-option-active:not(.ant-select-item-option-selected) {
+  color: #fff7e8 !important;
+  background: rgba(245, 158, 11, 0.18) !important;
+}
+
+body .ant-select-dropdown .ant-select-item-option.ant-select-item-option-selected {
+  color: #160d04 !important;
+  background: linear-gradient(135deg, var(--gold), var(--gold-2)) !important;
+}
+
+.summon-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+}
+
+.summon-sigil {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  color: #1b1004;
+  background: radial-gradient(circle, #ffe0a3 0%, #f59e0b 55%, #7c2d12 100%);
+  border-radius: 50%;
+  box-shadow: 0 0 28px rgba(245, 158, 11, 0.42);
+  animation: emberSpin 2.8s linear infinite;
+}
+
+.summon-text {
+  margin-top: 2px;
+  color: #fff1cf;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.summon-panel {
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+  gap: 10px;
+  text-align: center;
+  border: 1px dashed rgba(245, 158, 11, 0.32);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(245, 158, 11, 0.12), transparent 42%),
+    rgba(255, 255, 255, 0.018);
 }

@@ -1,3 +1,5 @@
+import { resolveNs } from "node:dns/promises";
+
 interface RdapEntity {
   roles?: string[];
   vcardArray?: unknown[];
@@ -122,8 +124,30 @@ async function rdapLookupUrls(domain: string) {
   return [...new Set(urls)];
 }
 
-export async function lookupDomainRdap(input: string): Promise<DomainWhoisLookup> {
-  const domain = cleanDomain(input);
+async function resolveBestNameservers(inputDomain: string, registeredDomain: string, rdapNameservers: string[]) {
+  const candidates = parentDomainCandidates(inputDomain);
+  for (const candidate of candidates) {
+    try {
+      const records = await resolveNs(candidate);
+      const nameservers = records.map((item) => item.replace(/\.$/, "")).filter(Boolean);
+      if (nameservers.length) return nameservers;
+    } catch {
+      // Try parent domain. Subdomains often are not delegated.
+    }
+  }
+  if (registeredDomain !== inputDomain) {
+    try {
+      const records = await resolveNs(registeredDomain);
+      const nameservers = records.map((item) => item.replace(/\.$/, "")).filter(Boolean);
+      if (nameservers.length) return nameservers;
+    } catch {
+      // Fall back to RDAP nameservers below.
+    }
+  }
+  return rdapNameservers;
+}
+
+async function lookupExactDomainRdap(domain: string): Promise<DomainWhoisLookup> {
   if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)) throw new Error("域名格式无效");
 
   const errors: string[] = [];
@@ -141,16 +165,47 @@ export async function lookupDomainRdap(input: string): Promise<DomainWhoisLookup
   const expiresAt = eventDate(data.events, ["expiration", "expiry"]);
   if (!expiresAt) throw new Error("RDAP 未返回到期日");
 
+  const rdapNameservers = (data.nameservers ?? [])
+    .map((nameserver) => nameserver.ldhName || nameserver.unicodeName || "")
+    .filter(Boolean);
+
   return {
     name: data.ldhName?.toLowerCase() || data.unicodeName?.toLowerCase() || domain,
     registrar: registrarName(data.entities),
     createdAt: eventDate(data.events, ["registration", "registered"]),
     expiresAt,
-    dns: (data.nameservers ?? [])
-      .map((nameserver) => nameserver.ldhName || nameserver.unicodeName || "")
-      .filter(Boolean),
+    dns: rdapNameservers,
     whoisStatus: data.status?.length ? data.status : ["ok"],
     rawWhois: data,
     source: "rdap",
   };
+}
+
+function parentDomainCandidates(domain: string) {
+  const labels = domain.split(".").filter(Boolean);
+  const candidates: string[] = [];
+  for (let index = 0; index <= labels.length - 2; index += 1) {
+    candidates.push(labels.slice(index).join("."));
+  }
+  return [...new Set(candidates)];
+}
+
+export async function lookupDomainRdap(input: string): Promise<DomainWhoisLookup> {
+  const domain = cleanDomain(input);
+  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)) throw new Error("域名格式无效");
+
+  const errors: string[] = [];
+  for (const candidate of parentDomainCandidates(domain)) {
+    try {
+      const result = await lookupExactDomainRdap(candidate);
+      return {
+        ...result,
+        name: domain,
+        dns: await resolveBestNameservers(domain, result.name, result.dns),
+      };
+    } catch (error) {
+      errors.push(`${candidate}: ${error instanceof Error ? error.message : "RDAP 查询失败"}`);
+    }
+  }
+  throw new Error(errors.join("；") || "RDAP 查询失败");
 }

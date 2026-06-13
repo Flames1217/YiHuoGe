@@ -232,13 +232,18 @@ function buildDomains(assets: any[], details: any[]) {
   return assets.filter((asset) => asset.type === "domain").map((asset) => rowToDomain(asset, detailMap.get(asset.id)));
 }
 
-function combinedAssets(db: YiHuoStateData) {
-  const map = new Map<string, any>();
-  for (const asset of db.assets ?? []) map.set(asset.id, asset);
-  for (const domain of db.domains ?? []) {
-    if (!map.has(domain.id)) map.set(domain.id, { ...domain, type: "domain", renewalDate: domain.renewalDate ?? domain.expiresAt });
-  }
-  return [...map.values()];
+function assetsForWrite(db: YiHuoStateData) {
+  return Array.isArray(db.assets) ? db.assets : [];
+}
+
+function domainDetailsForWrite(db: YiHuoStateData) {
+  const domainAssetIds = new Set(assetsForWrite(db).filter((asset) => asset.type === "domain").map((asset) => asset.id));
+  const seen = new Set<string>();
+  return (Array.isArray(db.domains) ? db.domains : []).filter((domain) => {
+    if (!domainAssetIds.has(domain.id) || seen.has(domain.id)) return false;
+    seen.add(domain.id);
+    return true;
+  });
 }
 
 function rowToChannel(row: any) {
@@ -308,9 +313,9 @@ async function writeMysql(dbInput: YiHuoStateData) {
     await connection.beginTransaction();
     try {
       for (const table of ["yh_assets", "yh_asset_domain_details", "yh_channels", "yh_ai_config", "yh_settings"]) await connection.execute(`DELETE FROM ${table}`);
-      const assets = combinedAssets(db);
+      const assets = assetsForWrite(db);
       for (const asset of assets) await connection.execute(mysqlInsert("yh_assets", assetColumns), assetValues(asset));
-      for (const domain of db.domains) await connection.execute(mysqlInsert("yh_asset_domain_details", domainDetailColumns), domainDetailValues(domain));
+      for (const domain of domainDetailsForWrite(db)) await connection.execute(mysqlInsert("yh_asset_domain_details", domainDetailColumns), domainDetailValues(domain));
       for (const channel of db.channels) await connection.execute(mysqlInsert("yh_channels", channelColumns), channelValues(channel));
       await connection.execute(mysqlInsert("yh_ai_config", ["id", "provider", "api_key", "base_url", "models_json", "default_model"]), ["main", db.ai.provider, db.ai.apiKey ?? "", db.ai.baseUrl, json(db.ai.models ?? []), db.ai.defaultModel ?? ""]);
       await connection.execute(mysqlInsert("yh_settings", ["key_name", "value_json"]), ["main", json(db.settings)]);
@@ -362,9 +367,9 @@ async function writePostgres(dbInput: YiHuoStateData) {
     await client.query("BEGIN");
     try {
       for (const table of ["yh_assets", "yh_asset_domain_details", "yh_channels", "yh_ai_config", "yh_settings"]) await client.query(`DELETE FROM ${table}`);
-      const assets = combinedAssets(db);
+      const assets = assetsForWrite(db);
       for (const asset of assets) await client.query(pgInsert("yh_assets", assetColumns), assetValues(asset));
-      for (const domain of db.domains) await client.query(pgInsert("yh_asset_domain_details", domainDetailColumns), domainDetailValues(domain));
+      for (const domain of domainDetailsForWrite(db)) await client.query(pgInsert("yh_asset_domain_details", domainDetailColumns), domainDetailValues(domain));
       for (const channel of db.channels) await client.query(pgInsert("yh_channels", channelColumns), channelValues(channel));
       await client.query(pgInsert("yh_ai_config", ["id", "provider", "api_key", "base_url", "models_json", "default_model"]), ["main", db.ai.provider, db.ai.apiKey ?? "", db.ai.baseUrl, json(db.ai.models ?? []), db.ai.defaultModel ?? ""]);
       await client.query(pgInsert("yh_settings", ["key_name", "value_json"]), ["main", json(db.settings)]);
@@ -414,9 +419,9 @@ async function writeSqlite(dbInput: YiHuoStateData) {
     try {
       for (const table of ["yh_assets", "yh_asset_domain_details", "yh_channels", "yh_ai_config", "yh_settings"]) await db.run(`DELETE FROM ${table}`);
       const insert = (table: string, columns: string[]) => `INSERT INTO ${table} (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`;
-      const assets = combinedAssets(data);
+      const assets = assetsForWrite(data);
       for (const asset of assets) await db.run(insert("yh_assets", assetColumns), assetValues(asset));
-      for (const domain of data.domains) await db.run(insert("yh_asset_domain_details", domainDetailColumns), domainDetailValues(domain));
+      for (const domain of domainDetailsForWrite(data)) await db.run(insert("yh_asset_domain_details", domainDetailColumns), domainDetailValues(domain));
       for (const channel of data.channels) await db.run(insert("yh_channels", channelColumns), channelValues(channel));
       await db.run(insert("yh_ai_config", ["id", "provider", "api_key", "base_url", "models_json", "default_model"]), ["main", data.ai.provider, data.ai.apiKey ?? "", data.ai.baseUrl, json(data.ai.models ?? []), data.ai.defaultModel ?? ""]);
       await db.run(insert("yh_settings", ["key_name", "value_json"]), ["main", json(data.settings)]);
@@ -466,9 +471,9 @@ async function writeD1(dbInput: YiHuoStateData) {
   for (const sql of schemaStatements("sqlite")) await d1Run(db, sql);
   for (const table of ["yh_assets", "yh_asset_domain_details", "yh_channels", "yh_ai_config", "yh_settings"]) await d1Run(db, `DELETE FROM ${table}`);
   const insert = (table: string, columns: string[]) => `INSERT INTO ${table} (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`;
-  const assets = combinedAssets(data);
+  const assets = assetsForWrite(data);
   for (const asset of assets) await d1Run(db, insert("yh_assets", assetColumns), assetValues(asset));
-  for (const domain of data.domains) await d1Run(db, insert("yh_asset_domain_details", domainDetailColumns), domainDetailValues(domain));
+  for (const domain of domainDetailsForWrite(data)) await d1Run(db, insert("yh_asset_domain_details", domainDetailColumns), domainDetailValues(domain));
   for (const channel of data.channels) await d1Run(db, insert("yh_channels", channelColumns), channelValues(channel));
   await d1Run(db, insert("yh_ai_config", ["id", "provider", "api_key", "base_url", "models_json", "default_model"]), ["main", data.ai.provider, data.ai.apiKey ?? "", data.ai.baseUrl, json(data.ai.models ?? []), data.ai.defaultModel ?? ""]);
   await d1Run(db, insert("yh_settings", ["key_name", "value_json"]), ["main", json(data.settings)]);
