@@ -1666,11 +1666,11 @@ export default function App() {
               <Tooltip overlayClassName="yhg-tooltip" title={t("openAssetsTip")}>
                 <Button className="top-action" icon={<ApiOutlined />} onClick={() => { setActive("assets"); api.info(settings.language === "zh" ? "资产火阁已开启" : "Asset forge opened"); }}>{t("topAssets")}</Button>
               </Tooltip>
-              <Tooltip overlayClassName="yhg-tooltip" title={t("openSettingsTip")}>
-                <Button className="top-action" icon={<SettingOutlined />} onClick={() => { setActive("settings"); api.info(settings.language === "zh" ? "阁令中枢已开启" : "Settings sanctum opened"); }}>{t("topSettings")}</Button>
-              </Tooltip>
               <Tooltip overlayClassName="yhg-tooltip" title={t("openNotificationsTip")}>
                 <Button className="top-action" icon={<BellOutlined />} onClick={() => { setActive("notifications"); api.info(settings.language === "zh" ? "传讯阵法已开启" : "Notification array opened"); }}>{t("topNotifications")}</Button>
+              </Tooltip>
+              <Tooltip overlayClassName="yhg-tooltip" title={t("openSettingsTip")}>
+                <Button className="top-action" icon={<SettingOutlined />} onClick={() => { setActive("settings"); api.info(settings.language === "zh" ? "阁令中枢已开启" : "Settings sanctum opened"); }}>{t("topSettings")}</Button>
               </Tooltip>
             </Space>
           </Header>
