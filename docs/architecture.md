@@ -29,7 +29,7 @@
 统一由 `api/_state.ts` 自动建表；MySQL/MariaDB/TiDB/Postgres/SQLite/D1 使用同一套逻辑结构：
 
 - `yh_assets`：资产主表，保存类型、服务商、托管商、账号/标识、续期日、价格、管理地址、标签与备注。
-- `yh_domains`：域名 WHOIS/RDAP 扩展表，保存注册商、创建日、到期日、DNS 与状态。
+- `yh_asset_domain_details`：域名 WHOIS/RDAP 扩展详情表，只保存注册商、创建日、到期日、DNS 与状态，通过 `asset_id` 关联 `yh_assets.id`。
 - `yh_channels`：通知渠道表，保存渠道类型、目标、密钥掩码、配置 JSON 与模板。
 - `yh_ai_config`：AI 炼化配置表，单行 `main` 保存 provider、baseUrl、models、defaultModel 与 apiKey。
 - `yh_settings`：应用设置表，单行 `main` 保存时区、货币、模块顺序、备份目标等设置 JSON。

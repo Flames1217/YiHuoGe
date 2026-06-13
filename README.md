@@ -73,7 +73,7 @@ MYSQL_URL=mysql://USER:PASSWORD@HOST:4000/yihuoge
 | 表名 | 用途 |
 | --- | --- |
 | `yh_assets` | 资产主表：名称、类型、服务商、服务商后台、托管商、续期日、价格、标签、备注等。 |
-| `yh_domains` | 域名扩展表：注册商、创建日、到期日、DNS、WHOIS 状态等。 |
+| `yh_asset_domain_details` | 域名扩展详情表：只保存域名额外 WHOIS/RDAP 信息，通过 `asset_id` 关联 `yh_assets.id`。 |
 | `yh_channels` | 通知渠道表：渠道类型、目标、密钥掩码、配置 JSON、模板、测试时间等。 |
 | `yh_ai_config` | AI 配置表：provider、apiKey、baseUrl、models、defaultModel。 |
 | `yh_settings` | 应用设置表：语言、时区、货币、提醒天数、模块顺序、备份目标等。 |

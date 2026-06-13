@@ -136,28 +136,14 @@ function schemaStatements(dialect: SqlDialect) {
       created_at ${c.now},
       updated_at ${c.now}${c.autoUpdate}
     )`,
-    `CREATE TABLE IF NOT EXISTS yh_domains (
-      id ${c.id},
-      name ${c.text} NOT NULL,
-      type VARCHAR(32) NOT NULL DEFAULT 'domain',
-      provider ${c.text} NOT NULL DEFAULT '',
-      provider_url ${c.text},
-      host_provider ${c.text},
-      host_url ${c.text},
-      account ${c.text} NOT NULL DEFAULT '',
-      renewal_date VARCHAR(32) NOT NULL,
-      price ${c.money} NOT NULL DEFAULT 0,
-      currency VARCHAR(16) NOT NULL DEFAULT 'CNY',
-      cycle VARCHAR(16) NOT NULL DEFAULT 'custom',
-      status VARCHAR(16) NOT NULL DEFAULT 'healthy',
-      url ${c.text},
-      tags_json ${c.longText},
-      notes ${c.longText},
+    `CREATE TABLE IF NOT EXISTS yh_asset_domain_details (
+      asset_id ${c.id},
       registrar ${c.text},
       domain_created_at VARCHAR(32),
       expires_at VARCHAR(32),
       dns_json ${c.longText},
       whois_status_json ${c.longText},
+      raw_whois_json ${c.longText},
       created_at ${c.now},
       updated_at ${c.now}${c.autoUpdate}
     )`,
@@ -192,15 +178,15 @@ function schemaStatements(dialect: SqlDialect) {
 }
 
 const assetColumns = ["id", "name", "type", "provider", "provider_url", "host_provider", "host_url", "account", "renewal_date", "price", "currency", "cycle", "status", "url", "tags_json", "notes"];
-const domainColumns = [...assetColumns, "registrar", "domain_created_at", "expires_at", "dns_json", "whois_status_json"];
+const domainDetailColumns = ["asset_id", "registrar", "domain_created_at", "expires_at", "dns_json", "whois_status_json", "raw_whois_json"];
 const channelColumns = ["id", "name", "type", "enabled", "target", "last_test", "secret_masked", "config_json", "template"];
 
 function assetValues(asset: any) {
   return [asset.id, asset.name, asset.type, asset.provider ?? "", asset.providerUrl ?? "", asset.hostProvider ?? "", asset.hostUrl ?? "", asset.account ?? "", asset.renewalDate, Number(asset.price ?? 0), asset.currency ?? "CNY", asset.cycle ?? "custom", asset.status ?? "healthy", asset.url ?? "", json(asset.tags ?? []), asset.notes ?? ""];
 }
 
-function domainValues(domain: any) {
-  return [...assetValues(domain), domain.registrar ?? domain.provider ?? "", domain.createdAt ?? "", domain.expiresAt ?? domain.renewalDate ?? "", json(domain.dns ?? []), json(domain.whoisStatus ?? [])];
+function domainDetailValues(domain: any) {
+  return [domain.id, domain.registrar ?? domain.provider ?? "", domain.createdAt ?? "", domain.expiresAt ?? domain.renewalDate ?? "", json(domain.dns ?? []), json(domain.whoisStatus ?? []), json(domain.rawWhois ?? null)];
 }
 
 function channelValues(channel: any) {
@@ -228,16 +214,31 @@ function rowToAsset(row: any) {
   };
 }
 
-function rowToDomain(row: any) {
+function rowToDomain(asset: any, detail?: any) {
   return {
-    ...rowToAsset(row),
+    ...asset,
     type: "domain",
-    registrar: row.registrar ?? row.provider ?? "",
-    createdAt: row.domain_created_at ?? "",
-    expiresAt: row.expires_at ?? row.renewal_date ?? "",
-    dns: parseJson<string[]>(row.dns_json, []),
-    whoisStatus: parseJson<string[]>(row.whois_status_json, []),
+    registrar: detail?.registrar ?? asset.provider ?? "",
+    createdAt: detail?.domain_created_at ?? "",
+    expiresAt: detail?.expires_at ?? asset.renewalDate ?? "",
+    dns: parseJson<string[]>(detail?.dns_json, []),
+    whoisStatus: parseJson<string[]>(detail?.whois_status_json, []),
+    rawWhois: parseJson<Record<string, unknown> | null>(detail?.raw_whois_json, null) ?? undefined,
   };
+}
+
+function buildDomains(assets: any[], details: any[]) {
+  const detailMap = new Map(details.map((detail) => [detail.asset_id, detail]));
+  return assets.filter((asset) => asset.type === "domain").map((asset) => rowToDomain(asset, detailMap.get(asset.id)));
+}
+
+function combinedAssets(db: YiHuoStateData) {
+  const map = new Map<string, any>();
+  for (const asset of db.assets ?? []) map.set(asset.id, asset);
+  for (const domain of db.domains ?? []) {
+    if (!map.has(domain.id)) map.set(domain.id, { ...domain, type: "domain", renewalDate: domain.renewalDate ?? domain.expiresAt });
+  }
+  return [...map.values()];
 }
 
 function rowToChannel(row: any) {
@@ -267,13 +268,13 @@ async function readMysql(): Promise<YiHuoStateData> {
   try {
     for (const sql of schemaStatements("mysql")) await connection.execute(sql);
     const [assetRows] = await connection.execute("SELECT * FROM yh_assets ORDER BY created_at DESC");
-    const [domainRows] = await connection.execute("SELECT * FROM yh_domains ORDER BY created_at DESC");
+    const [domainDetailRows] = await connection.execute("SELECT * FROM yh_asset_domain_details");
     const [channelRows] = await connection.execute("SELECT * FROM yh_channels ORDER BY created_at DESC");
     const [aiRows] = await connection.execute("SELECT * FROM yh_ai_config WHERE id = ?", ["main"]);
     const [settingRows] = await connection.execute("SELECT * FROM yh_settings WHERE key_name = ?", ["main"]);
     const db = mergeSeed({
       assets: (assetRows as any[]).map(rowToAsset),
-      domains: (domainRows as any[]).map(rowToDomain),
+      domains: buildDomains((assetRows as any[]).map(rowToAsset), domainDetailRows as any[]),
       channels: (channelRows as any[]).map(rowToChannel),
       ai: (aiRows as any[])[0] ? {
         provider: (aiRows as any[])[0].provider,
@@ -306,9 +307,10 @@ async function writeMysql(dbInput: YiHuoStateData) {
     for (const sql of schemaStatements("mysql")) await connection.execute(sql);
     await connection.beginTransaction();
     try {
-      for (const table of ["yh_assets", "yh_domains", "yh_channels", "yh_ai_config", "yh_settings"]) await connection.execute(`DELETE FROM ${table}`);
-      for (const asset of db.assets) await connection.execute(mysqlInsert("yh_assets", assetColumns), assetValues(asset));
-      for (const domain of db.domains) await connection.execute(mysqlInsert("yh_domains", domainColumns), domainValues(domain));
+      for (const table of ["yh_assets", "yh_asset_domain_details", "yh_channels", "yh_ai_config", "yh_settings"]) await connection.execute(`DELETE FROM ${table}`);
+      const assets = combinedAssets(db);
+      for (const asset of assets) await connection.execute(mysqlInsert("yh_assets", assetColumns), assetValues(asset));
+      for (const domain of db.domains) await connection.execute(mysqlInsert("yh_asset_domain_details", domainDetailColumns), domainDetailValues(domain));
       for (const channel of db.channels) await connection.execute(mysqlInsert("yh_channels", channelColumns), channelValues(channel));
       await connection.execute(mysqlInsert("yh_ai_config", ["id", "provider", "api_key", "base_url", "models_json", "default_model"]), ["main", db.ai.provider, db.ai.apiKey ?? "", db.ai.baseUrl, json(db.ai.models ?? []), db.ai.defaultModel ?? ""]);
       await connection.execute(mysqlInsert("yh_settings", ["key_name", "value_json"]), ["main", json(db.settings)]);
@@ -338,14 +340,14 @@ async function readPostgres(): Promise<YiHuoStateData> {
     for (const sql of schemaStatements("postgres")) await client.query(sql);
     const [assets, domains, channels, ai, settings] = await Promise.all([
       client.query("SELECT * FROM yh_assets ORDER BY created_at DESC"),
-      client.query("SELECT * FROM yh_domains ORDER BY created_at DESC"),
+      client.query("SELECT * FROM yh_asset_domain_details"),
       client.query("SELECT * FROM yh_channels ORDER BY created_at DESC"),
       client.query("SELECT * FROM yh_ai_config WHERE id = $1", ["main"]),
       client.query("SELECT * FROM yh_settings WHERE key_name = $1", ["main"]),
     ]);
     return mergeSeed({
       assets: assets.rows.map(rowToAsset),
-      domains: domains.rows.map(rowToDomain),
+      domains: buildDomains(assets.rows.map(rowToAsset), domains.rows),
       channels: channels.rows.map(rowToChannel),
       ai: ai.rows[0] ? { provider: ai.rows[0].provider, apiKey: ai.rows[0].api_key ?? "", baseUrl: ai.rows[0].base_url, models: parseJson<string[]>(ai.rows[0].models_json, []), defaultModel: ai.rows[0].default_model } : seed.ai,
       settings: settings.rows[0] ? parseJson<Record<string, any>>(settings.rows[0].value_json, seed.settings) : seed.settings,
@@ -359,9 +361,10 @@ async function writePostgres(dbInput: YiHuoStateData) {
     for (const sql of schemaStatements("postgres")) await client.query(sql);
     await client.query("BEGIN");
     try {
-      for (const table of ["yh_assets", "yh_domains", "yh_channels", "yh_ai_config", "yh_settings"]) await client.query(`DELETE FROM ${table}`);
-      for (const asset of db.assets) await client.query(pgInsert("yh_assets", assetColumns), assetValues(asset));
-      for (const domain of db.domains) await client.query(pgInsert("yh_domains", domainColumns), domainValues(domain));
+      for (const table of ["yh_assets", "yh_asset_domain_details", "yh_channels", "yh_ai_config", "yh_settings"]) await client.query(`DELETE FROM ${table}`);
+      const assets = combinedAssets(db);
+      for (const asset of assets) await client.query(pgInsert("yh_assets", assetColumns), assetValues(asset));
+      for (const domain of db.domains) await client.query(pgInsert("yh_asset_domain_details", domainDetailColumns), domainDetailValues(domain));
       for (const channel of db.channels) await client.query(pgInsert("yh_channels", channelColumns), channelValues(channel));
       await client.query(pgInsert("yh_ai_config", ["id", "provider", "api_key", "base_url", "models_json", "default_model"]), ["main", db.ai.provider, db.ai.apiKey ?? "", db.ai.baseUrl, json(db.ai.models ?? []), db.ai.defaultModel ?? ""]);
       await client.query(pgInsert("yh_settings", ["key_name", "value_json"]), ["main", json(db.settings)]);
@@ -386,13 +389,13 @@ async function readSqlite(): Promise<YiHuoStateData> {
   try {
     for (const sql of schemaStatements("sqlite")) await db.exec(sql);
     const assets = await db.all("SELECT * FROM yh_assets ORDER BY created_at DESC");
-    const domains = await db.all("SELECT * FROM yh_domains ORDER BY created_at DESC");
+    const domainDetails = await db.all("SELECT * FROM yh_asset_domain_details");
     const channels = await db.all("SELECT * FROM yh_channels ORDER BY created_at DESC");
     const ai = await db.get("SELECT * FROM yh_ai_config WHERE id = ?", "main");
     const settings = await db.get("SELECT * FROM yh_settings WHERE key_name = ?", "main");
     return mergeSeed({
       assets: assets.map(rowToAsset),
-      domains: domains.map(rowToDomain),
+      domains: buildDomains(assets.map(rowToAsset), domainDetails),
       channels: channels.map(rowToChannel),
       ai: ai ? { provider: ai.provider, apiKey: ai.api_key ?? "", baseUrl: ai.base_url, models: parseJson<string[]>(ai.models_json, []), defaultModel: ai.default_model } : seed.ai,
       settings: settings ? parseJson<Record<string, any>>(settings.value_json, seed.settings) : seed.settings,
@@ -409,10 +412,11 @@ async function writeSqlite(dbInput: YiHuoStateData) {
     for (const sql of schemaStatements("sqlite")) await db.exec(sql);
     await db.exec("BEGIN");
     try {
-      for (const table of ["yh_assets", "yh_domains", "yh_channels", "yh_ai_config", "yh_settings"]) await db.run(`DELETE FROM ${table}`);
+      for (const table of ["yh_assets", "yh_asset_domain_details", "yh_channels", "yh_ai_config", "yh_settings"]) await db.run(`DELETE FROM ${table}`);
       const insert = (table: string, columns: string[]) => `INSERT INTO ${table} (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`;
-      for (const asset of data.assets) await db.run(insert("yh_assets", assetColumns), assetValues(asset));
-      for (const domain of data.domains) await db.run(insert("yh_domains", domainColumns), domainValues(domain));
+      const assets = combinedAssets(data);
+      for (const asset of assets) await db.run(insert("yh_assets", assetColumns), assetValues(asset));
+      for (const domain of data.domains) await db.run(insert("yh_asset_domain_details", domainDetailColumns), domainDetailValues(domain));
       for (const channel of data.channels) await db.run(insert("yh_channels", channelColumns), channelValues(channel));
       await db.run(insert("yh_ai_config", ["id", "provider", "api_key", "base_url", "models_json", "default_model"]), ["main", data.ai.provider, data.ai.apiKey ?? "", data.ai.baseUrl, json(data.ai.models ?? []), data.ai.defaultModel ?? ""]);
       await db.run(insert("yh_settings", ["key_name", "value_json"]), ["main", json(data.settings)]);
@@ -443,13 +447,13 @@ async function readD1(): Promise<YiHuoStateData> {
   const db = d1Binding();
   for (const sql of schemaStatements("sqlite")) await d1Run(db, sql);
   const assets = await d1All(db, "SELECT * FROM yh_assets ORDER BY created_at DESC");
-  const domains = await d1All(db, "SELECT * FROM yh_domains ORDER BY created_at DESC");
+  const domainDetails = await d1All(db, "SELECT * FROM yh_asset_domain_details");
   const channels = await d1All(db, "SELECT * FROM yh_channels ORDER BY created_at DESC");
   const ai = await d1First(db, "SELECT * FROM yh_ai_config WHERE id = ?", ["main"]);
   const settings = await d1First(db, "SELECT * FROM yh_settings WHERE key_name = ?", ["main"]);
   return mergeSeed({
     assets: assets.map(rowToAsset),
-    domains: domains.map(rowToDomain),
+    domains: buildDomains(assets.map(rowToAsset), domainDetails),
     channels: channels.map(rowToChannel),
     ai: ai ? { provider: ai.provider, apiKey: ai.api_key ?? "", baseUrl: ai.base_url, models: parseJson<string[]>(ai.models_json, []), defaultModel: ai.default_model } : seed.ai,
     settings: settings ? parseJson<Record<string, any>>(settings.value_json, seed.settings) : seed.settings,
@@ -460,10 +464,11 @@ async function writeD1(dbInput: YiHuoStateData) {
   const data = mergeSeed(dbInput);
   const db = d1Binding();
   for (const sql of schemaStatements("sqlite")) await d1Run(db, sql);
-  for (const table of ["yh_assets", "yh_domains", "yh_channels", "yh_ai_config", "yh_settings"]) await d1Run(db, `DELETE FROM ${table}`);
+  for (const table of ["yh_assets", "yh_asset_domain_details", "yh_channels", "yh_ai_config", "yh_settings"]) await d1Run(db, `DELETE FROM ${table}`);
   const insert = (table: string, columns: string[]) => `INSERT INTO ${table} (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`;
-  for (const asset of data.assets) await d1Run(db, insert("yh_assets", assetColumns), assetValues(asset));
-  for (const domain of data.domains) await d1Run(db, insert("yh_domains", domainColumns), domainValues(domain));
+  const assets = combinedAssets(data);
+  for (const asset of assets) await d1Run(db, insert("yh_assets", assetColumns), assetValues(asset));
+  for (const domain of data.domains) await d1Run(db, insert("yh_asset_domain_details", domainDetailColumns), domainDetailValues(domain));
   for (const channel of data.channels) await d1Run(db, insert("yh_channels", channelColumns), channelValues(channel));
   await d1Run(db, insert("yh_ai_config", ["id", "provider", "api_key", "base_url", "models_json", "default_model"]), ["main", data.ai.provider, data.ai.apiKey ?? "", data.ai.baseUrl, json(data.ai.models ?? []), data.ai.defaultModel ?? ""]);
   await d1Run(db, insert("yh_settings", ["key_name", "value_json"]), ["main", json(data.settings)]);
@@ -493,5 +498,5 @@ export function hasValidAdminKey(req: any) {
 
 export const storageInfo = {
   kind: storageKind,
-  tables: ["yh_assets", "yh_domains", "yh_channels", "yh_ai_config", "yh_settings"],
+  tables: ["yh_assets", "yh_asset_domain_details", "yh_channels", "yh_ai_config", "yh_settings"],
 };
