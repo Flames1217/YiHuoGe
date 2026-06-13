@@ -4,6 +4,7 @@ import {
   BellOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
+  CopyOutlined,
   DatabaseOutlined,
   DeleteOutlined,
   EditOutlined,
@@ -57,7 +58,6 @@ import { useEffect, useMemo, useState } from "react";
 import type { Key } from "react";
 import { useTranslation } from "react-i18next";
 import "./i18n";
-import { providerPresets } from "./data/mock";
 import { useYiHuoStore } from "./store";
 import type { Asset, AssetStatus, AssetType, BackupTarget, Language, NotificationChannel, NotifyType, ViewMode } from "./types";
 import { daysUntil, topbarDate } from "./utils/calendar";
@@ -102,6 +102,7 @@ const statusTone: Record<AssetStatus, string> = {
 const typeTone: Record<AssetType, string> = {
   domain: "volcano",
   vps: "geekblue",
+  hosting: "cyan",
   cloud: "cyan",
   ai: "purple",
   membership: "gold",
@@ -110,9 +111,10 @@ const typeTone: Record<AssetType, string> = {
 
 const assetTypeName: Record<AssetType, string> = {
   domain: "域名",
-  vps: "云主机",
-  cloud: "云服务",
-  ai: "智能订阅",
+  vps: "VPS",
+  hosting: "虚拟主机",
+  cloud: "虚拟主机",
+  ai: "AI订阅",
   membership: "会员订阅",
   custom: "自定义",
 };
@@ -207,6 +209,123 @@ const currencyRatesToCny: Record<string, number> = {
   NZD: 4.35,
   INR: 0.087,
 };
+
+type ProviderOption = { value: string; label: string; url?: string };
+
+const providerCatalog: Record<AssetType, ProviderOption[]> = {
+  domain: [
+    { value: "阿里云", label: "阿里云", url: "https://dc.console.aliyun.com/" },
+    { value: "腾讯云", label: "腾讯云", url: "https://console.cloud.tencent.com/domain" },
+    { value: "华为云", label: "华为云", url: "https://console.huaweicloud.com/domain/" },
+    { value: "西部数码", label: "西部数码", url: "https://www.west.cn/Manager/" },
+    { value: "新网", label: "新网", url: "https://www.xinnet.com/user/" },
+    { value: "Cloudflare Registrar", label: "Cloudflare Registrar", url: "https://dash.cloudflare.com/" },
+    { value: "Namecheap", label: "Namecheap", url: "https://ap.www.namecheap.com/domains/list/" },
+    { value: "Namesilo", label: "Namesilo", url: "https://www.namesilo.com/account_domains.php" },
+    { value: "Dynadot", label: "Dynadot", url: "https://www.dynadot.com/account/domain/manage" },
+    { value: "GoDaddy", label: "GoDaddy", url: "https://dcc.godaddy.com/domains" },
+    { value: "Porkbun", label: "Porkbun", url: "https://porkbun.com/account/domains" },
+    { value: "自定义", label: "自定义" },
+  ],
+  vps: [
+    { value: "阿里云 ECS", label: "阿里云 ECS", url: "https://ecs.console.aliyun.com/" },
+    { value: "腾讯云 CVM", label: "腾讯云 CVM", url: "https://console.cloud.tencent.com/cvm" },
+    { value: "华为云 ECS", label: "华为云 ECS", url: "https://console.huaweicloud.com/ecm/" },
+    { value: "AWS EC2", label: "AWS EC2", url: "https://console.aws.amazon.com/ec2/" },
+    { value: "Google Compute Engine", label: "Google Compute Engine", url: "https://console.cloud.google.com/compute/instances" },
+    { value: "Azure Virtual Machines", label: "Azure Virtual Machines", url: "https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.Compute%2FVirtualMachines" },
+    { value: "Oracle Cloud", label: "Oracle Cloud", url: "https://cloud.oracle.com/compute/instances" },
+    { value: "Vultr", label: "Vultr", url: "https://my.vultr.com/" },
+    { value: "DigitalOcean", label: "DigitalOcean", url: "https://cloud.digitalocean.com/droplets" },
+    { value: "Linode / Akamai", label: "Linode / Akamai", url: "https://cloud.linode.com/linodes" },
+    { value: "Hetzner", label: "Hetzner", url: "https://console.hetzner.cloud/projects" },
+    { value: "Contabo", label: "Contabo", url: "https://my.contabo.com/" },
+    { value: "自定义", label: "自定义" },
+  ],
+  hosting: [
+    { value: "阿里云虚拟主机", label: "阿里云虚拟主机", url: "https://wanwang.aliyun.com/hosting/" },
+    { value: "腾讯云轻量应用服务器", label: "腾讯云轻量应用服务器", url: "https://console.cloud.tencent.com/lighthouse/instance" },
+    { value: "西部数码虚拟主机", label: "西部数码虚拟主机", url: "https://www.west.cn/Manager/" },
+    { value: "Hostinger", label: "Hostinger", url: "https://hpanel.hostinger.com/" },
+    { value: "SiteGround", label: "SiteGround", url: "https://tools.siteground.com/" },
+    { value: "Bluehost", label: "Bluehost", url: "https://my.bluehost.com/" },
+    { value: "DreamHost", label: "DreamHost", url: "https://panel.dreamhost.com/" },
+    { value: "cPanel", label: "cPanel" },
+    { value: "Plesk", label: "Plesk" },
+    { value: "宝塔面板", label: "宝塔面板" },
+    { value: "自定义", label: "自定义" },
+  ],
+  cloud: [
+    { value: "阿里云虚拟主机", label: "阿里云虚拟主机", url: "https://wanwang.aliyun.com/hosting/" },
+    { value: "腾讯云轻量应用服务器", label: "腾讯云轻量应用服务器", url: "https://console.cloud.tencent.com/lighthouse/instance" },
+    { value: "自定义", label: "自定义" },
+  ],
+  ai: [
+    { value: "OpenAI", label: "OpenAI", url: "https://platform.openai.com/" },
+    { value: "Anthropic Claude", label: "Anthropic Claude", url: "https://console.anthropic.com/" },
+    { value: "Google Gemini", label: "Google Gemini", url: "https://aistudio.google.com/" },
+    { value: "DeepSeek", label: "DeepSeek", url: "https://platform.deepseek.com/" },
+    { value: "智谱 AI", label: "智谱 AI", url: "https://open.bigmodel.cn/" },
+    { value: "Moonshot / Kimi", label: "Moonshot / Kimi", url: "https://platform.moonshot.cn/" },
+    { value: "通义千问", label: "通义千问", url: "https://bailian.console.aliyun.com/" },
+    { value: "火山方舟", label: "火山方舟", url: "https://console.volcengine.com/ark" },
+    { value: "硅基流动", label: "硅基流动", url: "https://cloud.siliconflow.cn/" },
+    { value: "OpenRouter", label: "OpenRouter", url: "https://openrouter.ai/settings/keys" },
+    { value: "NewAPI / SharedChat", label: "NewAPI / SharedChat" },
+    { value: "自定义", label: "自定义" },
+  ],
+  membership: [
+    { value: "GitHub", label: "GitHub", url: "https://github.com/settings/billing" },
+    { value: "Cloudflare", label: "Cloudflare", url: "https://dash.cloudflare.com/" },
+    { value: "Vercel", label: "Vercel", url: "https://vercel.com/dashboard" },
+    { value: "Netlify", label: "Netlify", url: "https://app.netlify.com/" },
+    { value: "Notion", label: "Notion", url: "https://www.notion.so/my-settings" },
+    { value: "Figma", label: "Figma", url: "https://www.figma.com/files/team" },
+    { value: "JetBrains", label: "JetBrains", url: "https://account.jetbrains.com/licenses" },
+    { value: "Microsoft 365", label: "Microsoft 365", url: "https://admin.microsoft.com/" },
+    { value: "Google Workspace", label: "Google Workspace", url: "https://admin.google.com/" },
+    { value: "Adobe", label: "Adobe", url: "https://account.adobe.com/plans" },
+    { value: "自定义", label: "自定义" },
+  ],
+  custom: [
+    { value: "自定义", label: "自定义" },
+    { value: "代码仓库", label: "代码仓库" },
+    { value: "静态托管", label: "静态托管" },
+    { value: "内部系统", label: "内部系统" },
+  ],
+};
+
+const domainHostingProviders: ProviderOption[] = [
+  { value: "Cloudflare DNS", label: "Cloudflare DNS", url: "https://dash.cloudflare.com/" },
+  { value: "阿里云 DNS", label: "阿里云 DNS", url: "https://dns.console.aliyun.com/" },
+  { value: "腾讯云 DNSPod", label: "腾讯云 DNSPod", url: "https://console.dnspod.cn/dns/list" },
+  { value: "华为云 DNS", label: "华为云 DNS", url: "https://console.huaweicloud.com/dns/" },
+  { value: "DNSPod 国际版", label: "DNSPod 国际版", url: "https://www.dnspod.com/" },
+  { value: "Namecheap DNS", label: "Namecheap DNS", url: "https://ap.www.namecheap.com/domains/list/" },
+  { value: "GoDaddy DNS", label: "GoDaddy DNS", url: "https://dcc.godaddy.com/manage/dns" },
+  { value: "自定义", label: "自定义" },
+];
+
+function normalizeAssetType(type?: string): AssetType {
+  return type === "cloud" ? "hosting" : (type as AssetType) || "custom";
+}
+
+function findProviderOption(type: AssetType | string | undefined, provider?: string) {
+  const normalized = normalizeAssetType(type);
+  return providerCatalog[normalized].find((item) => item.value === provider) ?? providerCatalog.custom.find((item) => item.value === provider);
+}
+
+function findDomainHostOption(provider?: string) {
+  return domainHostingProviders.find((item) => item.value === provider);
+}
+
+function assetManageUrl(asset: Asset) {
+  return asset.url || asset.providerUrl || findProviderOption(asset.type, asset.provider)?.url || "";
+}
+
+function assetHostManageUrl(asset: Asset) {
+  return asset.hostUrl || findDomainHostOption(asset.hostProvider)?.url || "";
+}
 
 const backupTypeName: Record<BackupTarget["type"], string> = {
   WebDAV: "网盘协议",
@@ -403,7 +522,7 @@ function defaultNotifyTemplate(_type: NotifyType) {
   ].join("\n");
 }
 
-const assetTypes: AssetType[] = ["domain", "vps", "cloud", "ai", "membership", "custom"];
+const assetTypes: AssetType[] = ["domain", "vps", "hosting", "ai", "membership", "custom"];
 
 const heavenlyFlames = [
   "帝炎",
@@ -443,9 +562,21 @@ function whoisStatusName(status: string) {
   const map: Record<string, string> = {
     clientTransferProhibited: "禁止转移",
     autoRenewPeriod: "自动续期宽限",
+    "lookup-adapter-not-configured": "WHOIS/RDAP 适配器未配置",
     ok: "正常",
   };
   return map[status] ?? status;
+}
+
+function isWhoisUsable(whois: { registrar?: string; expiresAt?: string; whoisStatus?: string[] }) {
+  const statuses = whois.whoisStatus ?? [];
+  return Boolean(
+    whois.expiresAt &&
+      dayjs(whois.expiresAt).isValid() &&
+      whois.registrar &&
+      !whois.registrar.includes("适配器") &&
+      !statuses.includes("lookup-adapter-not-configured"),
+  );
 }
 
 function convertCurrency(amount: number, from: string, to: string) {
@@ -497,12 +628,12 @@ function inferAssetType(row: Record<string, string>, fallback?: string): AssetTy
   const raw = [fallback, row["\u7c7b\u578b"], row["\u7c7b\u522b"], row["\u8d44\u4ea7\u7c7b\u578b"], row["\u57df\u540d"] ? "\u57df\u540d" : ""].filter(Boolean).join(" ");
   const chineseTypeMap: Array<[RegExp, AssetType]> = [
     [/\u57df\u540d|domain/i, "domain"],
-    [/vps|\u4e91\u4e3b\u673a|\u670d\u52a1\u5668|\u4e3b\u673a/i, "vps"],
-    [/\u4e91\u670d\u52a1|cloud/i, "cloud"],
-    [/AI|\u667a\u80fd|\u6a21\u578b|OpenAI|Claude|Gemini/i, "ai"],
+    [/vps|\u4e91\u4e3b\u673a|\u670d\u52a1\u5668|\u72ec\u7acb\u4e3b\u673a|ECS|CVM|EC2|droplet/i, "vps"],
+    [/\u865a\u62df\u4e3b\u673a|\u5171\u4eab\u4e3b\u673a|web\s*hosting|hosting|cPanel|Plesk|\u8f7b\u91cf\u5e94\u7528/i, "hosting"],
+    [/AI|\u667a\u80fd|\u6a21\u578b|OpenAI|Claude|Gemini|API/i, "ai"],
     [/\u4f1a\u5458|\u8ba2\u9605|membership/i, "membership"],
   ];
-  return chineseTypeMap.find(([pattern]) => pattern.test(raw))?.[1] ?? "custom";
+  return normalizeAssetType(chineseTypeMap.find(([pattern]) => pattern.test(raw))?.[1] ?? fallback ?? "custom");
 }
 
 function normalizeImportedAsset(item: Partial<Asset> & Record<string, unknown>, index: number): Asset {
@@ -510,6 +641,8 @@ function normalizeImportedAsset(item: Partial<Asset> & Record<string, unknown>, 
   const name = String(item.name ?? row["\u540d\u79f0"] ?? row["\u57df\u540d"] ?? row["\u7ba1\u7406\u540e\u53f0"] ?? `\u70bc\u5316\u8d44\u4ea7 ${index + 1}`).trim();
   const provider = String(item.provider ?? row["\u670d\u52a1\u5546"] ?? row["\u5e73\u53f0"] ?? row["\u6ce8\u518c\u5546"] ?? row["\u5730\u533a"] ?? "\u81ea\u5b9a\u4e49").trim();
   const url = String(item.url ?? row["\u7ba1\u7406\u5730\u5740"] ?? row["\u7ba1\u7406\u540e\u53f0"] ?? row["\u540e\u53f0"] ?? row["\u63a7\u5236\u53f0"] ?? "").trim();
+  const hostProvider = String(item.hostProvider ?? row["\u6258\u7ba1\u5546"] ?? row["DNS"] ?? row["DNS\u670d\u52a1\u5546"] ?? row["\u89e3\u6790\u5546"] ?? "").trim();
+  const hostUrl = String(item.hostUrl ?? row["\u6258\u7ba1\u5730\u5740"] ?? row["DNS\u540e\u53f0"] ?? "").trim();
   const account = String(item.account ?? row["\u8d26\u53f7"] ?? row["\u8d26\u6237"] ?? row["IP\u5730\u5740"] ?? "\u70bc\u5316\u5bfc\u5165").trim();
   const renewalDate = normalizeAssetDate(String(item.renewalDate ?? row["\u7eed\u671f\u65e5"] ?? row["\u7eed\u671f\u65e5\u671f"] ?? row["\u5230\u671f\u65f6\u95f4"] ?? row["\u5230\u671f\u65e5\u671f"] ?? ""));
   const price = Number(item.price ?? row["\u4ef7\u683c"] ?? row["\u8d39\u7528"] ?? row["\u91d1\u989d"] ?? 0) || 0;
@@ -520,6 +653,9 @@ function normalizeImportedAsset(item: Partial<Asset> & Record<string, unknown>, 
     name: name || `\u70bc\u5316\u8d44\u4ea7 ${index + 1}`,
     type,
     provider: provider || "\u81ea\u5b9a\u4e49",
+    providerUrl: String(item.providerUrl ?? findProviderOption(type, provider)?.url ?? "").trim(),
+    hostProvider: type === "domain" ? hostProvider : undefined,
+    hostUrl: type === "domain" ? hostUrl || findDomainHostOption(hostProvider)?.url : undefined,
     account,
     renewalDate,
     price,
@@ -527,7 +663,7 @@ function normalizeImportedAsset(item: Partial<Asset> & Record<string, unknown>, 
     cycle: (item.cycle === "monthly" || item.cycle === "yearly" || item.cycle === "custom" ? item.cycle : "custom") as Asset["cycle"],
     status: "healthy",
     url,
-    tags: Array.isArray(item.tags) ? item.tags : ["AI\u70bc\u5316"],
+    tags: Array.isArray(item.tags) ? item.tags.filter((tag) => tag !== "AI\u70bc\u5316") : [],
     notes: notes || "\u7531 AI \u70bc\u5316/\u6279\u91cf\u5bfc\u5165\u5411\u5bfc\u751f\u6210\uff0c\u53ef\u7ee7\u7eed\u7f16\u8f91\u3002",
   };
 }
@@ -574,8 +710,8 @@ function useFilteredAssets(globalSearch = "") {
   const filtered = useMemo(() => {
     const lower = keyword.toLowerCase();
     return assets.filter((asset) => {
-      const matchesType = type === "all" || asset.type === type;
-      const matchesText = [asset.name, asset.provider, asset.account, asset.tags.join(" ")].join(" ").toLowerCase().includes(lower);
+      const matchesType = type === "all" || normalizeAssetType(asset.type) === type;
+      const matchesText = [asset.name, asset.provider, asset.hostProvider, asset.account, asset.tags.join(" ")].join(" ").toLowerCase().includes(lower);
       return matchesType && matchesText;
     });
   }, [assets, keyword, type]);
@@ -740,38 +876,49 @@ function AssetDrawer({
   const updateAsset = useYiHuoStore((state) => state.updateAsset);
   const preferredCurrency = useYiHuoStore((state) => state.settings.currency);
   const [api, contextHolder] = message.useMessage();
+  const watchedType = normalizeAssetType(Form.useWatch("type", form) ?? editing?.type ?? "domain");
+  const activeProviderOptions = providerCatalog[watchedType] ?? providerCatalog.custom;
 
   useEffect(() => {
     if (open) {
       form.setFieldsValue(
         editing ?? {
           type: "domain",
-          provider: "火网注册局",
+          provider: "阿里云",
+          providerUrl: findProviderOption("domain", "阿里云")?.url,
           account: "",
           renewalDate: dayjs().add(30, "day").format("YYYY-MM-DD"),
           price: 0,
           currency: preferredCurrency,
-          cycle: "monthly",
+          cycle: "yearly",
           tags: [],
         },
       );
     }
   }, [editing, form, open, preferredCurrency]);
 
+  const buildWhoisNotes = (whois: Awaited<ReturnType<typeof lookupDomainWhois>>, currentNotes?: string) => [
+    currentNotes,
+    whois.createdAt ? `WHOIS 创建日期：${whois.createdAt}` : "",
+    whois.dns?.length ? `DNS：${whois.dns.join("、")}` : "",
+    whois.whoisStatus?.length ? `状态：${whois.whoisStatus.map(whoisStatusName).join("、")}` : "",
+  ].filter(Boolean).join("\n");
+
   const fillWhois = async () => {
     const name = form.getFieldValue("name");
-    const type = form.getFieldValue("type");
+    const type = normalizeAssetType(form.getFieldValue("type"));
     if (type !== "domain" || !name) return;
     try {
       const whois = await lookupDomainWhois(name);
+      if (!isWhoisUsable(whois)) {
+        form.setFieldsValue({ notes: buildWhoisNotes(whois, form.getFieldValue("notes")) });
+        api.warning("WHOIS/RDAP 适配器未配置或未返回有效到期日，已保留当前服务商和续期日");
+        return;
+      }
       const patch: Partial<Asset> = {
         renewalDate: whois.expiresAt,
         provider: whois.registrar,
-        notes: [
-          whois.createdAt ? `WHOIS 创建日期：${whois.createdAt}` : "",
-          whois.dns?.length ? `DNS：${whois.dns.join("、")}` : "",
-          whois.whoisStatus?.length ? `状态：${whois.whoisStatus.map(whoisStatusName).join("、")}` : "",
-        ].filter(Boolean).join("\n"),
+        notes: buildWhoisNotes(whois, form.getFieldValue("notes")),
       };
       form.setFieldsValue(patch);
       api.success("WHOIS 占验已成，到期灵纹已刻入续期日");
@@ -782,21 +929,28 @@ function AssetDrawer({
 
   const submit = async () => {
     let values = await form.validateFields();
+    values = {
+      ...values,
+      type: normalizeAssetType(values.type),
+      providerUrl: values.providerUrl || findProviderOption(values.type, values.provider)?.url,
+      hostUrl: normalizeAssetType(values.type) === "domain" ? values.hostUrl || findDomainHostOption(values.hostProvider)?.url : undefined,
+      tags: Array.isArray(values.tags) ? values.tags.filter((tag) => tag !== "AI炼化") : [],
+    };
     if (values.type === "domain" && values.name) {
       try {
         const whois = await lookupDomainWhois(values.name);
-        values = {
-          ...values,
-          renewalDate: whois.expiresAt || values.renewalDate,
-          provider: whois.registrar || values.provider,
-          notes: [
-            values.notes,
-            whois.createdAt ? `WHOIS 创建日期：${whois.createdAt}` : "",
-            whois.dns?.length ? `DNS：${whois.dns.join("、")}` : "",
-            whois.whoisStatus?.length ? `状态：${whois.whoisStatus.map(whoisStatusName).join("、")}` : "",
-          ].filter(Boolean).join("\n"),
-        };
-        api.success("域名 WHOIS 已验真，续期日已按到期灵纹写入");
+        if (isWhoisUsable(whois)) {
+          values = {
+            ...values,
+            renewalDate: whois.expiresAt || values.renewalDate,
+            provider: whois.registrar || values.provider,
+            notes: buildWhoisNotes(whois, values.notes),
+          };
+          api.success("域名 WHOIS 已验真，续期日已按到期灵纹写入");
+        } else {
+          values = { ...values, notes: buildWhoisNotes(whois, values.notes) };
+          api.warning("WHOIS 未配置或结果无效，已按当前表单内容保存");
+        }
       } catch {
         api.warning("WHOIS 占验未成，已依当前续期日封存");
       }
@@ -812,15 +966,32 @@ function AssetDrawer({
   };
 
   return (
-    <Drawer size="large" open={open} onClose={onClose} title={editing ? "编辑资产" : t("addAsset")} extra={<Button title="封存当前火种；域名类型会先占验 WHOIS" type="primary" onClick={submit}>保存</Button>}>
+    <Drawer size="large" open={open} onClose={onClose} title={editing ? "编辑资产" : t("addAsset")} extra={<Button title="封存当前资产；域名类型会尝试 WHOIS，但不会用无效结果覆盖表单" type="primary" onClick={submit}>保存</Button>}>
       {contextHolder}
       <Form form={form} layout="vertical">
         <Form.Item name="name" label="名称" rules={[{ required: true }]}><Input onBlur={fillWhois} placeholder="例如：yihuoge.dev / 开放智能接口额度" /></Form.Item>
         <Row gutter={12}>
-          <Col span={12}><Form.Item name="type" label="类型"><Select options={assetTypes.map((value) => ({ value, label: assetTypeName[value] }))} /></Form.Item></Col>
-          <Col span={12}><Form.Item name="provider" label={t("provider")}><Select showSearch options={providerPresets.map((value) => ({ value, label: value }))} /></Form.Item></Col>
+          <Col span={12}><Form.Item name="type" label="类型"><Select options={assetTypes.map((value) => ({ value, label: assetTypeName[value] }))} onChange={(nextType: AssetType) => {
+            const normalized = normalizeAssetType(nextType);
+            const nextProvider = providerCatalog[normalized][0];
+            form.setFieldsValue({ type: normalized, provider: nextProvider.value, providerUrl: nextProvider.url, url: nextProvider.url ?? "", hostProvider: undefined, hostUrl: undefined });
+          }} /></Form.Item></Col>
+          <Col span={12}><Form.Item name="provider" label={t("provider")}><Select showSearch options={activeProviderOptions} onChange={(provider: string) => {
+            const option = findProviderOption(watchedType, provider);
+            form.setFieldsValue({ providerUrl: option?.url, url: option?.url || form.getFieldValue("url") });
+          }} /></Form.Item></Col>
         </Row>
-        <Form.Item name="account" label={t("account")}><Input /></Form.Item>
+        <Form.Item name="providerUrl" hidden><Input /></Form.Item>
+        {watchedType === "domain" ? (
+          <Row gutter={12}>
+            <Col span={12}><Form.Item name="hostProvider" label="托管商"><Select allowClear showSearch placeholder="DNS/托管服务商，可不填" options={domainHostingProviders} onChange={(provider?: string) => {
+              const option = findDomainHostOption(provider);
+              form.setFieldsValue({ hostUrl: option?.url });
+            }} /></Form.Item></Col>
+            <Col span={12}><Form.Item name="hostUrl" label="托管后台"><Input placeholder="https://dash.cloudflare.com/..." /></Form.Item></Col>
+          </Row>
+        ) : null}
+        <Form.Item name="account" label="账号 / 标识（可选）" tooltip="可填登录邮箱、账号、实例 ID 或 IP；域名没有独立账号时留空即可。"><Input placeholder="登录账号、邮箱、实例 ID 或 IP，可空" /></Form.Item>
         <Row gutter={12}>
           <Col span={12}><Form.Item name="renewalDate" label="续期日期" rules={[{ required: true }]}><Input type="date" /></Form.Item></Col>
           <Col span={12}><Form.Item name="cycle" label="周期"><Select options={(["monthly", "yearly", "custom"] as Asset["cycle"][]).map((value) => ({ value, label: cycleName[value] }))} /></Form.Item></Col>
@@ -849,6 +1020,7 @@ function AssetsModule({
 }) {
   const { t } = useTranslation();
   const { filtered, keyword, setKeyword, type, setType } = useFilteredAssets(globalSearch);
+  const addAsset = useYiHuoStore((state) => state.addAsset);
   const deleteAsset = useYiHuoStore((state) => state.deleteAsset);
   const importAssets = useYiHuoStore((state) => state.importAssets);
   const preferredCurrency = useYiHuoStore((state) => state.settings.currency);
@@ -893,6 +1065,26 @@ function AssetsModule({
     api.success(`已删除 ${ids.length} 枚资产火种`);
   };
 
+  const cloneAsset = (asset: Asset) => {
+    addAsset({
+      name: `${asset.name} 副本`,
+      type: normalizeAssetType(asset.type),
+      provider: asset.provider,
+      providerUrl: asset.providerUrl,
+      hostProvider: asset.hostProvider,
+      hostUrl: asset.hostUrl,
+      account: asset.account,
+      renewalDate: asset.renewalDate,
+      price: asset.price,
+      currency: asset.currency,
+      cycle: asset.cycle,
+      url: asset.url,
+      tags: [...(asset.tags ?? [])],
+      notes: asset.notes,
+    });
+    api.success(`已克隆：${asset.name}`);
+  };
+
   const columns: ColumnsType<Asset> = [
     {
       title: "名称",
@@ -905,16 +1097,40 @@ function AssetsModule({
         </Space>
       ),
     },
-    { title: "类型", dataIndex: "type", filters: assetTypes.map((item) => ({ text: assetTypeName[item], value: item })), onFilter: (value, record) => record.type === value, render: (value: AssetType) => <Tag color={typeTone[value]}>{assetTypeName[value]}</Tag> },
-    { title: t("provider"), dataIndex: "provider", sorter: (a, b) => a.provider.localeCompare(b.provider) },
+    { title: "类型", dataIndex: "type", filters: assetTypes.map((item) => ({ text: assetTypeName[item], value: item })), onFilter: (value, record) => normalizeAssetType(record.type) === value, render: (value: AssetType) => {
+      const normalized = normalizeAssetType(value);
+      return <Tag color={typeTone[normalized]}>{assetTypeName[normalized]}</Tag>;
+    } },
+    {
+      title: t("provider"),
+      dataIndex: "provider",
+      sorter: (a, b) => a.provider.localeCompare(b.provider),
+      render: (value: string, record) => (
+        <Space direction="vertical" size={0}>
+          <Text>{value}</Text>
+          {normalizeAssetType(record.type) === "domain" && record.hostProvider ? <Text className="muted asset-subline">托管：{record.hostProvider}</Text> : null}
+        </Space>
+      ),
+    },
     { title: "续期日", dataIndex: "renewalDate", sorter: (a, b) => dayjs(a.renewalDate).valueOf() - dayjs(b.renewalDate).valueOf(), render: (value: string) => <Space><CalendarOutlined />{value}<Tag color="orange">{dayUnit(value)}</Tag></Space> },
     { title: t("price"), render: (_, record) => formatPreferredAmount(record.price, record.currency, preferredCurrency) },
-    { title: "管理地址", dataIndex: "url", render: (value: string) => value ? <a className="asset-manage-link" href={value} target="_blank" rel="noreferrer">进入后台</a> : <Text className="muted">未填</Text> },
+    { title: "管理地址", render: (_, record) => {
+      const manageUrl = assetManageUrl(record);
+      const hostUrl = normalizeAssetType(record.type) === "domain" ? assetHostManageUrl(record) : "";
+      if (!manageUrl && !hostUrl) return <Text className="muted">未填</Text>;
+      return (
+        <Space direction="vertical" size={0}>
+          {manageUrl ? <a className="asset-manage-link" href={manageUrl} target="_blank" rel="noreferrer">服务商后台</a> : null}
+          {hostUrl ? <a className="asset-manage-link asset-subline" href={hostUrl} target="_blank" rel="noreferrer">托管后台</a> : null}
+        </Space>
+      );
+    } },
     {
       title: t("action"),
       render: (_, record) => (
         <Space>
           <Button title="编辑这条资产" size="small" icon={<EditOutlined />} onClick={() => { setEditing(record); setDrawerOpen(true); }} />
+          <Button title="克隆这条资产" size="small" icon={<CopyOutlined />} onClick={() => cloneAsset(record)} />
           <Popconfirm title="确认删除该资产？" onConfirm={() => deleteAsset(record.id)}>
             <Button title="删除这条资产" size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
@@ -994,12 +1210,12 @@ function AssetsModule({
           <Row gutter={[16, 16]}>
             {filtered.map((asset) => (
               <Col xs={24} md={12} xl={8} key={asset.id}>
-                <Card className="asset-card" actions={[<Tooltip title="编辑资产" key="edit"><EditOutlined onClick={() => { setEditing(asset); setDrawerOpen(true); }} /></Tooltip>, <Tooltip title="删除资产" key="delete"><DeleteOutlined onClick={() => deleteAsset(asset.id)} /></Tooltip>]}>
+                <Card className="asset-card" actions={[<Tooltip title="编辑资产" key="edit"><EditOutlined onClick={() => { setEditing(asset); setDrawerOpen(true); }} /></Tooltip>, <Tooltip title="克隆资产" key="clone"><CopyOutlined onClick={() => cloneAsset(asset)} /></Tooltip>, <Tooltip title="删除资产" key="delete"><DeleteOutlined onClick={() => deleteAsset(asset.id)} /></Tooltip>]}>
                   <Flex justify="space-between" align="start">
                     <Title level={4}>{asset.name}</Title>
                     {statusLabel(asset.status, t)}
                   </Flex>
-                  <Space wrap><Tag color={typeTone[asset.type]}>{assetTypeName[asset.type]}</Tag><Tag>{asset.provider}</Tag></Space>
+                  <Space wrap><Tag color={typeTone[normalizeAssetType(asset.type)]}>{assetTypeName[normalizeAssetType(asset.type)]}</Tag><Tag>{asset.provider}</Tag>{asset.hostProvider ? <Tag>托管：{asset.hostProvider}</Tag> : null}</Space>
                   <Divider />
                   <Text className="muted">续期：{asset.renewalDate} · {dayUnit(asset.renewalDate)}</Text>
                   <br />
@@ -1012,7 +1228,7 @@ function AssetsModule({
       </Card>
       <AssetDrawer open={drawerOpen} editing={editing} onClose={() => setDrawerOpen(false)} />
       <Modal open={importOpen} title="批量纳火入阁" onCancel={() => setImportOpen(false)} onOk={runAssetImport} okText="纳入">
-        <Paragraph className="muted">每行一枚火种：名称,类型,服务商,续期日期,价格。类型可填：域名、云主机、云服务、智能订阅、会员订阅、自定义。</Paragraph>
+        <Paragraph className="muted">每行一枚火种：名称,类型,服务商,续期日期,价格。类型可填：域名、VPS、虚拟主机、AI订阅、会员订阅、自定义。</Paragraph>
         <TextArea rows={8} value={importText} onChange={(event) => setImportText(event.target.value)} placeholder="示例：异火阁主域名,域名,火网注册局,2026-12-31,12" />
       </Modal>
     </div>

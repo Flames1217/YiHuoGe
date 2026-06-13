@@ -1,6 +1,6 @@
 export type Language = "zh" | "en";
 
-export type AssetType = "domain" | "vps" | "cloud" | "ai" | "membership" | "custom";
+export type AssetType = "domain" | "vps" | "hosting" | "cloud" | "ai" | "membership" | "custom";
 export type AssetStatus = "healthy" | "warning" | "critical" | "expired";
 export type ViewMode = "table" | "card";
 export type NotifyType =
@@ -35,6 +35,9 @@ export interface Asset {
   name: string;
   type: AssetType;
   provider: string;
+  providerUrl?: string;
+  hostProvider?: string;
+  hostUrl?: string;
   account: string;
   renewalDate: string;
   price: number;

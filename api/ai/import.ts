@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import { hasValidAdminKey, readState, writeState } from "../_state.js";
 
-type AssetType = "domain" | "vps" | "cloud" | "ai" | "membership" | "custom";
+type AssetType = "domain" | "vps" | "hosting" | "ai" | "membership" | "custom";
 
 function splitCsvLine(line: string) {
   const cells: string[] = [];
@@ -38,8 +38,8 @@ function normalizeDate(value?: string) {
 function inferType(row: Record<string, any>, fallback?: string): AssetType {
   const raw = [fallback, row["类型"], row["类别"], row["资产类型"], row["域名"] ? "域名" : ""].filter(Boolean).join(" ");
   if (/域名|domain/i.test(raw)) return "domain";
-  if (/vps|云主机|服务器|主机|IP地址/i.test(raw)) return "vps";
-  if (/云服务|cloud|cdn|数据库|对象存储/i.test(raw)) return "cloud";
+  if (/vps|云主机|服务器|独立主机|ECS|CVM|EC2|droplet|IP地址/i.test(raw)) return "vps";
+  if (/虚拟主机|共享主机|web\s*hosting|hosting|cPanel|Plesk|轻量应用/i.test(raw)) return "hosting";
   if (/AI|智能|模型|OpenAI|Claude|Gemini/i.test(raw)) return "ai";
   if (/会员|订阅|membership|SaaS/i.test(raw)) return "membership";
   return "custom";
@@ -69,7 +69,7 @@ function normalizeAsset(item: Record<string, any>, index: number) {
     cycle: ["monthly", "yearly", "custom"].includes(item.cycle) ? item.cycle : "custom",
     status: "healthy",
     url,
-    tags: Array.isArray(item.tags) ? item.tags : ["AI炼化"],
+    tags: Array.isArray(item.tags) ? item.tags.filter((tag: string) => tag !== "AI炼化") : [],
     notes: notes || "由 AI 炼化生成，可继续编辑。",
   };
 }
@@ -140,8 +140,8 @@ async function aiForge(text: string, ai: Record<string, any>) {
         role: "system",
         content: `你是“异火阁”的资产炼化器。把用户提供的 CSV、TSV、JSON、表格文本、域名/服务器/订阅导出数据映射成异火阁 Asset。
 Asset 字段：name,type,provider,account,renewalDate,price,currency,cycle,url,tags,notes。
-type 只能是 domain/vps/cloud/ai/membership/custom。域名=>domain；VPS/服务器/IP=>vps；云产品/CDN/数据库=>cloud；OpenAI/Claude/Gemini/API/模型=>ai；会员/订阅/SaaS=>membership；无法判断=>custom。
-renewalDate 必须是 YYYY-MM-DD；管理后台/控制台/console/login/dashboard 写入 url；密码/token/secret 不要明文返回，只在 notes 说明已忽略敏感列。
+type 只能是 domain/vps/hosting/ai/membership/custom。域名=>domain；VPS/云主机/独立服务器/IP=>vps；虚拟主机/共享主机/cPanel/Plesk/轻量应用=>hosting；OpenAI/Claude/Gemini/API/模型=>ai；会员/订阅/SaaS=>membership；无法判断=>custom。
+renewalDate 必须是 YYYY-MM-DD；管理后台/控制台/console/login/dashboard 写入 url；域名若有 DNS/托管商/解析商，写入 hostProvider/hostUrl；密码/token/secret 不要明文返回，只在 notes 说明已忽略敏感列；不要默认添加“AI炼化”标签。
 只返回严格 JSON：{"assets":[...]}，不要 Markdown。`,
       },
       { role: "user", content: text.slice(0, 30000) },

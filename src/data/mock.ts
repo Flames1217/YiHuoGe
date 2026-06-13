@@ -26,17 +26,15 @@ export const settingsSeed: AppSettings = {
 };
 
 export const providerPresets = [
-  "火网云",
-  "静态托管",
-  "代码仓库",
-  "开放智能",
-  "智谱",
-  "甲骨文云",
-  "阿里云",
-  "腾讯云",
-  "华为云",
-  "雨云",
-  "搬瓦工",
-  "旧域名仓",
-  "自定义",
+  "???",
+  "???",
+  "???",
+  "Cloudflare",
+  "Namecheap",
+  "Vultr",
+  "DigitalOcean",
+  "OpenAI",
+  "Anthropic Claude",
+  "GitHub",
+  "???",
 ];
