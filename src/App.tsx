@@ -451,6 +451,8 @@ const notifyTypes: NotifyType[] = [
   "Custom",
 ];
 
+const DEFAULT_NOTIFY_TYPE: NotifyType = "WeCom";
+
 type NotifyFieldName = "target" | "secretMasked" | `config.${string}`;
 
 interface NotifyFieldPreset {
@@ -1364,12 +1366,12 @@ function ChannelDrawer({ open, editing, onClose }: { open: boolean; editing?: No
   const updateChannel = useYiHuoStore((state) => state.updateChannel);
   const [api, contextHolder] = message.useMessage();
   const [testing, setTesting] = useState(false);
-  const watchedType = (Form.useWatch("type", form) ?? editing?.type ?? "Webhook") as NotifyType;
+  const watchedType = (Form.useWatch("type", form) ?? editing?.type ?? DEFAULT_NOTIFY_TYPE) as NotifyType;
   const preset = notifyPresets[watchedType];
 
   useEffect(() => {
     if (!open) return;
-    const type = editing?.type ?? "Webhook";
+    const type = editing?.type ?? DEFAULT_NOTIFY_TYPE;
     form.setFieldsValue({
       type,
       enabled: true,
@@ -1402,7 +1404,7 @@ function ChannelDrawer({ open, editing, onClose }: { open: boolean; editing?: No
 
   const testTemplate = async () => {
     const values = await form.validateFields();
-    const type = values.type ?? "Webhook";
+    const type = values.type ?? DEFAULT_NOTIFY_TYPE;
     const template = values.template || defaultNotifyTemplate(type);
     const channel = {
       ...values,

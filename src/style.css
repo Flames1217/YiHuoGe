@@ -2286,3 +2286,58 @@ body .ant-tooltip .ant-tooltip-arrow::before,
 body .ant-tooltip .ant-tooltip-arrow::after {
   background: rgba(13, 10, 9, 0.98) !important;
 }
+
+/* Notification drawer fixes:
+   - static Modal.success must not expose AntD's white content surface around the themed body;
+   - Select dropdown rows should have one unified background layer, not row + inner-content double fills. */
+body .yhg-themed-modal-root .ant-modal-content,
+body .yhg-themed-modal-root .ant-modal-container,
+body .ant-modal-root .yhg-themed-modal.ant-modal-confirm .ant-modal-content,
+body .ant-modal-root .yhg-themed-modal.ant-modal-confirm .ant-modal-container,
+body .ant-modal-root .ant-modal-confirm.yhg-themed-modal .ant-modal-content,
+body .ant-modal-root .ant-modal-confirm.yhg-themed-modal .ant-modal-container {
+  overflow: hidden !important;
+  color: #fff2d6 !important;
+  background:
+    radial-gradient(circle at 16% 0%, rgba(245, 158, 11, 0.2), transparent 40%),
+    radial-gradient(circle at 92% 12%, rgba(139, 92, 246, 0.16), transparent 34%),
+    linear-gradient(145deg, #1b1410 0%, #0b090c 54%, #050407 100%) !important;
+  border: 1px solid rgba(255, 184, 77, 0.48) !important;
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.76),
+    0 0 44px rgba(245, 158, 11, 0.12),
+    inset 0 1px 0 rgba(255, 216, 154, 0.12),
+    inset 0 0 34px rgba(245, 158, 11, 0.1) !important;
+}
+
+body .yhg-themed-modal-root .ant-modal-confirm-body-wrapper,
+body .yhg-themed-modal-root .ant-modal-confirm-body,
+body .ant-modal-root .yhg-themed-modal .ant-modal-confirm-body-wrapper,
+body .ant-modal-root .yhg-themed-modal .ant-modal-confirm-body {
+  background: transparent !important;
+}
+
+body .ant-select-dropdown .ant-select-item-option-content,
+body .ant-select-dropdown .ant-select-item-option-state,
+body .ant-select-dropdown .rc-virtual-list,
+body .ant-select-dropdown .rc-virtual-list-holder,
+body .ant-select-dropdown .rc-virtual-list-holder-inner {
+  background: transparent !important;
+}
+
+body .ant-select-dropdown .ant-select-item-option-active:not(.ant-select-item-option-selected),
+body .ant-select-dropdown .ant-select-item-option-active:not(.ant-select-item-option-selected) .ant-select-item-option-content {
+  color: #fff7e8 !important;
+  background: rgba(245, 158, 11, 0.18) !important;
+}
+
+body .ant-select-dropdown .ant-select-item-option-selected,
+body .ant-select-dropdown .ant-select-item-option-selected .ant-select-item-option-content {
+  color: #160d04 !important;
+  background: linear-gradient(135deg, var(--gold), var(--gold-2)) !important;
+}
+
+body .ant-select-dropdown .ant-select-item-option-active .ant-select-item-option-content,
+body .ant-select-dropdown .ant-select-item-option-selected .ant-select-item-option-content {
+  background: transparent !important;
+}
