@@ -1297,28 +1297,8 @@ function AiModule({ onForgeDone }: { onForgeDone?: () => void }) {
         content: `炼化成功：${assets.length} 枚火种已入库，正在前往异火库`,
         duration: 4,
       });
-      Modal.success({
-        className: "yhg-themed-modal",
-        rootClassName: "yhg-themed-modal-root",
-        title: "\u70bc\u5316\u6210\u529f\uff0c\u706b\u79cd\u5df2\u5165\u5e93",
-        okText: "\u8fdb\u5165\u5f02\u706b\u5e93",
-        onOk: () => onForgeDone?.(),
-        content: (
-          <div className="notify-test-modal">
-            <div className="notify-test-head"><FireOutlined /><span>{payload.source === "ai" ? "AI \u4e39\u7089\u5df2\u6210" : "\u672c\u5730\u7075\u8bc6\u515c\u5e95\u5df2\u6210"}</span></div>
-            <pre>{`\u5df2\u70bc\u6210 ${assets.length} \u679a\u8d44\u4ea7\u706b\u79cd\n\u5df2\u5199\u5165\u5f53\u524d\u5b58\u50a8\u5e93\n${payload.model ? `\u6a21\u578b\uff1a${payload.model}\n` : ""}${payload.warning ? `\u63d0\u793a\uff1a${payload.warning}` : "\u5f02\u706b\u5e93\u5df2\u5f00\uff0c\u53ef\u7acb\u5373\u6821\u9605\u3002"}`}</pre>
-          </div>
-        ),
-      });
       window.setTimeout(() => onForgeDone?.(), 650);
     } catch (error) {
-      Modal.error({
-        className: "yhg-themed-modal",
-        rootClassName: "yhg-themed-modal-root",
-        title: "炼化失败",
-        okText: "知道了",
-        content: <Text>{error instanceof Error ? error.message : "AI 炼化失败"}</Text>,
-      });
       api.error(error instanceof Error ? error.message : "AI \u70bc\u5316\u5931\u8d25");
     } finally {
       setForging(false);
@@ -1366,27 +1346,11 @@ function AiModule({ onForgeDone }: { onForgeDone?: () => void }) {
       });
       const payload = (await response.json().catch(() => ({}))) as { ok?: boolean; model?: string; endpoint?: string; content?: string; error?: string };
       if (!response.ok || !payload.ok) throw new Error(payload.error || `模型测试失败 ${response.status}`);
-      Modal.success({
-        className: "yhg-themed-modal",
-        rootClassName: "yhg-themed-modal-root",
-        title: "模型测试成功",
-        okText: "知道了",
-        content: (
-          <div className="notify-test-modal">
-            <div className="notify-test-head"><RobotOutlined /><span>{payload.model || aiConfig.defaultModel}</span></div>
-            <pre>{`通道：${payload.endpoint || aiConfig.baseUrl}\n回复：${payload.content || "异火阁模型通道正常"}`}</pre>
-          </div>
-        ),
+      api.success({
+        content: `模型可用：${payload.model || aiConfig.defaultModel}`,
+        duration: 4,
       });
-      api.success(`模型可用：${payload.model || aiConfig.defaultModel}`);
     } catch (error) {
-      Modal.error({
-        className: "yhg-themed-modal",
-        rootClassName: "yhg-themed-modal-root",
-        title: "模型测试失败",
-        okText: "知道了",
-        content: <Text>{error instanceof Error ? error.message : "模型测试失败"}</Text>,
-      });
       api.error(error instanceof Error ? error.message : "模型测试失败");
     } finally {
       setTestingModel(false);
