@@ -135,7 +135,7 @@ domain / vps / hosting / ai / membership / custom
 
 Vercel 推荐使用 MySQL/TiDB/MariaDB/PostgreSQL 连接。SQLite 不适合 Vercel 无状态文件系统长期保存。
 
-### 🟩 Netlify
+### 🟦 Netlify
 
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/Flames1217/YiHuoGe)
 
