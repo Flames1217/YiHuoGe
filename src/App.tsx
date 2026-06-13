@@ -559,6 +559,19 @@ function domainHostOptionsFor(dynamicProviders: Array<string | undefined> = []) 
   return uniqueProviderOptions([...dynamic, ...domainHostingProviders]);
 }
 
+function savedProviderNames(assets: Asset[], type: AssetType | string | undefined) {
+  const normalized = normalizeAssetType(type);
+  return assets
+    .filter((asset) => normalizeAssetType(asset.type) === normalized)
+    .map((asset) => asset.provider);
+}
+
+function savedHostProviderNames(assets: Asset[]) {
+  return assets
+    .filter((asset) => normalizeAssetType(asset.type) === "domain")
+    .map((asset) => asset.hostProvider);
+}
+
 function inferDomainHostOption(dns: string[] = []): ProviderOption | undefined {
   const nameservers = dns.map((item) => item.toLowerCase()).join(" ");
   if (nameservers.includes("cloudflare.com")) return findDomainHostOption("Cloudflare DNS");
@@ -1191,6 +1204,7 @@ function AssetDrawer({
   const [form] = Form.useForm<Asset>();
   const addAsset = useYiHuoStore((state) => state.addAsset);
   const updateAsset = useYiHuoStore((state) => state.updateAsset);
+  const assets = useYiHuoStore((state) => state.assets);
   const preferredCurrency = useYiHuoStore((state) => state.settings.currency);
   const [api, contextHolder] = message.useMessage();
   const [whoisLoading, setWhoisLoading] = useState(false);
@@ -1198,8 +1212,8 @@ function AssetDrawer({
   const watchedCycle = Form.useWatch("cycle", form) ?? editing?.cycle ?? "yearly";
   const watchedProvider = Form.useWatch("provider", form) ?? editing?.provider;
   const watchedHostProvider = Form.useWatch("hostProvider", form) ?? editing?.hostProvider;
-  const activeProviderOptions = providerOptionsFor(watchedType, [watchedProvider, editing?.provider]);
-  const activeHostProviderOptions = domainHostOptionsFor([watchedHostProvider, editing?.hostProvider]);
+  const activeProviderOptions = providerOptionsFor(watchedType, [watchedProvider, editing?.provider, ...savedProviderNames(assets, watchedType)]);
+  const activeHostProviderOptions = domainHostOptionsFor([watchedHostProvider, editing?.hostProvider, ...savedHostProviderNames(assets)]);
 
   const applyProviderChoice = (provider?: string) => {
     const option = findProviderOption(watchedType, provider);
@@ -1214,7 +1228,7 @@ function AssetDrawer({
     const option = findDomainHostOption(provider);
     form.setFieldsValue({
       hostProvider: provider,
-      hostUrl: option?.url,
+      hostUrl: option?.url || form.getFieldValue("hostUrl"),
     });
   };
 
