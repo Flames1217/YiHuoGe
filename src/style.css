@@ -2482,3 +2482,67 @@ body .ant-select-dropdown .ant-select-item-option.ant-select-item-option-selecte
     radial-gradient(circle at 50% 20%, rgba(245, 158, 11, 0.12), transparent 42%),
     rgba(255, 255, 255, 0.018);
 }
+
+/* Asset table final layout rules:
+   - no horizontal scrollbar;
+   - no active/sorted column background on the name column;
+   - all rows keep the same taller height even when provider/host/manage sub-lines exist. */
+body .asset-table .ant-table-content,
+body .asset-table .ant-table-body,
+body .asset-table .ant-table-container {
+  overflow-x: hidden !important;
+}
+
+body .asset-table .ant-table-tbody > tr {
+  height: 76px !important;
+}
+
+body .asset-table .ant-table-tbody > tr > td {
+  height: 76px !important;
+  padding: 10px 14px !important;
+  vertical-align: middle !important;
+  background: transparent !important;
+  background-image: none !important;
+}
+
+body .asset-table .ant-table-tbody > tr > td.ant-table-column-sort,
+body .asset-table .ant-table-tbody > tr:hover > td.ant-table-column-sort,
+body .asset-table .ant-table-tbody > tr > td:first-child,
+body .asset-table .ant-table-tbody > tr > td:nth-child(2) {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+body .asset-table .ant-table-tbody > tr:hover > td,
+body .asset-table .ant-table-tbody > tr > td.ant-table-cell-row-hover,
+body .asset-table .ant-table-tbody > tr.ant-table-row:hover > td {
+  background: rgba(245, 158, 11, 0.055) !important;
+}
+
+body .asset-table .ant-table-tbody > tr.ant-table-row-selected > td,
+body .asset-table .ant-table-tbody > tr.ant-table-row-selected:hover > td {
+  background: rgba(245, 158, 11, 0.12) !important;
+}
+
+body .asset-table .ant-table-tbody .ant-space,
+body .asset-table .ant-table-tbody .ant-space-item,
+body .asset-table .ant-table-tbody .ant-typography,
+body .asset-table .asset-manage-link,
+body .asset-table .asset-subline {
+  max-width: 100%;
+}
+
+body .asset-table .ant-table-tbody .ant-typography,
+body .asset-table .asset-manage-link,
+body .asset-table .asset-subline {
+  overflow: hidden;
+  line-height: 20px !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body .asset-table .ant-table-tbody .ant-space-vertical {
+  gap: 2px !important;
+  max-height: 46px;
+  overflow: hidden;
+}

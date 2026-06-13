@@ -72,20 +72,38 @@ const ASSET_COLUMN_WIDTHS_STORAGE = "yihuoge-asset-column-widths";
 type AssetColumnKey = "name" | "type" | "provider" | "renewalDate" | "price" | "manage" | "action";
 
 const defaultAssetColumnWidths: Record<AssetColumnKey, number> = {
-  name: 420,
-  type: 130,
-  provider: 170,
-  renewalDate: 270,
+  name: 300,
+  type: 120,
+  provider: 190,
+  renewalDate: 220,
+  price: 110,
+  manage: 150,
+  action: 120,
+};
+
+const maxAssetColumnWidths: Record<AssetColumnKey, number> = {
+  name: 360,
+  type: 140,
+  provider: 220,
+  renewalDate: 240,
   price: 130,
   manage: 170,
-  action: 150,
+  action: 140,
 };
 
 function loadAssetColumnWidths(): Record<AssetColumnKey, number> {
   if (typeof window === "undefined") return defaultAssetColumnWidths;
   try {
     const saved = JSON.parse(window.localStorage.getItem(ASSET_COLUMN_WIDTHS_STORAGE) || "{}") as Partial<Record<AssetColumnKey, number>>;
-    return { ...defaultAssetColumnWidths, ...Object.fromEntries(Object.entries(saved).filter(([, value]) => Number.isFinite(value) && Number(value) >= 80)) } as Record<AssetColumnKey, number>;
+    const normalizedSaved = Object.fromEntries(
+      Object.entries(saved)
+        .filter(([, value]) => Number.isFinite(value) && Number(value) >= 80)
+        .map(([key, value]) => {
+          const columnKey = key as AssetColumnKey;
+          return [columnKey, Math.min(Number(value), maxAssetColumnWidths[columnKey] ?? Number(value))];
+        }),
+    );
+    return { ...defaultAssetColumnWidths, ...normalizedSaved } as Record<AssetColumnKey, number>;
   } catch {
     return defaultAssetColumnWidths;
   }
@@ -1377,7 +1395,7 @@ function AssetsModule({
   const [editing, setEditing] = useState<Asset>();
   const [selectedIds, setSelectedIds] = useState<Key[]>([]);
   const [tablePage, setTablePage] = useState(1);
-  const [tablePageSize, setTablePageSize] = useState(5);
+  const [tablePageSize, setTablePageSize] = useState(20);
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState("");
   const [api, contextHolder] = message.useMessage();
@@ -1420,8 +1438,6 @@ function AssetsModule({
       />
     </span>
   );
-
-  const tableScrollX = Object.values(columnWidths).reduce((total, width) => total + width, 0) + 64;
 
   useEffect(() => {
     if (quickCreateNonce) {
@@ -1616,13 +1632,12 @@ function AssetsModule({
             dataSource={filtered}
             tableLayout="fixed"
             showSorterTooltip={{ rootClassName: "yhg-sorter-tooltip" }}
-            scroll={{ x: tableScrollX }}
             pagination={{
               current: tablePage,
               pageSize: tablePageSize,
               total: filtered.length,
               showSizeChanger: true,
-              pageSizeOptions: ["5", "10", "20", "50", "100"],
+              pageSizeOptions: ["10", "20", "50", "100"],
               showTotal: (total) => `共 ${total} 枚火种`,
               onChange: (page, size) => {
                 setTablePage(page);
