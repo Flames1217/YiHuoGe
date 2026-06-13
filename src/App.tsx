@@ -975,7 +975,7 @@ function parseImportedAssets(text: string): Asset[] {
 }
 
 async function lookupDomainWhois(domain: string) {
-  const response = await fetch(`/api/whois/${encodeURIComponent(domain)}`);
+  const response = await fetch(`/api/whois?domain=${encodeURIComponent(domain)}`);
   if (!response.ok) throw new Error("WHOIS 查询失败");
   return (await response.json()) as Partial<{
     name: string;

@@ -169,9 +169,9 @@ app.get("/api/domains", async (_req, res) => {
   res.json(db.domains);
 });
 
-app.get("/api/whois/:domain", async (req, res) => {
+async function handleWhoisLookup(requested: unknown, res: express.Response) {
   const db = await readDb();
-  const requestedDomain = String(req.params.domain ?? "").toLowerCase();
+  const requestedDomain = String(requested ?? "").toLowerCase();
   const found = db.domains.find((domain) => domain.name.toLowerCase() === requestedDomain);
   const cachedRegistrar = found?.registrar?.trim().toLowerCase();
   if (found?.expiresAt && cachedRegistrar && !["自定义", "rdap registrar", "rdap lookup failed"].includes(cachedRegistrar)) {
@@ -191,6 +191,14 @@ app.get("/api/whois/:domain", async (req, res) => {
       error: error instanceof Error ? error.message : "RDAP lookup failed",
     });
   }
+}
+
+app.get("/api/whois", async (req, res) => {
+  await handleWhoisLookup(req.query.domain, res);
+});
+
+app.get("/api/whois/:domain", async (req, res) => {
+  await handleWhoisLookup(req.params.domain, res);
 });
 
 app.get("/api/channels", async (_req, res) => {
