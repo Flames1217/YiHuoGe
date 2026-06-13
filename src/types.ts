@@ -81,7 +81,7 @@ export interface AiConfig {
 export interface BackupTarget {
   id: string;
   name: string;
-  type: "WebDAV" | "S3" | "GitJson";
+  type: "WebDAV" | "S3";
   target: string;
   enabled: boolean;
   notes?: string;

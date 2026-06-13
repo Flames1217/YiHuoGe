@@ -72,12 +72,10 @@
     "language": "zh",
     "timezone": "Asia/Shanghai",
     "storageAdapters": [
-      "Cloudflare D1/KV",
+      "Cloudflare D1",
       "Postgres",
       "MySQL/MariaDB",
-      "MongoDB",
-      "SQLite",
-      "Git JSON"
+      "SQLite"
     ],
     "deployTargets": [
       "Cloudflare Workers/Pages",

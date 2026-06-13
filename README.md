@@ -15,9 +15,9 @@
 - 🤖 AI 炼化：从文本/CSV/表格内容解析生成资产
 - 🧠 模型管理：手动添加、删除、默认模型选择、从 OpenAI-compatible `/models` 获取列表
 - 🕰️ 时间偏好：时区选择生效，顶部时间精确到秒，农历常显
-- 💾 存储适配：默认 MySQL/TiDB，可扩展 PostgreSQL、MariaDB、SQLite、D1/KV、MongoDB、Git 仓库 JSON 与自定义适配器
+- 💾 存储适配：结构化表存储，支持 MySQL/TiDB/MariaDB、PostgreSQL、SQLite 与 Cloudflare D1
 - 🛡️ 管理密钥：写操作与模型获取接口受 `YIHUOGE_ADMIN_KEY` 保护
-- 📦 备份方式：WebDAV、S3/R2/MinIO、Git 仓库 JSON、本地导出与自定义外部存储；备份配置会随导出数据一起导出
+- 📦 备份方式：WebDAV、S3/R2/MinIO、本地导出与自定义外部存储；备份配置会随导出数据一起导出
 
 ## 🚀 快速开始
 
@@ -53,12 +53,9 @@ MYSQL_URL=mysql://USER:PASSWORD@HOST:4000/yihuoge
 | --- | --- | --- |
 | MySQL / TiDB | Vercel、Docker、VPS、长期生产使用 | 默认接入 |
 | MariaDB | Docker、VPS、自托管数据库 | MySQL 兼容 |
-| PostgreSQL | 自托管、云数据库、结构化扩展 | 可扩展适配 |
-| SQLite | 单机 Docker、轻量私有部署 | 可扩展适配 |
-| Cloudflare D1 | Cloudflare Pages / Workers | 可扩展适配 |
-| Cloudflare KV | 配置、缓存、小体量状态 | 可扩展适配 |
-| MongoDB | 文档型资产数据、灵活字段 | 可扩展适配 |
-| Git 仓库 JSON | 小团队、版本化、可审计快照 | 可扩展适配 |
+| PostgreSQL | 自托管、云数据库、结构化扩展 | 已支持，继续使用 `MYSQL_URL=postgres://...` |
+| SQLite | 单机 Docker、轻量私有部署 | 已支持，`MYSQL_URL=sqlite://data/yihuoge.sqlite`；未配置时默认使用 SQLite |
+| Cloudflare D1 | Cloudflare Pages / Workers | 已支持，绑定 `YIHUOGE_D1` / `DB` 即可 |
 | 自定义适配器 | 其他数据库或对象存储 | 预留扩展 |
 
 ### 备份方式
@@ -67,7 +64,6 @@ MYSQL_URL=mysql://USER:PASSWORD@HOST:4000/yihuoge
 | --- | --- |
 | WebDAV | 适合 NAS、坚果云、Nextcloud、Alist 等 |
 | S3 / R2 / MinIO | 适合对象存储、跨区域备份、长期归档 |
-| Git 仓库 JSON | 适合把资产快照提交到私有仓库，便于回滚和审计 |
 | 本地导出 JSON | 适合手动备份、迁移、离线留档 |
 | 自定义外部存储 | 适合接入自有备份网关或企业内部存储 |
 

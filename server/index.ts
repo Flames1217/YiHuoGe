@@ -1,11 +1,11 @@
 import cors from "cors";
 import express from "express";
 import type { Request } from "express";
-import { existsSync, readFileSync, promises as fs } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { nanoid } from "nanoid";
-import { createConnection } from "mysql2/promise";
+import { readState, writeState } from "../api/_state.js";
 import { sendNotificationTest } from "./notify.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -28,8 +28,6 @@ function loadLocalEnv() {
 
 loadLocalEnv();
 
-const dbFile = process.env.YIHUOGE_DB_FILE ?? (process.env.VERCEL ? "/tmp/yihuoge.json" : path.join(rootDir, "data", "yihuoge.json"));
-const mysqlUrl = process.env.MYSQL_URL ?? process.env.DATABASE_URL ?? "";
 const adminKey = process.env.YIHUOGE_ADMIN_KEY ?? "";
 
 type AssetType = "domain" | "vps" | "hosting" | "cloud" | "ai" | "membership" | "custom";
@@ -88,89 +86,12 @@ interface Database {
   settings: Record<string, unknown>;
 }
 
-const seed: Database = {
-  assets: [],
-  domains: [],
-  channels: [],
-  ai: {
-    provider: "OpenAI Compatible",
-    baseUrl: "https://api.openai.com/v1",
-    models: ["gpt-4.1-mini"],
-    defaultModel: "gpt-4.1-mini",
-  },
-  settings: {
-    language: "zh",
-    timezone: "Asia/Shanghai",
-    currency: "CNY",
-    backupTargets: [],
-  },
-};
-
-async function readMysqlDb(): Promise<Database> {
-  const connection = await createConnection({
-    uri: mysqlUrl,
-    ssl: { rejectUnauthorized: true },
-  });
-  try {
-    await connection.execute(`
-      CREATE TABLE IF NOT EXISTS yihuoge_state (
-        id VARCHAR(64) PRIMARY KEY,
-        data LONGTEXT NOT NULL,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      )
-    `);
-    const [rows] = await connection.execute("SELECT data FROM yihuoge_state WHERE id = ?", ["main"]);
-    const first = (rows as Array<{ data: string }>)[0];
-    if (!first) {
-      await connection.execute("INSERT INTO yihuoge_state (id, data) VALUES (?, ?)", ["main", JSON.stringify(seed)]);
-      return seed;
-    }
-    return JSON.parse(first.data) as Database;
-  } finally {
-    await connection.end();
-  }
-}
-
-async function writeMysqlDb(db: Database) {
-  const connection = await createConnection({
-    uri: mysqlUrl,
-    ssl: { rejectUnauthorized: true },
-  });
-  try {
-    await connection.execute(`
-      CREATE TABLE IF NOT EXISTS yihuoge_state (
-        id VARCHAR(64) PRIMARY KEY,
-        data LONGTEXT NOT NULL,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      )
-    `);
-    await connection.execute(
-      "INSERT INTO yihuoge_state (id, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = VALUES(data)",
-      ["main", JSON.stringify(db)],
-    );
-  } finally {
-    await connection.end();
-  }
-}
-
 async function readDb(): Promise<Database> {
-  if (mysqlUrl) return readMysqlDb();
-  try {
-    return JSON.parse(await fs.readFile(dbFile, "utf8")) as Database;
-  } catch {
-    await fs.mkdir(path.dirname(dbFile), { recursive: true });
-    await fs.writeFile(dbFile, JSON.stringify(seed, null, 2), "utf8");
-    return seed;
-  }
+  return await readState() as Database;
 }
 
 async function writeDb(db: Database) {
-  if (mysqlUrl) {
-    await writeMysqlDb(db);
-    return;
-  }
-  await fs.mkdir(path.dirname(dbFile), { recursive: true });
-  await fs.writeFile(dbFile, JSON.stringify(db, null, 2), "utf8");
+  await writeState(db);
 }
 
 const app = express();

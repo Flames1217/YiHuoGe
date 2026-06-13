@@ -330,7 +330,6 @@ function assetHostManageUrl(asset: Asset) {
 const backupTypeName: Record<BackupTarget["type"], string> = {
   WebDAV: "网盘协议",
   S3: "对象存储",
-  GitJson: "Git 仓库 JSON",
 };
 
 const themePalettes = {
@@ -1735,7 +1734,7 @@ function SettingsModule() {
           <Card
             className="yhg-card backup-card"
             title="备份法阵"
-            extra={<Button title="新铸 WebDAV、S3 或 Git 仓库 JSON 备份法阵" icon={<PlusOutlined />} onClick={() => openBackupEditor()}>新增法阵</Button>}
+            extra={<Button title="新铸 WebDAV 或 S3/R2/MinIO 备份法阵" icon={<PlusOutlined />} onClick={() => openBackupEditor()}>新增法阵</Button>}
           >
             <div className="backup-list">
               {backupTargets.map((target) => (
@@ -1758,7 +1757,7 @@ function SettingsModule() {
                   </Space>
                 </div>
               ))}
-              {!backupTargets.length && <Text className="muted">暂无备份法阵，请新铸 WebDAV、S3 或 Git 仓库 JSON。</Text>}
+              {!backupTargets.length && <Text className="muted">暂无备份法阵，请新铸 WebDAV 或 S3/R2/MinIO。</Text>}
             </div>
             <Divider />
             <Space wrap>
@@ -1772,9 +1771,9 @@ function SettingsModule() {
       </Row>
       <Modal open={backupOpen} title={editingBackupId ? "编辑备份法阵" : "新增备份法阵"} onCancel={() => setBackupOpen(false)} onOk={saveBackupTarget} okText="保存">
         <Form form={backupForm} layout="vertical">
-          <Form.Item name="name" label="名称" rules={[{ required: true, message: "请填写备份名称" }]}><Input placeholder="例如：网盘镜像 / 对象存储仓 / Git JSON" /></Form.Item>
+          <Form.Item name="name" label="名称" rules={[{ required: true, message: "请填写备份名称" }]}><Input placeholder="例如：网盘镜像 / 对象存储仓" /></Form.Item>
           <Form.Item name="type" label="类型"><Select options={(Object.keys(backupTypeName) as BackupTarget["type"][]).map((value) => ({ value, label: backupTypeName[value] }))} /></Form.Item>
-          <Form.Item name="target" label="目标地址" rules={[{ required: true, message: "请填写备份目标地址" }]}><Input placeholder="https://dav.example.local、s3://bucket 或 git@example:repo.git:data/yihuoge.json" /></Form.Item>
+          <Form.Item name="target" label="目标地址" rules={[{ required: true, message: "请填写备份目标地址" }]}><Input placeholder="https://dav.example.local 或 s3://bucket/path" /></Form.Item>
           <Form.Item name="enabled" label="启用" valuePropName="checked"><Switch /></Form.Item>
           <Form.Item name="notes" label="备注"><TextArea rows={3} /></Form.Item>
         </Form>
