@@ -2203,3 +2203,86 @@ textarea.import-textarea,
   font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace !important;
   line-height: 1.62 !important;
 }
+
+
+/* Asset table header correction: no dirty hover block, no double divider beside resize handle. */
+body .asset-table .ant-table-thead > tr > th,
+body .asset-table .ant-table-thead > tr > th.ant-table-column-sort,
+body .asset-table .ant-table-thead > tr > th.ant-table-cell-row-hover,
+body .asset-table .ant-table-thead th.ant-table-column-has-sorters:hover,
+body .asset-table .ant-table-thead th.ant-table-column-sort:hover,
+body .asset-table .ant-table-thead .ant-table-column-sorters,
+body .asset-table .ant-table-thead .ant-table-column-sorters:hover {
+  color: #ffe7b5 !important;
+  background: rgba(245, 158, 11, 0.13) !important;
+}
+
+body .asset-table .ant-table-thead > tr > th::before {
+  width: 1px !important;
+  height: 44% !important;
+  background-color: rgba(255, 184, 77, 0.24) !important;
+}
+
+body .asset-table .ant-table-thead > tr > th:hover::before,
+body .asset-table .ant-table-thead > tr > th.ant-table-column-sort::before {
+  background-color: rgba(255, 184, 77, 0.24) !important;
+}
+
+body .asset-table .ant-table-column-sorter,
+body .asset-table .ant-table-column-sorter-inner,
+body .asset-table .ant-table-filter-trigger {
+  color: rgba(255, 231, 181, 0.5) !important;
+}
+
+body .asset-table .ant-table-column-sorter-up.active,
+body .asset-table .ant-table-column-sorter-down.active,
+body .asset-table .ant-table-filter-trigger.active {
+  color: var(--gold) !important;
+}
+
+body .asset-table .column-resize-handle {
+  right: -10px;
+  width: 18px;
+  border-right: 0 !important;
+  background: transparent !important;
+  opacity: 1;
+}
+
+body .asset-table .column-resize-handle:hover,
+body.is-resizing-column .asset-table .column-resize-handle {
+  border-right: 0 !important;
+  background: transparent !important;
+}
+
+body .asset-table .resizable-column-title {
+  padding-right: 0;
+}
+
+/* Sorter tooltip: force dark fire surface instead of AntD's light/gray bubble. */
+body .ant-tooltip,
+body .ant-tooltip-placement-top,
+body .ant-tooltip-placement-bottom,
+body .ant-tooltip-placement-left,
+body .ant-tooltip-placement-right {
+  --antd-arrow-background-color: rgba(13, 10, 9, 0.98) !important;
+}
+
+body .ant-tooltip .ant-tooltip-content,
+body .ant-tooltip .ant-tooltip-inner,
+body .ant-tooltip.ant-tooltip-placement-top .ant-tooltip-inner,
+body .ant-tooltip.ant-tooltip-placement-bottom .ant-tooltip-inner,
+body .ant-tooltip.ant-tooltip-placement-left .ant-tooltip-inner,
+body .ant-tooltip.ant-tooltip-placement-right .ant-tooltip-inner {
+  color: #fff2d6 !important;
+  font-weight: 800 !important;
+  background: rgba(13, 10, 9, 0.98) !important;
+  background-image: linear-gradient(135deg, rgba(20, 14, 9, 0.98), rgba(45, 25, 9, 0.96)) !important;
+  border: 1px solid rgba(255, 184, 77, 0.46) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.58), 0 0 22px rgba(245, 158, 11, 0.18) !important;
+}
+
+body .ant-tooltip .ant-tooltip-arrow::before,
+body .ant-tooltip .ant-tooltip-arrow::after {
+  background: rgba(13, 10, 9, 0.98) !important;
+}
