@@ -163,7 +163,7 @@ const cycleName: Record<Asset["cycle"], string> = {
   yearly: "年付",
   biennial: "两年付",
   triennial: "三年付",
-  lifetime: "终身",
+  lifetime: "永久",
   custom: "自定",
 };
 
@@ -814,8 +814,13 @@ function statusLabel(status: AssetStatus, t: (key: string) => string) {
   return <Tag className={`flame-tag flame-${status}`} color={statusTone[status]} icon={status === "healthy" ? <CheckCircleOutlined /> : <FireOutlined />}>{t(status)}</Tag>;
 }
 
-function dayUnit(date: string) {
+function dayUnit(date: string, cycle?: Asset["cycle"]) {
+  if (cycle === "lifetime") return "永久有效";
   return `${daysUntil(date)} 天`;
+}
+
+function renewalText(asset: Asset) {
+  return asset.cycle === "lifetime" ? "永久有效" : asset.renewalDate;
 }
 
 function isWhoisUsable(whois: { registrar?: string; expiresAt?: string; whoisStatus?: string[] }) {
@@ -869,6 +874,7 @@ function splitAssetCsvLine(line: string) {
 
 function normalizeAssetDate(value?: string) {
   const raw = String(value ?? "").trim();
+  if (/^(lifetime|permanent|永久|永久有效|终身)$/i.test(raw)) return "";
   if (!raw) return dayjs().add(1, "year").format("YYYY-MM-DD");
   const parsed = dayjs(raw.replace(/[./\u5e74]/g, "-").replace(/\u6708/g, "-").replace(/\u65e5/g, ""));
   return parsed.isValid() ? parsed.format("YYYY-MM-DD") : dayjs().add(1, "year").format("YYYY-MM-DD");
@@ -903,6 +909,8 @@ function normalizeAssetCycle(value: unknown): Asset["cycle"] {
     lifetime: "lifetime",
     permanent: "lifetime",
     "终身": "lifetime",
+    "永久": "lifetime",
+    "永久有效": "lifetime",
     custom: "custom",
     "自定": "custom",
     "自定义": "custom",
@@ -931,7 +939,11 @@ function normalizeImportedAsset(item: Partial<Asset> & Record<string, unknown>, 
   const hostProvider = String(item.hostProvider ?? row["\u6258\u7ba1\u5546"] ?? row["DNS"] ?? row["DNS\u670d\u52a1\u5546"] ?? row["\u89e3\u6790\u5546"] ?? "").trim();
   const hostUrl = String(item.hostUrl ?? row["\u6258\u7ba1\u5730\u5740"] ?? row["DNS\u540e\u53f0"] ?? "").trim();
   const account = String(item.account ?? row["\u8d26\u53f7"] ?? row["\u8d26\u6237"] ?? row["IP\u5730\u5740"] ?? "\u70bc\u5316\u5bfc\u5165").trim();
-  const renewalDate = normalizeAssetDate(String(item.renewalDate ?? row["\u7eed\u671f\u65e5"] ?? row["\u7eed\u671f\u65e5\u671f"] ?? row["\u5230\u671f\u65f6\u95f4"] ?? row["\u5230\u671f\u65e5\u671f"] ?? ""));
+  const rawRenewalDate = String(item.renewalDate ?? row["\u7eed\u671f\u65e5"] ?? row["\u7eed\u671f\u65e5\u671f"] ?? row["\u5230\u671f\u65f6\u95f4"] ?? row["\u5230\u671f\u65e5\u671f"] ?? "");
+  const renewalDate = normalizeAssetDate(rawRenewalDate);
+  const cycle = /^(lifetime|permanent|永久|永久有效|终身)$/i.test(rawRenewalDate.trim())
+    ? "lifetime"
+    : normalizeAssetCycle(item.cycle ?? row["\u5468\u671f"] ?? row["\u4ed8\u8d39\u5468\u671f"] ?? row["\u8ba1\u8d39\u5468\u671f"]);
   const price = Number(item.price ?? row["\u4ef7\u683c"] ?? row["\u8d39\u7528"] ?? row["\u91d1\u989d"] ?? 0) || 0;
   const type = inferAssetType(row, item.type as string | undefined);
   const notes = [item.notes, row["\u5907\u6ce8"], row["\u72b6\u6001"] ? `\u539f\u72b6\u6001\uff1a${row["\u72b6\u6001"]}` : "", row["\u5bc6\u7801"] ? "\u539f\u8868\u5305\u542b\u5bc6\u7801\u5217\uff0c\u5df2\u907f\u514d\u5c55\u793a\u660e\u6587\u3002" : ""].filter(Boolean).join("\n");
@@ -947,7 +959,7 @@ function normalizeImportedAsset(item: Partial<Asset> & Record<string, unknown>, 
     renewalDate,
     price,
     currency: String(item.currency ?? row["\u8d27\u5e01"] ?? "CNY"),
-    cycle: normalizeAssetCycle(item.cycle ?? row["\u5468\u671f"] ?? row["\u4ed8\u8d39\u5468\u671f"] ?? row["\u8ba1\u8d39\u5468\u671f"]),
+    cycle,
     status: "healthy",
     url,
     tags: Array.isArray(item.tags) ? item.tags.filter((tag) => tag !== "AI\u70bc\u5316") : [],
@@ -1092,7 +1104,7 @@ function OverviewModule({
   const channels = useYiHuoStore((state) => state.channels);
   const settings = useYiHuoStore((state) => state.settings);
   const hydrating = useYiHuoStore((state) => state.hydrating);
-  const urgent = assets.filter((asset) => daysUntil(asset.renewalDate) <= 14);
+  const urgent = assets.filter((asset) => asset.cycle !== "lifetime" && daysUntil(asset.renewalDate, asset.cycle) <= 14);
   const monthlyCost = assets.reduce((sum, asset) => sum + convertCurrency(asset.price, asset.currency, settings.currency), 0);
   const healthPercent = Math.round((assets.filter((asset) => asset.status === "healthy").length / Math.max(assets.length, 1)) * 100);
 
@@ -1132,13 +1144,17 @@ function OverviewModule({
             <div className="timeline-list">
               {assets
                 .slice()
-                .sort((a, b) => dayjs(a.renewalDate).valueOf() - dayjs(b.renewalDate).valueOf())
+                .sort((a, b) => {
+                  if (a.cycle === "lifetime" && b.cycle !== "lifetime") return 1;
+                  if (a.cycle !== "lifetime" && b.cycle === "lifetime") return -1;
+                  return dayjs(a.renewalDate).valueOf() - dayjs(b.renewalDate).valueOf();
+                })
                 .slice(0, 6)
                 .map((asset) => (
                   <button className="timeline-row" key={asset.id} onClick={() => setActive("assets")}>
                     <span>{asset.name}</span>
-                    <Tag color={daysUntil(asset.renewalDate) <= 14 ? "error" : "gold"}>{dayUnit(asset.renewalDate)}</Tag>
-                    <Text>{asset.renewalDate}</Text>
+                    <Tag color={asset.cycle === "lifetime" ? "green" : daysUntil(asset.renewalDate, asset.cycle) <= 14 ? "error" : "gold"}>{dayUnit(asset.renewalDate, asset.cycle)}</Tag>
+                    <Text>{renewalText(asset)}</Text>
                   </button>
                 ))}
             </div>
@@ -1178,6 +1194,7 @@ function AssetDrawer({
   const [api, contextHolder] = message.useMessage();
   const [whoisLoading, setWhoisLoading] = useState(false);
   const watchedType = normalizeAssetType(Form.useWatch("type", form) ?? editing?.type ?? "domain");
+  const watchedCycle = Form.useWatch("cycle", form) ?? editing?.cycle ?? "yearly";
   const watchedProvider = Form.useWatch("provider", form) ?? editing?.provider;
   const watchedHostProvider = Form.useWatch("hostProvider", form) ?? editing?.hostProvider;
   const activeProviderOptions = providerOptionsFor(watchedType, [watchedProvider, editing?.provider]);
@@ -1251,6 +1268,7 @@ function AssetDrawer({
     values = {
       ...values,
       type: normalizeAssetType(values.type),
+      renewalDate: values.cycle === "lifetime" ? "" : values.renewalDate,
       providerUrl: values.providerUrl || findProviderOption(values.type, values.provider)?.url,
       hostUrl: normalizeAssetType(values.type) === "domain" ? values.hostUrl || findDomainHostOption(values.hostProvider)?.url : undefined,
       tags: Array.isArray(values.tags) ? values.tags.filter((tag) => tag !== "AI炼化") : [],
@@ -1293,8 +1311,11 @@ function AssetDrawer({
         ) : null}
         <Form.Item name="account" label="账号 / 标识（可选）" tooltip="可填登录邮箱、账号、实例 ID 或 IP；域名没有独立账号时留空即可。"><Input placeholder="登录账号、邮箱、实例 ID 或 IP，可空" /></Form.Item>
         <Row gutter={12}>
-          <Col span={12}><Form.Item name="renewalDate" label="续期日期" rules={[{ required: true }]}><Input type="date" /></Form.Item></Col>
-          <Col span={12}><Form.Item name="cycle" label="周期"><Select options={assetCycleOptions} /></Form.Item></Col>
+          <Col span={12}><Form.Item name="renewalDate" label="续期日期" rules={[{ required: watchedCycle !== "lifetime", message: "永久资产无需填写续期日期" }]}><Input type="date" disabled={watchedCycle === "lifetime"} placeholder={watchedCycle === "lifetime" ? "永久有效" : undefined} /></Form.Item></Col>
+          <Col span={12}><Form.Item name="cycle" label="周期"><Select options={assetCycleOptions} onChange={(cycle: Asset["cycle"]) => {
+            if (cycle === "lifetime") form.setFieldValue("renewalDate", "");
+            if (cycle !== "lifetime" && !form.getFieldValue("renewalDate")) form.setFieldValue("renewalDate", dayjs().add(1, "year").format("YYYY-MM-DD"));
+          }} /></Form.Item></Col>
         </Row>
         <Button title="查询 WHOIS/RDAP，并同步注册商、托管商和续期日；不会自动改写备注" icon={<GlobalOutlined />} onClick={fillWhois} loading={whoisLoading} disabled={watchedType !== "domain"}>占验 WHOIS 并同步资产信息</Button>
         <Row gutter={12}>
@@ -1471,8 +1492,12 @@ function AssetsModule({
       dataIndex: "renewalDate",
       key: "renewalDate",
       width: columnWidths.renewalDate,
-      sorter: (a, b) => dayjs(a.renewalDate).valueOf() - dayjs(b.renewalDate).valueOf(),
-      render: (value: string) => <Space><CalendarOutlined />{value}<Tag color="orange">{dayUnit(value)}</Tag></Space>,
+      sorter: (a, b) => {
+        if (a.cycle === "lifetime" && b.cycle !== "lifetime") return 1;
+        if (a.cycle !== "lifetime" && b.cycle === "lifetime") return -1;
+        return dayjs(a.renewalDate).valueOf() - dayjs(b.renewalDate).valueOf();
+      },
+      render: (value: string, record) => <Space><CalendarOutlined />{renewalText(record)}<Tag color={record.cycle === "lifetime" ? "green" : "orange"}>{dayUnit(value, record.cycle)}</Tag></Space>,
     },
     {
       title: columnTitle("price", t("price"), 110),
@@ -1599,7 +1624,7 @@ function AssetsModule({
                   </Flex>
                   <Space wrap><Tag color={typeTone[normalizeAssetType(asset.type)]}>{assetTypeName[normalizeAssetType(asset.type)]}</Tag><Tag>{asset.provider}</Tag>{asset.hostProvider ? <Tag>托管：{asset.hostProvider}</Tag> : null}</Space>
                   <Divider />
-                  <Text className="muted">续期：{asset.renewalDate} · {dayUnit(asset.renewalDate)}</Text>
+                  <Text className="muted">续期：{renewalText(asset)} · {dayUnit(asset.renewalDate, asset.cycle)}</Text>
                   <br />
                   <Text>{formatPreferredAmount(asset.price, asset.currency, preferredCurrency)} / {cycleName[asset.cycle]}</Text>
                 </Card>

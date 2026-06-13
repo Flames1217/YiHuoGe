@@ -409,6 +409,8 @@ function normalizeCycle(value: unknown): AssetCycle {
     lifetime: "lifetime",
     permanent: "lifetime",
     "\u7ec8\u8eab": "lifetime",
+    "\u6c38\u4e45": "lifetime",
+    "\u6c38\u4e45\u6709\u6548": "lifetime",
     custom: "custom",
     "\u81ea\u5b9a": "custom",
     "\u81ea\u5b9a\u4e49": "custom",
@@ -419,6 +421,7 @@ function normalizeCycle(value: unknown): AssetCycle {
 
 function normalizeAssetDate(value?: string) {
   const raw = String(value ?? "").trim();
+  if (/^(lifetime|permanent|\u6c38\u4e45|\u6c38\u4e45\u6709\u6548|\u7ec8\u8eab)$/i.test(raw)) return "";
   if (!raw) return new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
   const normalized = raw.replace(/[./\u5e74]/g, "-").replace(/\u6708/g, "-").replace(/\u65e5/g, "");
   const date = new Date(normalized);
@@ -440,7 +443,11 @@ function normalizeImportedAsset(item: Record<string, any>, index: number): Asset
   const provider = String(item.provider ?? item["\u670d\u52a1\u5546"] ?? item["\u5e73\u53f0"] ?? item["\u6ce8\u518c\u5546"] ?? item["\u5730\u533a"] ?? "\u81ea\u5b9a\u4e49").trim();
   const url = String(item.url ?? item["\u7ba1\u7406\u5730\u5740"] ?? item["\u7ba1\u7406\u540e\u53f0"] ?? item["\u540e\u53f0"] ?? item["\u63a7\u5236\u53f0"] ?? "").trim();
   const account = String(item.account ?? item["\u8d26\u53f7"] ?? item["\u8d26\u6237"] ?? item["IP\u5730\u5740"] ?? "\u70bc\u5316\u5bfc\u5165").trim();
-  const renewalDate = normalizeAssetDate(item.renewalDate ?? item["\u7eed\u671f\u65e5"] ?? item["\u7eed\u671f\u65e5\u671f"] ?? item["\u5230\u671f\u65f6\u95f4"] ?? item["\u5230\u671f\u65e5\u671f"]);
+  const rawRenewalDate = String(item.renewalDate ?? item["\u7eed\u671f\u65e5"] ?? item["\u7eed\u671f\u65e5\u671f"] ?? item["\u5230\u671f\u65f6\u95f4"] ?? item["\u5230\u671f\u65e5\u671f"] ?? "");
+  const renewalDate = normalizeAssetDate(rawRenewalDate);
+  const cycle = /^(lifetime|permanent|\u6c38\u4e45|\u6c38\u4e45\u6709\u6548|\u7ec8\u8eab)$/i.test(rawRenewalDate.trim())
+    ? "lifetime"
+    : normalizeCycle(item.cycle ?? item["\u5468\u671f"] ?? item["\u4ed8\u8d39\u5468\u671f"] ?? item["\u8ba1\u8d39\u5468\u671f"]);
   const notes = [item.notes, item["\u5907\u6ce8"], item["\u72b6\u6001"] ? `\u539f\u72b6\u6001\uff1a${item["\u72b6\u6001"]}` : "", item["\u5bc6\u7801"] ? "\u539f\u8868\u5305\u542b\u5bc6\u7801\u5217\uff0c\u5df2\u907f\u514d\u5c55\u793a\u660e\u6587\u3002" : ""].filter(Boolean).join("\n");
   return {
     id: nanoid(10),
@@ -454,7 +461,7 @@ function normalizeImportedAsset(item: Record<string, any>, index: number): Asset
     renewalDate,
     price: Number(item.price ?? item["\u4ef7\u683c"] ?? item["\u8d39\u7528"] ?? 0) || 0,
     currency: String(item.currency ?? item["\u8d27\u5e01"] ?? "CNY"),
-    cycle: normalizeCycle(item.cycle ?? item["\u5468\u671f"] ?? item["\u4ed8\u8d39\u5468\u671f"] ?? item["\u8ba1\u8d39\u5468\u671f"]),
+    cycle,
     status: "healthy",
     url,
     tags: Array.isArray(item.tags) ? item.tags.filter((tag: string) => tag !== "AI\u70bc\u5316") : [],

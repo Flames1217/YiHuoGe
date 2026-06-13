@@ -30,6 +30,7 @@ function splitCsvLine(line: string) {
 
 function normalizeDate(value?: string) {
   const raw = String(value ?? "").trim();
+  if (/^(lifetime|permanent|\u6c38\u4e45|\u6c38\u4e45\u6709\u6548|\u7ec8\u8eab)$/i.test(raw)) return "";
   if (!raw) return new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
   const normalized = raw.replace(/[./年]/g, "-").replace(/月/g, "-").replace(/日/g, "");
   const date = new Date(normalized);
@@ -76,6 +77,8 @@ function normalizeCycle(value: unknown): AssetCycle {
     lifetime: "lifetime",
     permanent: "lifetime",
     "\u7ec8\u8eab": "lifetime",
+    "\u6c38\u4e45": "lifetime",
+    "\u6c38\u4e45\u6709\u6548": "lifetime",
     custom: "custom",
     "\u81ea\u5b9a": "custom",
     "\u81ea\u5b9a\u4e49": "custom",
@@ -89,7 +92,11 @@ function normalizeAsset(item: Record<string, any>, index: number) {
   const provider = String(item.provider ?? item["服务商"] ?? item["平台"] ?? item["注册商"] ?? item["地区"] ?? "自定义").trim();
   const url = String(item.url ?? item["管理地址"] ?? item["管理后台"] ?? item["后台"] ?? item["控制台"] ?? item["console"] ?? "").trim();
   const account = String(item.account ?? item["账号"] ?? item["账户"] ?? item["邮箱"] ?? item["IP地址"] ?? item["实例ID"] ?? "炼化导入").trim();
-  const renewalDate = normalizeDate(item.renewalDate ?? item["续期日"] ?? item["续期日期"] ?? item["到期时间"] ?? item["到期日期"] ?? item["expires"] ?? item["expiration"]);
+  const rawRenewalDate = String(item.renewalDate ?? item["续期日"] ?? item["续期日期"] ?? item["到期时间"] ?? item["到期日期"] ?? item["expires"] ?? item["expiration"] ?? "");
+  const renewalDate = normalizeDate(rawRenewalDate);
+  const cycle = /^(lifetime|permanent|永久|永久有效|终身)$/i.test(rawRenewalDate.trim())
+    ? "lifetime"
+    : normalizeCycle(item.cycle ?? item["\u5468\u671f"] ?? item["\u4ed8\u8d39\u5468\u671f"] ?? item["\u8ba1\u8d39\u5468\u671f"]);
   const notes = [
     item.notes,
     item["备注"],
@@ -105,7 +112,7 @@ function normalizeAsset(item: Record<string, any>, index: number) {
     renewalDate,
     price: Number(item.price ?? item["价格"] ?? item["费用"] ?? item["金额"] ?? item.cost ?? 0) || 0,
     currency: String(item.currency ?? item["货币"] ?? "CNY"),
-    cycle: normalizeCycle(item.cycle ?? item["\u5468\u671f"] ?? item["\u4ed8\u8d39\u5468\u671f"] ?? item["\u8ba1\u8d39\u5468\u671f"]),
+    cycle,
     status: "healthy",
     url,
     tags: Array.isArray(item.tags) ? item.tags.filter((tag: string) => tag !== "AI炼化") : [],

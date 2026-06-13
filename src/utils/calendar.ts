@@ -32,12 +32,15 @@ export function topbarDate(now = new Date(), language: Language = "zh", timezone
   return `${dayjs(current).format("YYYY-MM-DD dddd HH:mm:ss")} · ${lunarLabel(current)}`;
 }
 
-export function daysUntil(date: string): number {
+export function daysUntil(date: string, cycle?: Asset["cycle"]): number {
+  if (cycle === "lifetime") return Number.POSITIVE_INFINITY;
   return dayjs(date).startOf("day").diff(dayjs().startOf("day"), "day");
 }
 
-export function statusByDate(date: string): Asset["status"] {
+export function statusByDate(date: string, cycle?: Asset["cycle"]): Asset["status"] {
+  if (cycle === "lifetime") return "healthy";
   const days = daysUntil(date);
+  if (!Number.isFinite(days)) return "healthy";
   if (days < 0) return "expired";
   if (days <= 7) return "critical";
   if (days <= 30) return "warning";
@@ -50,7 +53,7 @@ export function monthMatrix(anchor: dayjs.Dayjs): dayjs.Dayjs[] {
 }
 
 export function calendarItemsFromAssets(assets: Asset[]): CalendarItem[] {
-  return assets.map((asset) => ({
+  return assets.filter((asset) => asset.cycle !== "lifetime" && asset.renewalDate).map((asset) => ({
     id: `renew-${asset.id}`,
     title: asset.name,
     date: asset.renewalDate,

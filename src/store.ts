@@ -75,8 +75,8 @@ interface YiHuoState {
 export const useYiHuoStore = create<YiHuoState>((set) => ({
   hydrating: false,
   hydrated: false,
-  assets: assetsSeed.map((asset) => ({ ...asset, status: statusByDate(asset.renewalDate) })),
-  domains: domainsSeed.map((domain) => ({ ...domain, status: statusByDate(domain.expiresAt) })),
+  assets: assetsSeed.map((asset) => ({ ...asset, status: statusByDate(asset.renewalDate, asset.cycle) })),
+  domains: domainsSeed.map((domain) => ({ ...domain, status: statusByDate(domain.expiresAt, domain.cycle) })),
   channels: channelsSeed,
   aiConfig: aiConfigSeed,
   settings: settingsSeed,
@@ -85,7 +85,7 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
     const nextAsset: Asset = {
       ...asset,
       id: nanoid(10),
-      status: asset.status ?? statusByDate(asset.renewalDate),
+      status: asset.status ?? statusByDate(asset.renewalDate, asset.cycle),
       tags: asset.tags ?? [],
     };
     set((state) => ({ assets: [nextAsset, ...state.assets] }));
@@ -93,7 +93,7 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
   },
 
   updateAsset: (asset) => {
-    const nextAsset = { ...asset, status: statusByDate(asset.renewalDate) };
+    const nextAsset = { ...asset, status: statusByDate(asset.renewalDate, asset.cycle) };
     set((state) => ({ assets: state.assets.map((item) => (item.id === asset.id ? nextAsset : item)) }));
     persistAsset(nextAsset, "PUT");
   },
@@ -104,7 +104,7 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
   },
 
   importAssets: (assets) => {
-    const nextAssets = assets.map((asset) => ({ ...asset, id: asset.id || nanoid(10), status: statusByDate(asset.renewalDate) }));
+    const nextAssets = assets.map((asset) => ({ ...asset, id: asset.id || nanoid(10), status: statusByDate(asset.renewalDate, asset.cycle) }));
     set((state) => ({ assets: [...nextAssets, ...state.assets] }));
     nextAssets.forEach((asset) => persistAsset(asset));
   },
