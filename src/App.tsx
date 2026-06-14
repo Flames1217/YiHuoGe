@@ -1,4 +1,4 @@
-import {
+﻿import {
   AppstoreOutlined,
   BellOutlined,
   CalendarOutlined,
@@ -1386,7 +1386,7 @@ function AssetDrawer({
         ) : null}
         <Form.Item name="account" label="账号 / 标识（可选）" tooltip="可填登录邮箱、账号、实例 ID 或 IP；域名没有独立账号时留空即可。"><Input placeholder="登录账号、邮箱、实例 ID 或 IP，可空" /></Form.Item>
         <Row gutter={12}>
-          <Col span={12}><Form.Item name="renewalDate" label="续期日期" rules={[{ required: watchedCycle !== "lifetime", message: "永久资产无需填写续期日期" }]}><Input type="date" disabled={watchedCycle === "lifetime"} placeholder={watchedCycle === "lifetime" ? "永久有效" : undefined} /></Form.Item></Col>
+          <Col span={12}><Form.Item name="renewalDate" label="续期日期" rules={[{ required: watchedCycle !== "lifetime", message: "永久资产无需填写续期日期" }]}><Input disabled={watchedCycle === "lifetime"} placeholder={watchedCycle === "lifetime" ? "永久有效" : "支持粘贴如 2027-05-05 / 2027.5.5 / 2027年5月5日"} onBlur={(e) => { if (e.target.value) form.setFieldValue("renewalDate", normalizeAssetDate(e.target.value)); }} /></Form.Item></Col>
           <Col span={12}><Form.Item name="cycle" label={settings.language === "en" ? "Cycle" : "周期"}><Select options={assetCycles.map((value) => ({ value, label: cycleLabel(value, settings.language) }))} onChange={(cycle: Asset["cycle"]) => {
             if (cycle === "lifetime") form.setFieldValue("renewalDate", "");
             if (cycle !== "lifetime" && !form.getFieldValue("renewalDate")) form.setFieldValue("renewalDate", dayjs().add(1, "year").format("YYYY-MM-DD"));
