@@ -1355,7 +1355,7 @@ function AssetDrawer({
       renewalDate: values.cycle === "lifetime" ? "" : values.renewalDate,
       providerUrl: values.providerUrl || findProviderOption(values.type, values.provider)?.url,
       hostUrl: normalizeAssetType(values.type) === "domain" ? values.hostUrl || findDomainHostOption(values.hostProvider)?.url : undefined,
-      autoRenew: values.autoRenew ?? true,
+      autoRenew: values.cycle === "lifetime" ? false : values.autoRenew ?? true,
       tags: Array.isArray(values.tags) ? values.tags.filter((tag) => tag !== "AI炼化") : [],
     };
     if (editing) {
@@ -1392,12 +1392,15 @@ function AssetDrawer({
         <Row gutter={12}>
           <Col span={12}><Form.Item name="renewalDate" label="续期日期" rules={[{ required: watchedCycle !== "lifetime", message: "永久资产无需填写续期日期" }]}><Input disabled={watchedCycle === "lifetime"} placeholder={watchedCycle === "lifetime" ? "永久有效" : "支持粘贴如 2027-05-05 / 2027.5.5 / 2027年5月5日"} onBlur={(e) => { if (e.target.value) form.setFieldValue("renewalDate", normalizeAssetDate(e.target.value)); }} /></Form.Item></Col>
           <Col span={12}><Form.Item name="cycle" label={settings.language === "en" ? "Cycle" : "周期"}><Select options={assetCycles.map((value) => ({ value, label: cycleLabel(value, settings.language) }))} onChange={(cycle: Asset["cycle"]) => {
-            if (cycle === "lifetime") form.setFieldValue("renewalDate", "");
+            if (cycle === "lifetime") {
+              form.setFieldValue("renewalDate", "");
+              form.setFieldValue("autoRenew", false);
+            }
             if (cycle !== "lifetime" && !form.getFieldValue("renewalDate")) form.setFieldValue("renewalDate", dayjs().add(1, "year").format("YYYY-MM-DD"));
           }} /></Form.Item></Col>
         </Row>
         <Form.Item name="autoRenew" label={t("autoRenew")} valuePropName="checked">
-          <Switch checkedChildren="已开启" unCheckedChildren="已关闭" />
+          <Switch disabled={watchedCycle === "lifetime"} checkedChildren="已开启" unCheckedChildren="已关闭" />
         </Form.Item>
         <Button title="查询 WHOIS/RDAP，并同步注册商、托管商和续期日；不会自动改写备注" icon={<GlobalOutlined />} onClick={fillWhois} loading={whoisLoading} disabled={watchedType !== "domain"}>占验 WHOIS 并同步资产信息</Button>
         <Row gutter={12}>
@@ -1597,7 +1600,8 @@ function AssetsModule({
       render: (value: boolean | undefined, record) => (
         <Switch
           size="small"
-          checked={value ?? true}
+          disabled={record.cycle === "lifetime"}
+          checked={record.cycle === "lifetime" ? false : value ?? true}
           checkedChildren="开"
           unCheckedChildren="关"
           onChange={(checked) => toggleAutoRenew(record.id, checked)}

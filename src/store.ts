@@ -88,14 +88,14 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
       id: nanoid(10),
       status: asset.status ?? statusByDate(asset.renewalDate, asset.cycle),
       tags: asset.tags ?? [],
-      autoRenew: asset.autoRenew ?? true,
+      autoRenew: asset.cycle === "lifetime" ? false : asset.autoRenew ?? true,
     };
     set((state) => ({ assets: [nextAsset, ...state.assets] }));
     persistAsset(nextAsset);
   },
 
   updateAsset: (asset) => {
-    const nextAsset = { ...asset, status: statusByDate(asset.renewalDate, asset.cycle) };
+    const nextAsset = { ...asset, status: statusByDate(asset.renewalDate, asset.cycle), autoRenew: asset.cycle === "lifetime" ? false : asset.autoRenew ?? true };
     set((state) => ({ assets: state.assets.map((item) => (item.id === asset.id ? nextAsset : item)) }));
     persistAsset(nextAsset, "PUT");
   },
@@ -106,7 +106,7 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
   },
 
   importAssets: (assets) => {
-    const nextAssets = assets.map((asset) => ({ ...asset, id: asset.id || nanoid(10), status: statusByDate(asset.renewalDate, asset.cycle), autoRenew: asset.autoRenew ?? true }));
+    const nextAssets = assets.map((asset) => ({ ...asset, id: asset.id || nanoid(10), status: statusByDate(asset.renewalDate, asset.cycle), autoRenew: asset.cycle === "lifetime" ? false : asset.autoRenew ?? true }));
     set((state) => ({ assets: [...nextAssets, ...state.assets] }));
     nextAssets.forEach((asset) => persistAsset(asset));
   },
@@ -180,7 +180,7 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
   },
   toggleAutoRenew: (id, autoRenew) => {
     set((state) => {
-      const assets = state.assets.map((item) => (item.id === id ? { ...item, autoRenew } : item));
+      const assets = state.assets.map((item) => (item.id === id ? { ...item, autoRenew: item.cycle === "lifetime" ? false : autoRenew } : item));
       const changed = assets.find((item) => item.id === id);
       if (changed) persistAsset(changed, 'PUT');
       return { assets };
