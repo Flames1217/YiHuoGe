@@ -1,4 +1,4 @@
-export type Language = "zh" | "en";
+﻿export type Language = "zh" | "en";
 
 export type AssetType = "domain" | "vps" | "hosting" | "cloud" | "ai" | "membership" | "custom";
 export type AssetStatus = "healthy" | "warning" | "critical" | "expired";
@@ -45,6 +45,7 @@ export interface Asset {
   currency: string;
   cycle: AssetCycle;
   status: AssetStatus;
+  autoRenew: boolean;
   url?: string;
   tags: string[];
   notes?: string;

@@ -49,6 +49,7 @@ interface Asset {
   currency: string;
   cycle: AssetCycle;
   status: AssetStatus;
+  autoRenew: boolean;
   url?: string;
   tags: string[];
   notes?: string;
@@ -142,7 +143,7 @@ app.get("/api/assets", async (_req, res) => {
 
 app.post("/api/assets", async (req, res) => {
   const db = await readDb();
-  const asset = { id: nanoid(10), status: "healthy", tags: [], ...req.body } as Asset;
+  const asset = { id: nanoid(10), status: "healthy", autoRenew: true, tags: [], ...req.body } as Asset;
   db.assets.unshift(asset);
   await writeDb(db);
   res.status(201).json(asset);

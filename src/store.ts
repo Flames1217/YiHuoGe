@@ -70,6 +70,7 @@ interface YiHuoState {
   removeModel: (model: string) => void;
   updateSettings: (patch: Partial<AppSettings>) => void;
   setLanguage: (language: Language) => void;
+  toggleAutoRenew: (id: string, autoRenew: boolean) => void;
 }
 
 export const useYiHuoStore = create<YiHuoState>((set) => ({
@@ -87,6 +88,7 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
       id: nanoid(10),
       status: asset.status ?? statusByDate(asset.renewalDate, asset.cycle),
       tags: asset.tags ?? [],
+      autoRenew: asset.autoRenew ?? true,
     };
     set((state) => ({ assets: [nextAsset, ...state.assets] }));
     persistAsset(nextAsset);
@@ -104,7 +106,7 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
   },
 
   importAssets: (assets) => {
-    const nextAssets = assets.map((asset) => ({ ...asset, id: asset.id || nanoid(10), status: statusByDate(asset.renewalDate, asset.cycle) }));
+    const nextAssets = assets.map((asset) => ({ ...asset, id: asset.id || nanoid(10), status: statusByDate(asset.renewalDate, asset.cycle), autoRenew: asset.autoRenew ?? true }));
     set((state) => ({ assets: [...nextAssets, ...state.assets] }));
     nextAssets.forEach((asset) => persistAsset(asset));
   },
@@ -174,6 +176,14 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
       const settings = { ...state.settings, ...patch };
       persistSettings(settings);
       return { settings };
+    });
+  },
+  toggleAutoRenew: (id, autoRenew) => {
+    set((state) => {
+      const assets = state.assets.map((item) => (item.id === id ? { ...item, autoRenew } : item));
+      const changed = assets.find((item) => item.id === id);
+      if (changed) persistAsset(changed, 'PUT');
+      return { assets };
     });
   },
   setLanguage: (language) => {
