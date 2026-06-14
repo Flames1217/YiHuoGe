@@ -2,7 +2,6 @@
   AppstoreOutlined,
   BellOutlined,
   CalendarOutlined,
-  CheckCircleOutlined,
   CopyOutlined,
   DatabaseOutlined,
   DeleteOutlined,
@@ -59,7 +58,7 @@ import type { Key, MouseEvent as ReactMouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import "./i18n";
 import { useYiHuoStore } from "./store";
-import type { Asset, AssetStatus, AssetType, BackupTarget, Language, NotificationChannel, NotifyType, ViewMode } from "./types";
+import type { Asset, AssetType, BackupTarget, Language, NotificationChannel, NotifyType, ViewMode } from "./types";
 import { daysUntil, topbarDate } from "./utils/calendar";
 
 const { Header, Sider, Content } = Layout;
@@ -144,13 +143,6 @@ async function hydrateFromServer(key: string) {
     useYiHuoStore.setState({ hydrating: false, hydrated: true });
   }
 }
-
-const statusTone: Record<AssetStatus, string> = {
-  healthy: "success",
-  warning: "warning",
-  critical: "error",
-  expired: "default",
-};
 
 const typeTone: Record<AssetType, string> = {
   domain: "volcano",
@@ -905,10 +897,6 @@ const heavenlyFlames = [
   "玄黄炎",
 ];
 
-function statusLabel(status: AssetStatus, t: (key: string) => string) {
-  return <Tag className={`flame-tag flame-${status}`} color={statusTone[status]} icon={status === "healthy" ? <CheckCircleOutlined /> : <FireOutlined />}>{t(status)}</Tag>;
-}
-
 function dayUnit(date: string, cycle: Asset["cycle"] | undefined, language: Language) {
   if (cycle === "lifetime") return language === "en" ? "Permanent" : "永久有效";
   const days = daysUntil(date, cycle);
@@ -1604,6 +1592,7 @@ function AssetsModule({
       render: (value: string, record) => (
         <Space orientation="vertical" size={0}>
           <Text strong>{value}</Text>
+          {record.account ? <Text className="muted asset-subline">{`账号 / 标识：${record.account}`}</Text> : null}
           <Space size={4}>{(record.tags ?? []).map((tag) => <Tag key={tag}>{tag}</Tag>)}</Space>
         </Space>
       ),
@@ -1789,7 +1778,6 @@ function AssetsModule({
                       <Title level={4} style={{ marginBottom: 2 }}>{asset.name}</Title>
                       {asset.account ? <Text type="secondary" style={{ fontSize: 12 }}>{`账号 / 标识：${asset.account}`}</Text> : null}
                     </div>
-                    {statusLabel(asset.status, t)}
                   </Flex>
                   <Space wrap><Tag color={typeTone[normalizeAssetType(asset.type)]}>{assetTypeLabel(normalizeAssetType(asset.type), settings.language)}</Tag><Tag>{asset.provider}</Tag>{asset.hostProvider ? <Tag>{t("hostPrefix")}：{asset.hostProvider}</Tag> : null}</Space>
                   <Divider />
