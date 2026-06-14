@@ -155,7 +155,7 @@ body::after {
   position: sticky !important;
   top: 0;
   height: 100dvh;
-  overflow: auto;
+  overflow: hidden;
   border-right: 1px solid rgba(255, 184, 77, 0.26);
   background:
     linear-gradient(180deg, rgba(18, 15, 16, 0.96), rgba(8, 7, 10, 0.98)),
