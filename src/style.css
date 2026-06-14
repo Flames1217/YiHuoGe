@@ -2484,36 +2484,30 @@ body .ant-select-dropdown .ant-select-item-option.ant-select-item-option-selecte
 }
 
 /* Asset table final layout rules:
-   - no horizontal scrollbar;
-   - no active/sorted column background on the name column;
+   - the page owns vertical scrolling;
+   - the AntD table must not expose a second vertical scrollbar;
    - all rows keep the same taller height even when provider/host/manage sub-lines exist. */
-body .asset-table .ant-table-content,
-body .asset-table .ant-table-body,
-body .asset-table .ant-table-container,
-body .asset-table .ant-table-content {
-  max-height: none !important;
-  overflow: visible !important;
-  overflow-x: hidden !important;
-  overflow-y: visible !important;
-}
-
-/* Kill antd's internal scroll container - let the page scroll instead */
-body .asset-table .ant-table-body-wrapper {
-  overflow: visible !important;
-  overflow-y: visible !important;
-}
-
 body .asset-table.ant-table-wrapper,
 body .asset-table .ant-spin-nested-loading,
 body .asset-table .ant-spin-container,
-body .asset-table .ant-table {
+body .asset-table .ant-table,
+body .asset-table .ant-table-container {
   max-height: none !important;
-  overflow: visible !important;
+  overflow: hidden !important;
 }
 
-body .yhg-card:has(.asset-table),
-body .yhg-card:has(.asset-table) > .ant-card-body {
-  overflow: visible !important;
+body .asset-table .ant-table-content,
+body .asset-table .ant-table-body {
+  max-height: none !important;
+  overflow-x: hidden !important;
+  overflow-y: clip !important;
+}
+
+@supports not (overflow: clip) {
+  body .asset-table .ant-table-content,
+  body .asset-table .ant-table-body {
+    overflow-y: hidden !important;
+  }
 }
 
 body .asset-table .ant-table-tbody > tr {

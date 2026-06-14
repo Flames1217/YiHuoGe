@@ -1666,7 +1666,6 @@ function AssetsModule({
             columns={columns}
             dataSource={sortedFiltered}
             tableLayout="fixed"
-            scroll={{ x: "max-content" }}
             showSorterTooltip={{ rootClassName: "yhg-sorter-tooltip" }}
             pagination={{
               current: tablePage,
