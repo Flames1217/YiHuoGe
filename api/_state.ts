@@ -184,6 +184,7 @@ function migrationStatements(dialect: SqlDialect) {
   return [
     `ALTER TABLE yh_assets ADD COLUMN auto_renew ${c.bool} NOT NULL DEFAULT 1`,
     `ALTER TABLE yh_assets ADD COLUMN custom_cycle_json ${c.longText}`,
+    `ALTER TABLE yh_assets ADD COLUMN account ${c.text} NOT NULL DEFAULT ''`,
   ];
 }
 
