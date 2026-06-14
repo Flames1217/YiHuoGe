@@ -1024,6 +1024,7 @@ function normalizeImportedAsset(item: Partial<Asset> & Record<string, unknown>, 
     status: "healthy",
     url,
     tags: Array.isArray(item.tags) ? item.tags.filter((tag) => tag !== "AI\u70bc\u5316") : [],
+    autoRenew: item.autoRenew ?? true,
     notes: notes || "\u7531 AI \u70bc\u5316/\u6279\u91cf\u5bfc\u5165\u5411\u5bfc\u751f\u6210\uff0c\u53ef\u7ee7\u7eed\u7f16\u8f91\u3002",
   };
 }
@@ -1518,6 +1519,7 @@ function AssetsModule({
       url: asset.url,
       tags: [...(asset.tags ?? [])],
       notes: asset.notes,
+      autoRenew: asset.autoRenew,
     });
     api.success(`已克隆：${asset.name}`);
   };
