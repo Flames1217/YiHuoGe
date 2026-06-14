@@ -33,6 +33,10 @@ interface RdapBootstrap {
   services?: Array<[string[], string[]]>;
 }
 
+const officialRdapFallbacks: Record<string, string[]> = {
+  me: ["https://rdap.identitydigital.services/rdap/"],
+};
+
 export interface DomainWhoisLookup {
   name: string;
   registrar: string;
@@ -118,8 +122,9 @@ async function rdapLookupUrls(domain: string) {
     const service = bootstrap.services?.find(([tlds]) => tlds.some((item) => item.toLowerCase() === tld));
     urls.push(...(service?.[1] ?? []).map((url) => rdapDomainUrl(url, domain)));
   } catch {
-    // Fall through to the public RDAP proxy below.
+    // Fall through to registry-specific fallbacks below.
   }
+  urls.push(...(officialRdapFallbacks[tld] ?? []).map((url) => rdapDomainUrl(url, domain)));
   urls.push(`https://rdap.org/domain/${encodeURIComponent(domain)}`);
   return [...new Set(urls)];
 }
