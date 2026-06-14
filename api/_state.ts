@@ -130,6 +130,7 @@ function schemaStatements(dialect: SqlDialect) {
       currency VARCHAR(16) NOT NULL DEFAULT 'CNY',
       cycle VARCHAR(16) NOT NULL DEFAULT 'custom',
       status VARCHAR(16) NOT NULL DEFAULT 'healthy',
+      auto_renew ${c.bool} NOT NULL DEFAULT 1,
       url ${c.text},
       tags_json ${c.longText},
       notes ${c.longText},
@@ -177,12 +178,28 @@ function schemaStatements(dialect: SqlDialect) {
   ];
 }
 
-const assetColumns = ["id", "name", "type", "provider", "provider_url", "host_provider", "host_url", "account", "renewal_date", "price", "currency", "cycle", "status", "url", "tags_json", "notes"];
+function migrationStatements(dialect: SqlDialect) {
+  const c = columnsFor(dialect);
+  return [
+    `ALTER TABLE yh_assets ADD COLUMN auto_renew ${c.bool} NOT NULL DEFAULT 1`,
+  ];
+}
+
+async function ignoreExistingColumn(work: () => Promise<unknown>) {
+  try {
+    await work();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/duplicate|exists|already|column/i.test(message)) throw error;
+  }
+}
+
+const assetColumns = ["id", "name", "type", "provider", "provider_url", "host_provider", "host_url", "account", "renewal_date", "price", "currency", "cycle", "status", "auto_renew", "url", "tags_json", "notes"];
 const domainDetailColumns = ["asset_id", "registrar", "domain_created_at", "expires_at", "dns_json", "whois_status_json", "raw_whois_json"];
 const channelColumns = ["id", "name", "type", "enabled", "target", "last_test", "secret_masked", "config_json", "template"];
 
 function assetValues(asset: any) {
-  return [asset.id, asset.name, asset.type, asset.provider ?? "", asset.providerUrl ?? "", asset.hostProvider ?? "", asset.hostUrl ?? "", asset.account ?? "", asset.renewalDate, Number(asset.price ?? 0), asset.currency ?? "CNY", asset.cycle ?? "custom", asset.status ?? "healthy", asset.url ?? "", json(asset.tags ?? []), asset.notes ?? ""];
+  return [asset.id, asset.name, asset.type, asset.provider ?? "", asset.providerUrl ?? "", asset.hostProvider ?? "", asset.hostUrl ?? "", asset.account ?? "", asset.renewalDate, Number(asset.price ?? 0), asset.currency ?? "CNY", asset.cycle ?? "custom", asset.status ?? "healthy", asset.autoRenew === false ? 0 : 1, asset.url ?? "", json(asset.tags ?? []), asset.notes ?? ""];
 }
 
 function domainDetailValues(domain: any) {
@@ -208,6 +225,7 @@ function rowToAsset(row: any) {
     currency: row.currency ?? "CNY",
     cycle: row.cycle ?? "custom",
     status: row.status ?? "healthy",
+    autoRenew: row.auto_renew === undefined || row.auto_renew === null ? true : Boolean(row.auto_renew),
     url: row.url ?? undefined,
     tags: parseJson<string[]>(row.tags_json, []),
     notes: row.notes ?? undefined,
@@ -272,6 +290,7 @@ async function readMysql(): Promise<YiHuoStateData> {
   const connection = await createConnection({ uri: mysqlUrl, ssl: { rejectUnauthorized: true } });
   try {
     for (const sql of schemaStatements("mysql")) await connection.execute(sql);
+    for (const sql of migrationStatements("mysql")) await ignoreExistingColumn(() => connection.execute(sql));
     const [assetRows] = await connection.execute("SELECT * FROM yh_assets ORDER BY created_at DESC");
     const [domainDetailRows] = await connection.execute("SELECT * FROM yh_asset_domain_details");
     const [channelRows] = await connection.execute("SELECT * FROM yh_channels ORDER BY created_at DESC");
@@ -310,6 +329,7 @@ async function writeMysql(dbInput: YiHuoStateData) {
   const connection = await createConnection({ uri: mysqlUrl, ssl: { rejectUnauthorized: true } });
   try {
     for (const sql of schemaStatements("mysql")) await connection.execute(sql);
+    for (const sql of migrationStatements("mysql")) await ignoreExistingColumn(() => connection.execute(sql));
     await connection.beginTransaction();
     try {
       for (const table of ["yh_assets", "yh_asset_domain_details", "yh_channels", "yh_ai_config", "yh_settings"]) await connection.execute(`DELETE FROM ${table}`);
@@ -343,6 +363,7 @@ async function withPostgres<T>(fn: (client: any) => Promise<T>) {
 async function readPostgres(): Promise<YiHuoStateData> {
   return withPostgres(async (client) => {
     for (const sql of schemaStatements("postgres")) await client.query(sql);
+    for (const sql of migrationStatements("postgres")) await ignoreExistingColumn(() => client.query(sql));
     const [assets, domains, channels, ai, settings] = await Promise.all([
       client.query("SELECT * FROM yh_assets ORDER BY created_at DESC"),
       client.query("SELECT * FROM yh_asset_domain_details"),
@@ -364,6 +385,7 @@ async function writePostgres(dbInput: YiHuoStateData) {
   const db = mergeSeed(dbInput);
   await withPostgres(async (client) => {
     for (const sql of schemaStatements("postgres")) await client.query(sql);
+    for (const sql of migrationStatements("postgres")) await ignoreExistingColumn(() => client.query(sql));
     await client.query("BEGIN");
     try {
       for (const table of ["yh_assets", "yh_asset_domain_details", "yh_channels", "yh_ai_config", "yh_settings"]) await client.query(`DELETE FROM ${table}`);
@@ -393,6 +415,7 @@ async function readSqlite(): Promise<YiHuoStateData> {
   const db = await openSqlite();
   try {
     for (const sql of schemaStatements("sqlite")) await db.exec(sql);
+    for (const sql of migrationStatements("sqlite")) await ignoreExistingColumn(() => db.exec(sql));
     const assets = await db.all("SELECT * FROM yh_assets ORDER BY created_at DESC");
     const domainDetails = await db.all("SELECT * FROM yh_asset_domain_details");
     const channels = await db.all("SELECT * FROM yh_channels ORDER BY created_at DESC");
@@ -415,6 +438,7 @@ async function writeSqlite(dbInput: YiHuoStateData) {
   const db = await openSqlite();
   try {
     for (const sql of schemaStatements("sqlite")) await db.exec(sql);
+    for (const sql of migrationStatements("sqlite")) await ignoreExistingColumn(() => db.exec(sql));
     await db.exec("BEGIN");
     try {
       for (const table of ["yh_assets", "yh_asset_domain_details", "yh_channels", "yh_ai_config", "yh_settings"]) await db.run(`DELETE FROM ${table}`);
@@ -451,6 +475,7 @@ async function d1Run(db: any, sql: string, params: any[] = []) {
 async function readD1(): Promise<YiHuoStateData> {
   const db = d1Binding();
   for (const sql of schemaStatements("sqlite")) await d1Run(db, sql);
+  for (const sql of migrationStatements("sqlite")) await ignoreExistingColumn(() => d1Run(db, sql));
   const assets = await d1All(db, "SELECT * FROM yh_assets ORDER BY created_at DESC");
   const domainDetails = await d1All(db, "SELECT * FROM yh_asset_domain_details");
   const channels = await d1All(db, "SELECT * FROM yh_channels ORDER BY created_at DESC");
@@ -469,6 +494,7 @@ async function writeD1(dbInput: YiHuoStateData) {
   const data = mergeSeed(dbInput);
   const db = d1Binding();
   for (const sql of schemaStatements("sqlite")) await d1Run(db, sql);
+  for (const sql of migrationStatements("sqlite")) await ignoreExistingColumn(() => d1Run(db, sql));
   for (const table of ["yh_assets", "yh_asset_domain_details", "yh_channels", "yh_ai_config", "yh_settings"]) await d1Run(db, `DELETE FROM ${table}`);
   const insert = (table: string, columns: string[]) => `INSERT INTO ${table} (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`;
   const assets = assetsForWrite(data);

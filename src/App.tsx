@@ -68,13 +68,14 @@ const { TextArea } = Input;
 const ADMIN_KEY_STORAGE = "yihuoge-admin-key";
 const ASSET_COLUMN_WIDTHS_STORAGE = "yihuoge-asset-column-widths";
 
-type AssetColumnKey = "name" | "type" | "provider" | "renewalDate" | "price" | "manage" | "action";
+type AssetColumnKey = "name" | "type" | "provider" | "renewalDate" | "autoRenew" | "price" | "manage" | "action";
 
 const defaultAssetColumnWidths: Record<AssetColumnKey, number> = {
   name: 300,
   type: 120,
   provider: 190,
   renewalDate: 220,
+  autoRenew: 120,
   price: 110,
   manage: 150,
   action: 120,
@@ -85,6 +86,7 @@ const maxAssetColumnWidths: Record<AssetColumnKey, number> = {
   type: 140,
   provider: 220,
   renewalDate: 240,
+  autoRenew: 140,
   price: 130,
   manage: 170,
   action: 140,
@@ -1293,6 +1295,7 @@ function AssetDrawer({
           price: 0,
           currency: preferredCurrency,
           cycle: "yearly",
+          autoRenew: true,
           tags: [],
         },
       );
@@ -1352,6 +1355,7 @@ function AssetDrawer({
       renewalDate: values.cycle === "lifetime" ? "" : values.renewalDate,
       providerUrl: values.providerUrl || findProviderOption(values.type, values.provider)?.url,
       hostUrl: normalizeAssetType(values.type) === "domain" ? values.hostUrl || findDomainHostOption(values.hostProvider)?.url : undefined,
+      autoRenew: values.autoRenew ?? true,
       tags: Array.isArray(values.tags) ? values.tags.filter((tag) => tag !== "AI炼化") : [],
     };
     if (editing) {
@@ -1392,6 +1396,9 @@ function AssetDrawer({
             if (cycle !== "lifetime" && !form.getFieldValue("renewalDate")) form.setFieldValue("renewalDate", dayjs().add(1, "year").format("YYYY-MM-DD"));
           }} /></Form.Item></Col>
         </Row>
+        <Form.Item name="autoRenew" label={t("autoRenew")} valuePropName="checked">
+          <Switch checkedChildren="已开启" unCheckedChildren="已关闭" />
+        </Form.Item>
         <Button title="查询 WHOIS/RDAP，并同步注册商、托管商和续期日；不会自动改写备注" icon={<GlobalOutlined />} onClick={fillWhois} loading={whoisLoading} disabled={watchedType !== "domain"}>占验 WHOIS 并同步资产信息</Button>
         <Row gutter={12}>
           <Col span={12}><Form.Item name="price" label={t("price")}><InputNumber min={0} style={{ width: "100%" }} /></Form.Item></Col>
@@ -1419,6 +1426,7 @@ function AssetsModule({
   const addAsset = useYiHuoStore((state) => state.addAsset);
   const deleteAsset = useYiHuoStore((state) => state.deleteAsset);
   const importAssets = useYiHuoStore((state) => state.importAssets);
+  const toggleAutoRenew = useYiHuoStore((state) => state.toggleAutoRenew);
   const settings = useYiHuoStore((state) => state.settings);
   const preferredCurrency = settings.currency;
   const hydrating = useYiHuoStore((state) => state.hydrating);
@@ -1575,6 +1583,26 @@ function AssetsModule({
         return dayjs(a.renewalDate).valueOf() - dayjs(b.renewalDate).valueOf();
       },
       render: (value: string, record) => <Space><CalendarOutlined />{renewalText(record, settings.language)}<Tag color={record.cycle === "lifetime" ? "green" : "orange"}>{dayUnit(value, record.cycle, settings.language)}</Tag></Space>,
+    },
+    {
+      title: columnTitle("autoRenew", t("autoRenew"), 104),
+      dataIndex: "autoRenew",
+      key: "autoRenew",
+      width: columnWidths.autoRenew,
+      filters: [
+        { text: "已开启", value: true },
+        { text: "已关闭", value: false },
+      ],
+      onFilter: (value, record) => (record.autoRenew ?? true) === value,
+      render: (value: boolean | undefined, record) => (
+        <Switch
+          size="small"
+          checked={value ?? true}
+          checkedChildren="开"
+          unCheckedChildren="关"
+          onChange={(checked) => toggleAutoRenew(record.id, checked)}
+        />
+      ),
     },
     {
       title: columnTitle("price", t("price"), 110),

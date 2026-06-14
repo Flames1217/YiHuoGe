@@ -49,6 +49,7 @@ interface Asset {
   currency: string;
   cycle: AssetCycle;
   status: AssetStatus;
+  autoRenew: boolean;
   url?: string;
   tags: string[];
   notes?: string;
@@ -142,7 +143,7 @@ app.get("/api/assets", async (_req, res) => {
 
 app.post("/api/assets", async (req, res) => {
   const db = await readDb();
-  const asset = { id: nanoid(10), status: "healthy", tags: [], ...req.body } as Asset;
+  const asset = { id: nanoid(10), status: "healthy", autoRenew: true, tags: [], ...req.body } as Asset;
   db.assets.unshift(asset);
   await writeDb(db);
   res.status(201).json(asset);
@@ -463,6 +464,7 @@ function normalizeImportedAsset(item: Record<string, any>, index: number): Asset
     currency: String(item.currency ?? item["\u8d27\u5e01"] ?? "CNY"),
     cycle,
     status: "healthy",
+    autoRenew: item.autoRenew ?? true,
     url,
     tags: Array.isArray(item.tags) ? item.tags.filter((tag: string) => tag !== "AI\u70bc\u5316") : [],
     notes: notes || "\u7531 AI \u70bc\u5316\u751f\u6210\uff0c\u53ef\u7ee7\u7eed\u7f16\u8f91\u3002",

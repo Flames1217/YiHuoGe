@@ -114,6 +114,7 @@ function normalizeAsset(item: Record<string, any>, index: number) {
     currency: String(item.currency ?? item["货币"] ?? "CNY"),
     cycle,
     status: "healthy",
+    autoRenew: item.autoRenew ?? true,
     url,
     tags: Array.isArray(item.tags) ? item.tags.filter((tag: string) => tag !== "AI炼化") : [],
     notes: notes || "由 AI 炼化生成，可继续编辑。",
