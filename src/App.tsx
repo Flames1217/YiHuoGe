@@ -350,6 +350,7 @@ const providerCatalog: Record<AssetType, ProviderOption[]> = {
     { value: "22.cn", label: "22.cn", url: "https://www.22.cn/" },
     { value: "Spaceship", label: "Spaceship", url: "https://www.spaceship.com/application/domain-list-application/" },
     { value: "Cloudflare Registrar", label: "Cloudflare Registrar", url: "https://dash.cloudflare.com/" },
+    { value: "DigitalPlat", label: "DigitalPlat", url: "https://register.us.kg/" },
     { value: "Namecheap", label: "Namecheap", url: "https://ap.www.namecheap.com/domains/list/" },
     { value: "GoDaddy", label: "GoDaddy", url: "https://dcc.godaddy.com/domains" },
     { value: "Porkbun", label: "Porkbun", url: "https://porkbun.com/account/domains" },
@@ -616,6 +617,7 @@ function providerFromWhois(registrar?: string) {
     [["dreamhost"], "DreamHost Domains"],
     [["sav.com", "sav "], "Sav"],
     [["centralnic", "hexonet"], "Hexonet / CentralNic"],
+    [["digitalplat", "digital platform"], "DigitalPlat"],
     [["unstoppable"], "Unstoppable Domains"],
     [["alibaba", "aliyun", "hichina"], "阿里云"],
     [["tencent"], "腾讯云"],
@@ -917,11 +919,10 @@ function renewalText(asset: Asset, language: Language) {
   return asset.cycle === "lifetime" ? (language === "en" ? "Permanent" : "永久有效") : asset.renewalDate;
 }
 
-function isWhoisUsable(whois: { registrar?: string; expiresAt?: string; whoisStatus?: string[] }) {
+function isWhoisUsable(whois: { registrar?: string; expiresAt?: string; dns?: string[]; whoisStatus?: string[] }) {
   const statuses = whois.whoisStatus ?? [];
   return Boolean(
-    whois.expiresAt &&
-      dayjs(whois.expiresAt).isValid() &&
+    (whois.expiresAt && dayjs(whois.expiresAt).isValid() || whois.dns?.length) &&
       whois.registrar &&
       !whois.registrar.includes("适配器") &&
       !statuses.includes("lookup-adapter-not-configured"),
@@ -1362,11 +1363,13 @@ function AssetDrawer({
       const whoisProvider = providerFromWhois(whois.registrar);
       const hostOption = inferDomainHostOption(whois.dns);
       const patch: Partial<Asset> = {
-        renewalDate: whois.expiresAt,
         provider: whoisProvider?.value ?? whois.registrar,
         providerUrl: whoisProvider?.url,
         url: whoisProvider?.url || form.getFieldValue("url"),
       };
+      if (whois.expiresAt && dayjs(whois.expiresAt).isValid()) {
+        patch.renewalDate = whois.expiresAt;
+      }
       if (hostOption) {
         patch.hostProvider = hostOption.value;
         patch.hostUrl = hostOption.url;
@@ -1375,7 +1378,13 @@ function AssetDrawer({
       if (patch.provider) form.setFieldValue("provider", patch.provider);
       if (patch.hostProvider) form.setFieldValue("hostProvider", patch.hostProvider);
       hideLoading();
-      api.success(`WHOIS 完成：已同步注册商${hostOption ? "、托管商" : ""}和续期日`);
+      if (patch.renewalDate) {
+        api.success(`WHOIS 完成：已同步注册商${hostOption ? "、托管商" : ""}和续期日`);
+      } else if (whois.whoisStatus?.includes("subdomain-expiry-private")) {
+        api.info(`已识别 DigitalPlat 免费子域并同步托管商；该平台未公开子域到期日，请保留或手动维护续期日`);
+      } else {
+        api.info(`已同步注册商${hostOption ? "、托管商" : ""}；公开 WHOIS 未返回可用续期日，请手动维护`);
+      }
     } catch {
       hideLoading();
       api.warning("WHOIS 查询失败，请稍后重试或手动校准续期日");

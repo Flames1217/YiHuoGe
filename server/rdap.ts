@@ -48,6 +48,18 @@ export interface DomainWhoisLookup {
   source: "rdap";
 }
 
+const delegatedFreeDomainProviders: Array<{
+  suffix: string;
+  registrar: string;
+  status: string;
+}> = [
+  {
+    suffix: "us.kg",
+    registrar: "DigitalPlat / Digital Platform",
+    status: "subdomain-expiry-private",
+  },
+];
+
 function cleanDomain(value: string) {
   return value
     .trim()
@@ -83,6 +95,14 @@ function dateOnly(value?: string) {
 function eventDate(events: RdapEvent[] | undefined, actions: string[]) {
   const lowered = actions.map((action) => action.toLowerCase());
   const found = events?.find((event) => event.eventAction && lowered.includes(event.eventAction.toLowerCase()));
+  return dateOnly(found?.eventDate);
+}
+
+function expirationDate(events: RdapEvent[] | undefined) {
+  const found = events?.find((event) => {
+    const action = event.eventAction?.toLowerCase() ?? "";
+    return action === "expiration" || action === "expiry" || action === "record expires" || action.includes("expire");
+  });
   return dateOnly(found?.eventDate);
 }
 
@@ -155,6 +175,19 @@ async function resolveBestNameservers(inputDomain: string, registeredDomain: str
 async function lookupExactDomainRdap(domain: string): Promise<DomainWhoisLookup> {
   if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)) throw new Error("域名格式无效");
 
+  const delegatedProvider = delegatedFreeDomainProvider(domain);
+  if (delegatedProvider) {
+    return {
+      name: domain,
+      registrar: delegatedProvider.registrar,
+      createdAt: "",
+      expiresAt: "",
+      dns: await resolveBestNameservers(domain, domain, []),
+      whoisStatus: [delegatedProvider.status],
+      source: "rdap",
+    };
+  }
+
   const errors: string[] = [];
   let data: RdapResponse | undefined;
   for (const url of await rdapLookupUrls(domain)) {
@@ -167,7 +200,7 @@ async function lookupExactDomainRdap(domain: string): Promise<DomainWhoisLookup>
   }
   if (!data) throw new Error(errors.join("；") || "RDAP 查询失败");
 
-  const expiresAt = eventDate(data.events, ["expiration", "expiry"]);
+  const expiresAt = expirationDate(data.events);
   if (!expiresAt) throw new Error("RDAP 未返回到期日");
 
   const rdapNameservers = (data.nameservers ?? [])
@@ -193,6 +226,10 @@ function parentDomainCandidates(domain: string) {
     candidates.push(labels.slice(index).join("."));
   }
   return [...new Set(candidates)];
+}
+
+function delegatedFreeDomainProvider(domain: string) {
+  return delegatedFreeDomainProviders.find((provider) => domain !== provider.suffix && domain.endsWith(`.${provider.suffix}`));
 }
 
 export async function lookupDomainRdap(input: string): Promise<DomainWhoisLookup> {
