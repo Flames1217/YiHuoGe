@@ -58,7 +58,7 @@ import type { Key, MouseEvent as ReactMouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import "./i18n";
 import { useYiHuoStore } from "./store";
-import type { Asset, AssetType, BackupTarget, Language, NotificationChannel, NotifyType, ViewMode } from "./types";
+import type { Asset, AssetType, BackupTarget, Language, NotificationChannel, NotifyType, ViewMode, AppSettings } from "./types";
 import { daysUntil, topbarDate } from "./utils/calendar";
 
 const { Header, Sider, Content } = Layout;
@@ -1323,6 +1323,7 @@ function AssetDrawer({
   const addAsset = useYiHuoStore((state) => state.addAsset);
   const updateAsset = useYiHuoStore((state) => state.updateAsset);
   const assets = useYiHuoStore((state) => state.assets);
+  const channels = useYiHuoStore((state) => state.channels);
   const settings = useYiHuoStore((state) => state.settings);
   const preferredCurrency = settings.currency;
   const [api, contextHolder] = message.useMessage();
@@ -1444,9 +1445,15 @@ function AssetDrawer({
     };
     if (editing) {
       updateAsset({ ...editing, ...values });
+      checkAndNotifyAsset({ ...editing, ...values }, channels, settings);
       api.success("资产火种已重铸");
     } else {
       addAsset(values);
+      // ???????????(?? store ?? id)
+      setTimeout(() => {
+        const added = assets.find((a) => a.name === values.name && a.provider === values.provider && a.renewalDate === values.renewalDate);
+        if (added) checkAndNotifyAsset(added, channels, settings);
+      }, 100);
       api.success("资产火种已收入异火阁");
     }
     onClose();
@@ -2432,9 +2439,104 @@ function SettingsModule() {
   );
 }
 
+
+const NOTIFIED_TODAY_STORAGE = "yihuoge-notified-today";
+
+async function dispatchRenewalNotification(asset: Asset, channel: NotificationChannel, daysLeft: number): Promise<boolean> {
+  try {
+    const response = await fetch("/api/notifications/dispatch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        channel: {
+          id: channel.id,
+          name: channel.name,
+          type: channel.type,
+          enabled: channel.enabled,
+          target: channel.target,
+          config: channel.config,
+          template: channel.template,
+        },
+        asset: {
+          name: asset.name,
+          renewalDate: asset.renewalDate,
+          cycle: asset.cycle,
+          daysLeft,
+        },
+      }),
+    });
+    return response.ok;
+  } catch (error) {
+    console.warn("[YiHuoGe] ????????", asset.id, error);
+    return false;
+  }
+}
+
+function checkAndNotifyAsset(asset: Asset, channels: NotificationChannel[], settings: AppSettings) {
+  const today = new Date().toISOString().slice(0, 10);
+  const notifiedJson = localStorage.getItem(NOTIFIED_TODAY_STORAGE) || "{}";
+  let notified: Record<string, string> = {};
+  try {
+    notified = JSON.parse(notifiedJson);
+  } catch {}
+  if (notified[asset.id] === today) return;
+  if (asset.cycle === "lifetime") return;
+
+  const defaultChannel = channels.find((c) => c.id === settings.defaultChannel && c.enabled);
+  if (!defaultChannel) return;
+
+  const days = daysUntil(asset.renewalDate, asset.cycle);
+  const reminderDays = settings.reminderDays || [];
+  if (reminderDays.includes(days)) {
+    void dispatchRenewalNotification(asset, defaultChannel, days).then((ok) => {
+      if (ok) {
+        notified[asset.id] = today;
+        localStorage.setItem(NOTIFIED_TODAY_STORAGE, JSON.stringify(notified));
+      }
+    });
+  }
+}
+
+function useRenewalWatcher(assets: Asset[], channels: NotificationChannel[], settings: AppSettings) {
+  useEffect(() => {
+    if (!assets.length || !channels.length) return;
+    const defaultChannel = channels.find((c) => c.id === settings.defaultChannel && c.enabled);
+    if (!defaultChannel) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const notifiedJson = localStorage.getItem(NOTIFIED_TODAY_STORAGE) || "{}";
+    let notified: Record<string, string> = {};
+    try {
+      notified = JSON.parse(notifiedJson);
+    } catch {}
+    // ?????????
+    Object.keys(notified).forEach((id) => {
+      if (notified[id] !== today) delete notified[id];
+    });
+
+    const reminderDays = settings.reminderDays || [];
+    assets.forEach((asset) => {
+      if (asset.cycle === "lifetime") return;
+      if (notified[asset.id] === today) return;
+      const days = daysUntil(asset.renewalDate, asset.cycle);
+      if (reminderDays.includes(days)) {
+        void dispatchRenewalNotification(asset, defaultChannel, days).then((ok) => {
+          if (ok) {
+            notified[asset.id] = today;
+            localStorage.setItem(NOTIFIED_TODAY_STORAGE, JSON.stringify(notified));
+          }
+        });
+      }
+    });
+  }, [assets, channels, settings]);
+}
+
+
 export default function App() {
   const { t, i18n } = useTranslation();
   const settings = useYiHuoStore((state) => state.settings);
+  const assets = useYiHuoStore((state) => state.assets);
+  const channels = useYiHuoStore((state) => state.channels);
   const setLanguage = useYiHuoStore((state) => state.setLanguage);
   const [active, setActive] = useState("overview");
   const [globalSearch, setGlobalSearch] = useState("");
@@ -2446,6 +2548,8 @@ export default function App() {
   );
   const [savedAccessKey, setSavedAccessKey] = useState(() => window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "");
 
+
+  useRenewalWatcher(assets, channels, settings);
   const unlock = async (key: string) => {
     try {
       const ok = await verifyAdminKey(key);

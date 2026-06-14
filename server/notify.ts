@@ -117,8 +117,8 @@ function splitList(value?: string) {
     .filter(Boolean);
 }
 
-export async function sendNotificationTest(channel: NotificationChannelPayload): Promise<NotifySendResult> {
-  const message = textOf(channel);
+export async function sendNotificationTest(channel: NotificationChannelPayload, override?: { message?: string; subject?: string }): Promise<NotifySendResult> {
+  const message = override?.message?.trim() || textOf(channel);
   const provider = channel.type;
   let response: Response | undefined;
   let messageId: string | undefined;
@@ -137,7 +137,7 @@ export async function sendNotificationTest(channel: NotificationChannelPayload):
       const info = await transporter.sendMail({
         from: channel.config?.from || user,
         to: requireValue(channel.target, "收件邮箱"),
-        subject: title,
+        subject: override?.subject || title,
         text: message,
       });
       messageId = info.messageId;
@@ -328,4 +328,38 @@ export async function sendNotificationTest(channel: NotificationChannelPayload):
     messageId,
     deliveredAt: new Date().toISOString(),
   };
+}
+
+
+
+export interface NotificationDispatchPayload {
+  channel: NotificationChannelPayload;
+  asset: {
+    id: string;
+    name: string;
+    renewalDate: string;
+    cycle: string;
+    daysUntil: number;
+  };
+}
+
+export async function sendNotificationDispatch(payload: NotificationDispatchPayload): Promise<NotifySendResult> {
+  const { channel, asset } = payload;
+  const days = asset.daysUntil;
+  const cycleText = asset.cycle === "lifetime" ? "永久" : asset.cycle;
+  const replacement: Record<string, string> = {
+    "{{name}}": asset.name,
+    "{{days}}": String(days),
+    "{{date}}": asset.renewalDate || "-",
+    "{{cycle}}": cycleText,
+  };
+  const baseTemplate = channel.template?.trim();
+  const finalTemplate = baseTemplate || [
+    "🔥【异火阁 · 续期提醒】",
+    "火种「{{name}}」将于 {{days}} 天后（{{date}}）到达续期节点，周期：{{cycle}}。",
+    "阁令已达，异火未熄。",
+  ].join("\n");
+  const message = finalTemplate.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match, key) => replacement[`{{${key}}}`] ?? `{{${key}}}`);
+  const subject = "【异火阁】续期提醒";
+  return sendNotificationTest(channel, { message, subject });
 }
