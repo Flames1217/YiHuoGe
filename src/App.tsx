@@ -897,6 +897,37 @@ const heavenlyFlames = [
   "玄黄炎",
 ];
 
+const accountTypeKeys = ["email", "github", "google", "microsoft", "apple", "oauth", "username", "apiKey", "instanceId", "other"] as const;
+
+function accountTypeOptions(t: (key: string) => string) {
+  return accountTypeKeys.map((key) => ({
+    value: key,
+    label: t(`accountType${key.charAt(0).toUpperCase()}${key.slice(1)}`),
+  }));
+}
+
+function accountTypeLabel(type: string | undefined, t: (key: string) => string) {
+  if (!type) return "";
+  const cap = type.charAt(0).toUpperCase() + type.slice(1);
+  return t(`accountType${cap}`);
+}
+
+function accountTypePlaceholder(type: string | undefined, t: (key: string) => string) {
+  if (!type) return t("accountTypePlaceholder");
+  switch (type) {
+    case "email": return "you@example.com";
+    case "github": return "octocat";
+    case "google": return "you@gmail.com";
+    case "microsoft": return "you@outlook.com";
+    case "apple": return "Apple ID";
+    case "oauth": return "client_id 或账号";
+    case "username": return "用户名";
+    case "apiKey": return "sk-...";
+    case "instanceId": return "i-0123...";
+    default: return "值";
+  }
+}
+
 function dayUnit(date: string, cycle: Asset["cycle"] | undefined, language: Language) {
   if (cycle === "lifetime") return language === "en" ? "Permanent" : "永久有效";
   const days = daysUntil(date, cycle);
@@ -1317,6 +1348,7 @@ function AssetDrawer({
           provider: "阿里云",
           providerUrl: findProviderOption("domain", "阿里云")?.url,
           account: "",
+          accountType: "",
           renewalDate: dayjs().add(30, "day").format("YYYY-MM-DD"),
           price: 0,
           currency: preferredCurrency,
@@ -1395,6 +1427,8 @@ function AssetDrawer({
       hostUrl: normalizeAssetType(values.type) === "domain" ? values.hostUrl || findDomainHostOption(values.hostProvider)?.url : undefined,
       customCycle: values.cycle === "custom" ? normalizeCustomCycle(values.customCycle) : undefined,
       autoRenew: values.cycle === "lifetime" ? false : values.autoRenew ?? true,
+      account: (values.account ?? "").trim(),
+      accountType: ((values.account ?? "").trim() ? (values.accountType ?? "") : "") || "",
       tags: Array.isArray(values.tags) ? values.tags.filter((tag) => tag !== "AI炼化") : [],
     };
     if (editing) {
@@ -1427,7 +1461,26 @@ function AssetDrawer({
             <Col span={12}><Form.Item name="hostUrl" label="托管后台"><Input placeholder="https://dash.cloudflare.com/..." /></Form.Item></Col>
           </Row>
         ) : null}
-        <Form.Item name="account" label="账号 / 标识（可选）" tooltip="可填登录邮箱、账号、实例 ID 或 IP；域名没有独立账号时留空即可。"><Input placeholder="登录账号、邮箱、实例 ID 或 IP，可空" /></Form.Item>
+        <Form.Item shouldUpdate={(prev, next) => prev.accountType !== next.accountType || prev.account !== next.account} noStyle>
+          {() => {
+            const accountType = (form.getFieldValue("accountType") as string | undefined) || "";
+            const account = (form.getFieldValue("account") as string | undefined) || "";
+            if (!accountType && !account) {
+              return (
+                <Row gutter={12}>
+                  <Col span={8}><Form.Item name="accountType" label="账号 / 标识（可选）" tooltip="可填登录邮箱、GitHub/Google 登录账号、API Key、实例 ID 等。"><Select allowClear placeholder="不选" options={accountTypeOptions(t)} /></Form.Item></Col>
+                  <Col span={16}><Form.Item label=" " colon={false}><Input disabled placeholder="先选类型再填值（可空）" /></Form.Item></Col>
+                </Row>
+              );
+            }
+            return (
+              <Row gutter={12}>
+                <Col span={8}><Form.Item name="accountType" label="账号 / 标识（可选）" tooltip="可填登录邮箱、GitHub/Google 登录账号、API Key、实例 ID 等。"><Select allowClear placeholder="不选" options={accountTypeOptions(t)} onChange={(value) => { if (!value) form.setFieldValue("account", ""); }} /></Form.Item></Col>
+                <Col span={16}><Form.Item name="account" label=" " colon={false} tooltip={accountType ? "" : "先选类型再填值"}><Input placeholder={accountTypePlaceholder(accountType, t)} /></Form.Item></Col>
+              </Row>
+            );
+          }}
+        </Form.Item>
         <Row gutter={12}>
           <Col span={12}><Form.Item name="renewalDate" label="续期日期" rules={[{ required: watchedCycle !== "lifetime", message: "永久资产无需填写续期日期" }]}><Input disabled={watchedCycle === "lifetime"} placeholder={watchedCycle === "lifetime" ? "永久有效" : "支持粘贴如 2027-05-05 / 2027.5.5 / 2027年5月5日"} onBlur={(e) => { if (e.target.value) form.setFieldValue("renewalDate", normalizeAssetDate(e.target.value)); }} /></Form.Item></Col>
           <Col span={12}><Form.Item name="cycle" label={settings.language === "en" ? "Cycle" : "周期"}><Select options={assetCycles.map((value) => ({ value, label: cycleLabel(value, settings.language) }))} onChange={(cycle: Asset["cycle"]) => {
@@ -1592,7 +1645,7 @@ function AssetsModule({
       render: (value: string, record) => (
         <Space orientation="vertical" size={0}>
           <Text strong>{value}</Text>
-          {record.account ? <Text className="muted asset-subline">{`账号 / 标识：${record.account}`}</Text> : null}
+          {record.account || record.accountType ? <Text className="muted asset-subline">{record.accountType ? `账号 / 标识：${accountTypeLabel(record.accountType, t)}${record.account ? ` · ${record.account}` : ""}` : `账号 / 标识：${record.account}`}</Text> : null}
           <Space size={4}>{(record.tags ?? []).map((tag) => <Tag key={tag}>{tag}</Tag>)}</Space>
         </Space>
       ),
@@ -1780,7 +1833,7 @@ function AssetsModule({
                   <div className="asset-card-head">
                     <div>
                       <Title level={4} style={{ marginBottom: 2 }}>{asset.name}</Title>
-                      {asset.account ? <Text type="secondary" style={{ fontSize: 12 }}>{`账号 / 标识：${asset.account}`}</Text> : null}
+                      {asset.account || asset.accountType ? <Text type="secondary" style={{ fontSize: 12 }}>{asset.accountType ? `账号 / 标识：${accountTypeLabel(asset.accountType, t)}${asset.account ? ` · ${asset.account}` : ""}` : `账号 / 标识：${asset.account}`}</Text> : null}
                     </div>
                   </div>
                   <div className="asset-card-chips">

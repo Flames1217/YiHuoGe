@@ -125,6 +125,7 @@ function schemaStatements(dialect: SqlDialect) {
       host_provider ${c.text},
       host_url ${c.text},
       account ${c.text} NOT NULL DEFAULT '',
+      account_type ${c.text},
       renewal_date VARCHAR(32) NOT NULL,
       price ${c.money} NOT NULL DEFAULT 0,
       currency VARCHAR(16) NOT NULL DEFAULT 'CNY',
@@ -185,6 +186,7 @@ function migrationStatements(dialect: SqlDialect) {
     `ALTER TABLE yh_assets ADD COLUMN auto_renew ${c.bool} NOT NULL DEFAULT 1`,
     `ALTER TABLE yh_assets ADD COLUMN custom_cycle_json ${c.longText}`,
     `ALTER TABLE yh_assets ADD COLUMN account ${c.text} NOT NULL DEFAULT ''`,
+    `ALTER TABLE yh_assets ADD COLUMN account_type ${c.text}`,
   ];
 }
 
@@ -197,12 +199,12 @@ async function ignoreExistingColumn(work: () => Promise<unknown>) {
   }
 }
 
-const assetColumns = ["id", "name", "type", "provider", "provider_url", "host_provider", "host_url", "account", "renewal_date", "price", "currency", "cycle", "custom_cycle_json", "status", "auto_renew", "url", "tags_json", "notes"];
+const assetColumns = ["id", "name", "type", "provider", "provider_url", "host_provider", "host_url", "account", "account_type", "renewal_date", "price", "currency", "cycle", "custom_cycle_json", "status", "auto_renew", "url", "tags_json", "notes"];
 const domainDetailColumns = ["asset_id", "registrar", "domain_created_at", "expires_at", "dns_json", "whois_status_json", "raw_whois_json"];
 const channelColumns = ["id", "name", "type", "enabled", "target", "last_test", "secret_masked", "config_json", "template"];
 
 function assetValues(asset: any) {
-  return [asset.id, asset.name, asset.type, asset.provider ?? "", asset.providerUrl ?? "", asset.hostProvider ?? "", asset.hostUrl ?? "", asset.account ?? "", asset.renewalDate, Number(asset.price ?? 0), asset.currency ?? "CNY", asset.cycle ?? "custom", json(asset.cycle === "custom" ? asset.customCycle ?? null : null), asset.status ?? "healthy", asset.autoRenew === false ? 0 : 1, asset.url ?? "", json(asset.tags ?? []), asset.notes ?? ""];
+  return [asset.id, asset.name, asset.type, asset.provider ?? "", asset.providerUrl ?? "", asset.hostProvider ?? "", asset.hostUrl ?? "", asset.account ?? "", asset.accountType ?? "", asset.renewalDate, Number(asset.price ?? 0), asset.currency ?? "CNY", asset.cycle ?? "custom", json(asset.cycle === "custom" ? asset.customCycle ?? null : null), asset.status ?? "healthy", asset.autoRenew === false ? 0 : 1, asset.url ?? "", json(asset.tags ?? []), asset.notes ?? ""];
 }
 
 function domainDetailValues(domain: any) {
@@ -223,6 +225,7 @@ function rowToAsset(row: any) {
     hostProvider: row.host_provider ?? undefined,
     hostUrl: row.host_url ?? undefined,
     account: row.account ?? "",
+    accountType: row.account_type ?? undefined,
     renewalDate: row.renewal_date,
     price: Number(row.price ?? 0),
     currency: row.currency ?? "CNY",

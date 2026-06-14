@@ -45,6 +45,7 @@ export interface Asset {
   hostProvider?: string;
   hostUrl?: string;
   account: string;
+  accountType?: string;
   renewalDate: string;
   price: number;
   currency: string;
