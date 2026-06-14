@@ -4,6 +4,23 @@ import { aiConfigSeed, assetsSeed, channelsSeed, domainsSeed, settingsSeed } fro
 import type { AiConfig, AppSettings, Asset, DomainRecord, Language, NotificationChannel } from "./types";
 import { statusByDate } from "./utils/calendar";
 
+function mergeAccountTypePreset(current: string[] | undefined, next: string | undefined) {
+  if (!next) return current;
+  const trimmed = next.trim();
+  if (!trimmed) return current;
+  const list = current ?? [];
+  if (list.includes(trimmed)) return list;
+  return [...list, trimmed];
+}
+
+function persistAccountTypePresets(settings: AppSettings, next: string) {
+  const merged = mergeAccountTypePreset(settings.accountTypePresets, next);
+  if (merged === settings.accountTypePresets) return settings;
+  const updated = { ...settings, accountTypePresets: merged };
+  persistSettings(updated);
+  return updated;
+}
+
 const ADMIN_KEY_STORAGE = "yihuoge-admin-key";
 
 function authHeaders(): HeadersInit {
@@ -91,13 +108,19 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
       customCycle: asset.cycle === "custom" ? asset.customCycle : undefined,
       autoRenew: asset.cycle === "lifetime" ? false : asset.autoRenew ?? true,
     };
-    set((state) => ({ assets: [nextAsset, ...state.assets] }));
+    set((state) => {
+      const settings = asset.accountType ? persistAccountTypePresets(state.settings, asset.accountType) : state.settings;
+      return { assets: [nextAsset, ...state.assets], settings };
+    });
     persistAsset(nextAsset);
   },
 
   updateAsset: (asset) => {
     const nextAsset = { ...asset, status: statusByDate(asset.renewalDate, asset.cycle), customCycle: asset.cycle === "custom" ? asset.customCycle : undefined, autoRenew: asset.cycle === "lifetime" ? false : asset.autoRenew ?? true };
-    set((state) => ({ assets: state.assets.map((item) => (item.id === asset.id ? nextAsset : item)) }));
+    set((state) => {
+      const settings = asset.accountType ? persistAccountTypePresets(state.settings, asset.accountType) : state.settings;
+      return { assets: state.assets.map((item) => (item.id === asset.id ? nextAsset : item)), settings };
+    });
     persistAsset(nextAsset, "PUT");
   },
 

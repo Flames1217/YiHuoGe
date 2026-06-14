@@ -105,6 +105,7 @@ export interface AppSettings {
   theme: "dark-fire" | "abyss-purple" | "ink-gold";
   moduleOrder: string[];
   backupTargets: BackupTarget[];
+  accountTypePresets?: string[];
 }
 
 export interface CalendarItem {

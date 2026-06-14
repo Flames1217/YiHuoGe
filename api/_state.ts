@@ -52,6 +52,7 @@ const seed: YiHuoStateData = {
     theme: "dark-fire",
     moduleOrder: ["overview", "assets", "notifications", "ai", "settings"],
     backupTargets: [],
+    accountTypePresets: [],
   },
 };
 

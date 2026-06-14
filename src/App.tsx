@@ -897,35 +897,46 @@ const heavenlyFlames = [
   "玄黄炎",
 ];
 
-const accountTypeKeys = ["email", "github", "google", "microsoft", "apple", "oauth", "username", "apiKey", "instanceId", "other"] as const;
+const accountTypePresets: { value: string; placeholder: string }[] = [
+  { value: "邮箱", placeholder: "you@example.com" },
+  { value: "GitHub OAuth", placeholder: "octocat" },
+  { value: "Google OAuth", placeholder: "you@gmail.com" },
+  { value: "Microsoft OAuth", placeholder: "you@outlook.com" },
+  { value: "Apple OAuth", placeholder: "Apple ID" },
+  { value: "X (Twitter) OAuth", placeholder: "@handle" },
+  { value: "Facebook OAuth", placeholder: "fb 用户名" },
+  { value: "自建 OAuth", placeholder: "client_id 或账号" },
+  { value: "用户名", placeholder: "用户名" },
+  { value: "API Key", placeholder: "sk-..." },
+  { value: "Access Token", placeholder: "ghp_..." },
+  { value: "实例 ID", placeholder: "i-0123..." },
+  { value: "服务器 IP", placeholder: "192.168.1.1" },
+  { value: "SSH Key 指纹", placeholder: "SHA256:..." },
+  { value: "私钥指纹", placeholder: "fingerprint" },
+  { value: "备注", placeholder: "自定义说明" },
+  { value: "其他", placeholder: "值" },
+];
 
-function accountTypeOptions(t: (key: string) => string) {
-  return accountTypeKeys.map((key) => ({
-    value: key,
-    label: t(`accountType${key.charAt(0).toUpperCase()}${key.slice(1)}`),
-  }));
-}
-
-function accountTypeLabel(type: string | undefined, t: (key: string) => string) {
-  if (!type) return "";
-  const cap = type.charAt(0).toUpperCase() + type.slice(1);
-  return t(`accountType${cap}`);
-}
-
-function accountTypePlaceholder(type: string | undefined, t: (key: string) => string) {
-  if (!type) return t("accountTypePlaceholder");
-  switch (type) {
-    case "email": return "you@example.com";
-    case "github": return "octocat";
-    case "google": return "you@gmail.com";
-    case "microsoft": return "you@outlook.com";
-    case "apple": return "Apple ID";
-    case "oauth": return "client_id 或账号";
-    case "username": return "用户名";
-    case "apiKey": return "sk-...";
-    case "instanceId": return "i-0123...";
-    default: return "值";
+function accountTypeOptionsFor(extra: string[]) {
+  const base = accountTypePresets.map((p) => ({ value: p.value, placeholder: p.placeholder }));
+  const seen = new Set(base.map((b) => b.value));
+  for (const item of extra) {
+    const trimmed = item.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    base.push({ value: trimmed, placeholder: "值" });
+    seen.add(trimmed);
   }
+  return base;
+}
+
+function accountTypePlaceholderFor(type: string | undefined, presets: { value: string; placeholder: string }[]) {
+  if (!type) return "选择或输入类型（可选）";
+  const found = presets.find((p) => p.value === type);
+  return found?.placeholder ?? "值";
+}
+
+function accountTypeLabel(type: string | undefined) {
+  return type ?? "";
 }
 
 function dayUnit(date: string, cycle: Asset["cycle"] | undefined, language: Language) {
@@ -1465,18 +1476,32 @@ function AssetDrawer({
           {() => {
             const accountType = (form.getFieldValue("accountType") as string | undefined) || "";
             const account = (form.getFieldValue("account") as string | undefined) || "";
+            const userPresets = (settings.accountTypePresets ?? []).filter(Boolean);
+            const typeOptions = accountTypeOptionsFor(userPresets).map((p) => ({ value: p.value, label: p.value }));
+            const accountTypeNode = (
+              <Form.Item name="accountType" label="账号 / 标识（可选）" tooltip="可填登录邮箱、GitHub/Google/Microsoft/Apple OAuth 账号、API Key、实例 ID 等；直接输入新文本会保存为自定义项。">
+                <AutoComplete
+                  allowClear
+                  placeholder="选择或输入类型（可选）"
+                  options={typeOptions}
+                  filterOption={(input, option) =>
+                    !input || String(option?.value ?? "").toLowerCase().includes(input.toLowerCase())
+                  }
+                />
+              </Form.Item>
+            );
             if (!accountType && !account) {
               return (
                 <Row gutter={12}>
-                  <Col span={8}><Form.Item name="accountType" label="账号 / 标识（可选）" tooltip="可填登录邮箱、GitHub/Google 登录账号、API Key、实例 ID 等。"><Select allowClear placeholder="不选" options={accountTypeOptions(t)} /></Form.Item></Col>
+                  <Col span={8}>{accountTypeNode}</Col>
                   <Col span={16}><Form.Item label=" " colon={false}><Input disabled placeholder="先选类型再填值（可空）" /></Form.Item></Col>
                 </Row>
               );
             }
             return (
               <Row gutter={12}>
-                <Col span={8}><Form.Item name="accountType" label="账号 / 标识（可选）" tooltip="可填登录邮箱、GitHub/Google 登录账号、API Key、实例 ID 等。"><Select allowClear placeholder="不选" options={accountTypeOptions(t)} onChange={(value) => { if (!value) form.setFieldValue("account", ""); }} /></Form.Item></Col>
-                <Col span={16}><Form.Item name="account" label=" " colon={false} tooltip={accountType ? "" : "先选类型再填值"}><Input placeholder={accountTypePlaceholder(accountType, t)} /></Form.Item></Col>
+                <Col span={8}>{accountTypeNode}</Col>
+                <Col span={16}><Form.Item name="account" label=" " colon={false} tooltip={accountType ? "" : "先选类型再填值"}><Input placeholder={accountTypePlaceholderFor(accountType, accountTypeOptionsFor(userPresets))} /></Form.Item></Col>
               </Row>
             );
           }}
@@ -1645,7 +1670,7 @@ function AssetsModule({
       render: (value: string, record) => (
         <Space orientation="vertical" size={0}>
           <Text strong>{value}</Text>
-          {record.account || record.accountType ? <Text className="muted asset-subline">{record.accountType ? `账号 / 标识：${accountTypeLabel(record.accountType, t)}${record.account ? ` · ${record.account}` : ""}` : `账号 / 标识：${record.account}`}</Text> : null}
+          {record.account || record.accountType ? <Text className="muted asset-subline">{record.accountType ? `账号 / 标识：${accountTypeLabel(record.accountType)}${record.account ? ` · ${record.account}` : ""}` : `账号 / 标识：${record.account}`}</Text> : null}
           <Space size={4}>{(record.tags ?? []).map((tag) => <Tag key={tag}>{tag}</Tag>)}</Space>
         </Space>
       ),
@@ -1833,7 +1858,7 @@ function AssetsModule({
                   <div className="asset-card-head">
                     <div>
                       <Title level={4} style={{ marginBottom: 2 }}>{asset.name}</Title>
-                      {asset.account || asset.accountType ? <Text type="secondary" style={{ fontSize: 12 }}>{asset.accountType ? `账号 / 标识：${accountTypeLabel(asset.accountType, t)}${asset.account ? ` · ${asset.account}` : ""}` : `账号 / 标识：${asset.account}`}</Text> : null}
+                      {asset.account || asset.accountType ? <Text type="secondary" style={{ fontSize: 12 }}>{asset.accountType ? `账号 / 标识：${accountTypeLabel(asset.accountType)}${asset.account ? ` · ${asset.account}` : ""}` : `账号 / 标识：${asset.account}`}</Text> : null}
                     </div>
                   </div>
                   <div className="asset-card-chips">
