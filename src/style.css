@@ -2489,10 +2489,17 @@ body .ant-select-dropdown .ant-select-item-option.ant-select-item-option-selecte
    - all rows keep the same taller height even when provider/host/manage sub-lines exist. */
 body .asset-table .ant-table-content,
 body .asset-table .ant-table-body,
-body .asset-table .ant-table-container {
+body .asset-table .ant-table-container,
+body .asset-table .ant-table-content {
   max-height: none !important;
   overflow: visible !important;
   overflow-x: hidden !important;
+  overflow-y: visible !important;
+}
+
+/* Kill antd's internal scroll container - let the page scroll instead */
+body .asset-table .ant-table-body-wrapper {
+  overflow: visible !important;
   overflow-y: visible !important;
 }
 
