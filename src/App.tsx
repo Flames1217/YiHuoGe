@@ -350,7 +350,7 @@ const providerCatalog: Record<AssetType, ProviderOption[]> = {
     { value: "22.cn", label: "22.cn", url: "https://www.22.cn/" },
     { value: "Spaceship", label: "Spaceship", url: "https://www.spaceship.com/application/domain-list-application/" },
     { value: "Cloudflare Registrar", label: "Cloudflare Registrar", url: "https://dash.cloudflare.com/" },
-    { value: "DigitalPlat", label: "DigitalPlat", url: "https://register.us.kg/" },
+    { value: "DigitalPlat", label: "DigitalPlat", url: "https://dash.domain.digitalplat.org/domains" },
     { value: "Namecheap", label: "Namecheap", url: "https://ap.www.namecheap.com/domains/list/" },
     { value: "GoDaddy", label: "GoDaddy", url: "https://dcc.godaddy.com/domains" },
     { value: "Porkbun", label: "Porkbun", url: "https://porkbun.com/account/domains" },
@@ -1785,7 +1785,10 @@ function AssetsModule({
               <Col xs={24} md={12} xl={8} key={asset.id}>
                 <Card className="asset-card" actions={[<Tooltip title={t("editAsset")} key="edit"><EditOutlined onClick={() => { setEditing(asset); setDrawerOpen(true); }} /></Tooltip>, <Tooltip title={t("cloneAsset")} key="clone"><CopyOutlined onClick={() => cloneAsset(asset)} /></Tooltip>, <Tooltip title={t("deleteAsset")} key="delete"><DeleteOutlined onClick={() => deleteAsset(asset.id)} /></Tooltip>]}>
                   <Flex justify="space-between" align="start">
-                    <Title level={4}>{asset.name}</Title>
+                    <div>
+                      <Title level={4} style={{ marginBottom: 2 }}>{asset.name}</Title>
+                      {asset.account ? <Text type="secondary" style={{ fontSize: 12 }}>{`账号 / 标识：${asset.account}`}</Text> : null}
+                    </div>
                     {statusLabel(asset.status, t)}
                   </Flex>
                   <Space wrap><Tag color={typeTone[normalizeAssetType(asset.type)]}>{assetTypeLabel(normalizeAssetType(asset.type), settings.language)}</Tag><Tag>{asset.provider}</Tag>{asset.hostProvider ? <Tag>{t("hostPrefix")}：{asset.hostProvider}</Tag> : null}</Space>
