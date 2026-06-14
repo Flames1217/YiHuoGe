@@ -33,7 +33,7 @@ const adminKey = process.env.YIHUOGE_ADMIN_KEY ?? "";
 
 type AssetType = "domain" | "vps" | "hosting" | "cloud" | "ai" | "membership" | "custom";
 type AssetStatus = "healthy" | "warning" | "critical" | "expired";
-type AssetCycle = "daily" | "weekly" | "monthly" | "quarterly" | "semiannual" | "yearly" | "biennial" | "triennial" | "lifetime" | "custom";
+type AssetCycle = "daily" | "weekly" | "monthly" | "quarterly" | "semiannual" | "yearly" | "biennial" | "triennial" | "decennial" | "lifetime" | "custom";
 
 interface Asset {
   id: string;
@@ -48,6 +48,7 @@ interface Asset {
   price: number;
   currency: string;
   cycle: AssetCycle;
+  customCycle?: { years?: number; months?: number; days?: number };
   status: AssetStatus;
   autoRenew: boolean;
   url?: string;
@@ -407,6 +408,9 @@ function normalizeCycle(value: unknown): AssetCycle {
     "\u4e24\u5e74\u4ed8": "biennial",
     triennial: "triennial",
     "\u4e09\u5e74\u4ed8": "triennial",
+    decennial: "decennial",
+    "\u5341\u5e74\u4ed8": "decennial",
+    "10\u5e74\u4ed8": "decennial",
     lifetime: "lifetime",
     permanent: "lifetime",
     "\u7ec8\u8eab": "lifetime",
@@ -416,7 +420,7 @@ function normalizeCycle(value: unknown): AssetCycle {
     "\u81ea\u5b9a": "custom",
     "\u81ea\u5b9a\u4e49": "custom",
   };
-  if (["daily", "weekly", "monthly", "quarterly", "semiannual", "yearly", "biennial", "triennial", "lifetime", "custom"].includes(raw)) return raw as AssetCycle;
+  if (["daily", "weekly", "monthly", "quarterly", "semiannual", "yearly", "biennial", "triennial", "decennial", "lifetime", "custom"].includes(raw)) return raw as AssetCycle;
   return aliases[raw] ?? "custom";
 }
 
@@ -463,6 +467,7 @@ function normalizeImportedAsset(item: Record<string, any>, index: number): Asset
     price: Number(item.price ?? item["\u4ef7\u683c"] ?? item["\u8d39\u7528"] ?? 0) || 0,
     currency: String(item.currency ?? item["\u8d27\u5e01"] ?? "CNY"),
     cycle,
+    customCycle: cycle === "custom" && item.customCycle ? item.customCycle : undefined,
     status: "healthy",
     autoRenew: item.autoRenew ?? true,
     url,
@@ -532,7 +537,7 @@ Project asset schema:
 - hostProvider/hostUrl: for domain DNS/hosting/nameserver provider and its console URL.
 - account: login email/account/instance ID/IP if present; leave empty if a domain has no independent account.
 - renewalDate: YYYY-MM-DD from expiry/expiration/next billing/renewal date; infer only when explicit enough.
-- price/currency/cycle: price number, currency such as CNY/USD/HKD/JPY/EUR, cycle only daily/weekly/monthly/quarterly/semiannual/yearly/biennial/triennial/lifetime/custom.
+- price/currency/cycle: price number, currency such as CNY/USD/HKD/JPY/EUR, cycle only daily/weekly/monthly/quarterly/semiannual/yearly/biennial/triennial/decennial/lifetime/custom. For custom cycle, include customCycle as {years,months,days}.
 - url: management console URL if it is the main management address.
 - tags: do not invent decorative tags; never add decorative AI tags automatically.
 - notes: keep useful non-sensitive context; never return raw password/token/secret/API key.

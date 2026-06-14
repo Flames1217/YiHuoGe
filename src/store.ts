@@ -88,6 +88,7 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
       id: nanoid(10),
       status: asset.status ?? statusByDate(asset.renewalDate, asset.cycle),
       tags: asset.tags ?? [],
+      customCycle: asset.cycle === "custom" ? asset.customCycle : undefined,
       autoRenew: asset.cycle === "lifetime" ? false : asset.autoRenew ?? true,
     };
     set((state) => ({ assets: [nextAsset, ...state.assets] }));
@@ -95,7 +96,7 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
   },
 
   updateAsset: (asset) => {
-    const nextAsset = { ...asset, status: statusByDate(asset.renewalDate, asset.cycle), autoRenew: asset.cycle === "lifetime" ? false : asset.autoRenew ?? true };
+    const nextAsset = { ...asset, status: statusByDate(asset.renewalDate, asset.cycle), customCycle: asset.cycle === "custom" ? asset.customCycle : undefined, autoRenew: asset.cycle === "lifetime" ? false : asset.autoRenew ?? true };
     set((state) => ({ assets: state.assets.map((item) => (item.id === asset.id ? nextAsset : item)) }));
     persistAsset(nextAsset, "PUT");
   },
@@ -106,7 +107,7 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
   },
 
   importAssets: (assets) => {
-    const nextAssets = assets.map((asset) => ({ ...asset, id: asset.id || nanoid(10), status: statusByDate(asset.renewalDate, asset.cycle), autoRenew: asset.cycle === "lifetime" ? false : asset.autoRenew ?? true }));
+    const nextAssets = assets.map((asset) => ({ ...asset, id: asset.id || nanoid(10), status: statusByDate(asset.renewalDate, asset.cycle), customCycle: asset.cycle === "custom" ? asset.customCycle : undefined, autoRenew: asset.cycle === "lifetime" ? false : asset.autoRenew ?? true }));
     set((state) => ({ assets: [...nextAssets, ...state.assets] }));
     nextAssets.forEach((asset) => persistAsset(asset));
   },

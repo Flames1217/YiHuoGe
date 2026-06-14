@@ -182,7 +182,7 @@ const assetTypeNameEn: Record<AssetType, string> = {
   custom: "Custom",
 };
 
-const assetCycles: Asset["cycle"][] = ["daily", "weekly", "monthly", "quarterly", "semiannual", "yearly", "biennial", "triennial", "lifetime", "custom"];
+const assetCycles: Asset["cycle"][] = ["daily", "weekly", "monthly", "quarterly", "semiannual", "yearly", "biennial", "triennial", "decennial", "lifetime", "custom"];
 
 const cycleName: Record<Asset["cycle"], string> = {
   daily: "日付",
@@ -193,6 +193,7 @@ const cycleName: Record<Asset["cycle"], string> = {
   yearly: "年付",
   biennial: "两年付",
   triennial: "三年付",
+  decennial: "十年付",
   lifetime: "永久",
   custom: "自定",
 };
@@ -206,6 +207,7 @@ const cycleNameEn: Record<Asset["cycle"], string> = {
   yearly: "Yearly",
   biennial: "Biennial",
   triennial: "Triennial",
+  decennial: "Decennial",
   lifetime: "Permanent",
   custom: "Custom",
 };
@@ -216,6 +218,35 @@ function assetTypeLabel(type: AssetType, language: Language) {
 
 function cycleLabel(cycle: Asset["cycle"], language: Language) {
   return language === "en" ? cycleNameEn[cycle] : cycleName[cycle];
+}
+
+function normalizeCustomCycle(value: unknown): Asset["customCycle"] {
+  const source = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const years = Math.max(0, Math.floor(Number(source.years ?? 0) || 0));
+  const months = Math.max(0, Math.floor(Number(source.months ?? 0) || 0));
+  const days = Math.max(0, Math.floor(Number(source.days ?? 0) || 0));
+  return years || months || days ? { years, months, days } : undefined;
+}
+
+function customCycleLabel(customCycle: Asset["customCycle"], language: Language) {
+  const normalized = normalizeCustomCycle(customCycle);
+  if (!normalized) return language === "en" ? "Custom" : "自定义";
+  if (language === "en") {
+    return [
+      normalized.years ? `${normalized.years}y` : "",
+      normalized.months ? `${normalized.months}m` : "",
+      normalized.days ? `${normalized.days}d` : "",
+    ].filter(Boolean).join(" ");
+  }
+  return [
+    normalized.years ? `${normalized.years}年` : "",
+    normalized.months ? `${normalized.months}月` : "",
+    normalized.days ? `${normalized.days}日` : "",
+  ].filter(Boolean).join("");
+}
+
+function displayCycleLabel(asset: Pick<Asset, "cycle" | "customCycle">, language: Language) {
+  return asset.cycle === "custom" ? customCycleLabel(asset.customCycle, language) : cycleLabel(asset.cycle, language);
 }
 
 const moduleName: Record<string, string> = {
@@ -969,6 +1000,11 @@ function normalizeAssetCycle(value: unknown): Asset["cycle"] {
     "两年付": "biennial",
     triennial: "triennial",
     "三年付": "triennial",
+    decennial: "decennial",
+    "10year": "decennial",
+    "10 years": "decennial",
+    "十年付": "decennial",
+    "10年付": "decennial",
     lifetime: "lifetime",
     permanent: "lifetime",
     "终身": "lifetime",
@@ -1023,6 +1059,7 @@ function normalizeImportedAsset(item: Partial<Asset> & Record<string, unknown>, 
     price,
     currency: String(item.currency ?? row["\u8d27\u5e01"] ?? "CNY"),
     cycle,
+    customCycle: normalizeCustomCycle(item.customCycle),
     status: "healthy",
     url,
     tags: Array.isArray(item.tags) ? item.tags.filter((tag) => tag !== "AI\u70bc\u5316") : [],
@@ -1349,12 +1386,17 @@ function AssetDrawer({
 
   const submit = async () => {
     let values = await form.validateFields();
+    if (values.cycle === "custom" && !normalizeCustomCycle(values.customCycle)) {
+      api.warning("自定义周期请至少填写年、月或日中的一项");
+      return;
+    }
     values = {
       ...values,
       type: normalizeAssetType(values.type),
       renewalDate: values.cycle === "lifetime" ? "" : values.renewalDate,
       providerUrl: values.providerUrl || findProviderOption(values.type, values.provider)?.url,
       hostUrl: normalizeAssetType(values.type) === "domain" ? values.hostUrl || findDomainHostOption(values.hostProvider)?.url : undefined,
+      customCycle: values.cycle === "custom" ? normalizeCustomCycle(values.customCycle) : undefined,
       autoRenew: values.cycle === "lifetime" ? false : values.autoRenew ?? true,
       tags: Array.isArray(values.tags) ? values.tags.filter((tag) => tag !== "AI炼化") : [],
     };
@@ -1399,6 +1441,13 @@ function AssetDrawer({
             if (cycle !== "lifetime" && !form.getFieldValue("renewalDate")) form.setFieldValue("renewalDate", dayjs().add(1, "year").format("YYYY-MM-DD"));
           }} /></Form.Item></Col>
         </Row>
+        {watchedCycle === "custom" ? (
+          <Row gutter={12}>
+            <Col span={8}><Form.Item name={["customCycle", "years"]} label="自定义年"><InputNumber min={0} precision={0} style={{ width: "100%" }} placeholder="0" /></Form.Item></Col>
+            <Col span={8}><Form.Item name={["customCycle", "months"]} label="自定义月"><InputNumber min={0} precision={0} style={{ width: "100%" }} placeholder="0" /></Form.Item></Col>
+            <Col span={8}><Form.Item name={["customCycle", "days"]} label="自定义日"><InputNumber min={0} precision={0} style={{ width: "100%" }} placeholder="0" /></Form.Item></Col>
+          </Row>
+        ) : null}
         <Form.Item name="autoRenew" label={t("autoRenew")} valuePropName="checked">
           <Switch disabled={watchedCycle === "lifetime"} checkedChildren="已开启" unCheckedChildren="已关闭" />
         </Form.Item>
@@ -1734,7 +1783,7 @@ function AssetsModule({
                   <Divider />
                   <Text className="muted">{t("renewal")}：{renewalText(asset, settings.language)} · {dayUnit(asset.renewalDate, asset.cycle, settings.language)}</Text>
                   <br />
-                  <Text>{formatPreferredAmount(asset.price, asset.currency, preferredCurrency)} / {cycleLabel(asset.cycle, settings.language)}</Text>
+                  <Text>{formatPreferredAmount(asset.price, asset.currency, preferredCurrency)} / {displayCycleLabel(asset, settings.language)}</Text>
                 </Card>
               </Col>
             ))}

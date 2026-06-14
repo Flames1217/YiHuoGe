@@ -129,6 +129,7 @@ function schemaStatements(dialect: SqlDialect) {
       price ${c.money} NOT NULL DEFAULT 0,
       currency VARCHAR(16) NOT NULL DEFAULT 'CNY',
       cycle VARCHAR(16) NOT NULL DEFAULT 'custom',
+      custom_cycle_json ${c.longText},
       status VARCHAR(16) NOT NULL DEFAULT 'healthy',
       auto_renew ${c.bool} NOT NULL DEFAULT 1,
       url ${c.text},
@@ -182,6 +183,7 @@ function migrationStatements(dialect: SqlDialect) {
   const c = columnsFor(dialect);
   return [
     `ALTER TABLE yh_assets ADD COLUMN auto_renew ${c.bool} NOT NULL DEFAULT 1`,
+    `ALTER TABLE yh_assets ADD COLUMN custom_cycle_json ${c.longText}`,
   ];
 }
 
@@ -194,12 +196,12 @@ async function ignoreExistingColumn(work: () => Promise<unknown>) {
   }
 }
 
-const assetColumns = ["id", "name", "type", "provider", "provider_url", "host_provider", "host_url", "account", "renewal_date", "price", "currency", "cycle", "status", "auto_renew", "url", "tags_json", "notes"];
+const assetColumns = ["id", "name", "type", "provider", "provider_url", "host_provider", "host_url", "account", "renewal_date", "price", "currency", "cycle", "custom_cycle_json", "status", "auto_renew", "url", "tags_json", "notes"];
 const domainDetailColumns = ["asset_id", "registrar", "domain_created_at", "expires_at", "dns_json", "whois_status_json", "raw_whois_json"];
 const channelColumns = ["id", "name", "type", "enabled", "target", "last_test", "secret_masked", "config_json", "template"];
 
 function assetValues(asset: any) {
-  return [asset.id, asset.name, asset.type, asset.provider ?? "", asset.providerUrl ?? "", asset.hostProvider ?? "", asset.hostUrl ?? "", asset.account ?? "", asset.renewalDate, Number(asset.price ?? 0), asset.currency ?? "CNY", asset.cycle ?? "custom", asset.status ?? "healthy", asset.autoRenew === false ? 0 : 1, asset.url ?? "", json(asset.tags ?? []), asset.notes ?? ""];
+  return [asset.id, asset.name, asset.type, asset.provider ?? "", asset.providerUrl ?? "", asset.hostProvider ?? "", asset.hostUrl ?? "", asset.account ?? "", asset.renewalDate, Number(asset.price ?? 0), asset.currency ?? "CNY", asset.cycle ?? "custom", json(asset.cycle === "custom" ? asset.customCycle ?? null : null), asset.status ?? "healthy", asset.autoRenew === false ? 0 : 1, asset.url ?? "", json(asset.tags ?? []), asset.notes ?? ""];
 }
 
 function domainDetailValues(domain: any) {
@@ -224,6 +226,7 @@ function rowToAsset(row: any) {
     price: Number(row.price ?? 0),
     currency: row.currency ?? "CNY",
     cycle: row.cycle ?? "custom",
+    customCycle: row.cycle === "custom" ? parseJson(row.custom_cycle_json, undefined) : undefined,
     status: row.status ?? "healthy",
     autoRenew: row.auto_renew === undefined || row.auto_renew === null ? true : Boolean(row.auto_renew),
     url: row.url ?? undefined,

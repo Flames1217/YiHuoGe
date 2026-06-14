@@ -2,7 +2,12 @@
 
 export type AssetType = "domain" | "vps" | "hosting" | "cloud" | "ai" | "membership" | "custom";
 export type AssetStatus = "healthy" | "warning" | "critical" | "expired";
-export type AssetCycle = "daily" | "weekly" | "monthly" | "quarterly" | "semiannual" | "yearly" | "biennial" | "triennial" | "lifetime" | "custom";
+export type AssetCycle = "daily" | "weekly" | "monthly" | "quarterly" | "semiannual" | "yearly" | "biennial" | "triennial" | "decennial" | "lifetime" | "custom";
+export interface CustomCycle {
+  years?: number;
+  months?: number;
+  days?: number;
+}
 export type ViewMode = "table" | "card";
 export type NotifyType =
   | "Email"
@@ -44,6 +49,7 @@ export interface Asset {
   price: number;
   currency: string;
   cycle: AssetCycle;
+  customCycle?: CustomCycle;
   status: AssetStatus;
   autoRenew: boolean;
   url?: string;
