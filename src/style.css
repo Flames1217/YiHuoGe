@@ -2582,3 +2582,77 @@ body .asset-table .ant-table-tbody .ant-space-vertical {
   max-height: 46px;
   overflow: hidden;
 }
+
+/* 自定义排序提示 */
+.ant-table-column-sorters:hover::after {
+  content: '点击排序';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--gold) !important;
+  color: #000 !important;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  margin-top: 6px;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* 去掉排序列的额外边框 */
+.ant-table-thead th.ant-table-column-sort {
+  border-bottom: none !important;
+  box-shadow: inset 0 -2px 0 transparent !important;
+}
+
+/* 去掉外层卡片容器的悬停效果 */
+.assets-module > .ant-card:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+/* 调整卡片布局间距 */
+.asset-card-head {
+  margin-bottom: 8px !important;
+}
+.asset-card-chips {
+  margin-bottom: 8px !important;
+}
+
+
+/* 排序提示样式 */
+.ant-table-column-sorters:hover::after {
+  content: '点击排序';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--gold);
+  color: #000;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  margin-top: 6px;
+  z-index: 100;
+}
+
+/* 去掉名称列排序边框 */
+.ant-table-thead th.ant-table-column-sort {
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
+/* 去掉外层卡片悬停动效 */
+.assets-module > .ant-card {
+  transition: none !important;
+}
+.assets-module > .ant-card:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+

@@ -1744,6 +1744,7 @@ function AssetsModule({
       title: columnTitle("price", t("price"), 110),
       key: "price",
       width: columnWidths.price,
+      sorter: (a, b) => a.price - b.price,
       render: (_, record) => formatPreferredAmount(record.price, record.currency, preferredCurrency),
     },
     {
@@ -2692,3 +2693,5 @@ export default function App() {
     </ConfigProvider>
   );
 }
+
+
