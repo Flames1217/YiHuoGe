@@ -1904,7 +1904,7 @@ function AssetsModule({
       render: (_, record) => (
         <Space direction="vertical" size={0}>
           <Text>{formatPreferredAmount(record.price, record.currency, preferredCurrency, currencyRates)}</Text>
-          {record.currency !== preferredCurrency ? <Text className="muted asset-subline">原始金额：{formatOriginalAmount(record.price, record.currency)}</Text> : null}
+          {record.currency !== preferredCurrency ? <Text className="muted asset-subline">≈ {formatOriginalAmount(record.price, record.currency)}</Text> : null}
         </Space>
       ),
     },
