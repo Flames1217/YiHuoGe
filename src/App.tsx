@@ -220,27 +220,6 @@ function normalizeCustomCycle(value: unknown): Asset["customCycle"] {
   return years || months || days ? { years, months, days } : undefined;
 }
 
-function customCycleLabel(customCycle: Asset["customCycle"], language: Language) {
-  const normalized = normalizeCustomCycle(customCycle);
-  if (!normalized) return language === "en" ? "Custom" : "自定义";
-  if (language === "en") {
-    return [
-      normalized.years ? `${normalized.years}y` : "",
-      normalized.months ? `${normalized.months}m` : "",
-      normalized.days ? `${normalized.days}d` : "",
-    ].filter(Boolean).join(" ");
-  }
-  return [
-    normalized.years ? `${normalized.years}年` : "",
-    normalized.months ? `${normalized.months}月` : "",
-    normalized.days ? `${normalized.days}日` : "",
-  ].filter(Boolean).join("");
-}
-
-function displayCycleLabel(asset: Pick<Asset, "cycle" | "customCycle">, language: Language) {
-  return asset.cycle === "custom" ? customCycleLabel(asset.customCycle, language) : cycleLabel(asset.cycle, language);
-}
-
 const moduleName: Record<string, string> = {
   overview: "阁内总览",
   assets: "异火库",
@@ -1666,6 +1645,16 @@ function AssetsModule({
     api.success(`已克隆：${asset.name}`);
   };
 
+  const cardPriceLabel = (asset: Asset) => {
+    if (asset.price === 0) return settings.language === "en" ? "Free" : "免费";
+    return formatPreferredAmount(asset.price, asset.currency, preferredCurrency);
+  };
+
+  const cardRenewalLabel = (asset: Asset) => {
+    if (asset.cycle === "lifetime") return renewalText(asset, settings.language);
+    return `${renewalText(asset, settings.language)} · ${dayUnit(asset.renewalDate, asset.cycle, settings.language)}`;
+  };
+
   const columns: ColumnsType<Asset> = [
     {
       title: columnTitle("name", t("name"), 220),
@@ -1790,7 +1779,7 @@ function AssetsModule({
           <Button title="手动收录一枚火种；WHOIS 可在编辑抽屉中手动占验" type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(undefined); setDrawerOpen(true); }}>{t("addAsset")}</Button>
         </Space>
       </Flex>
-      <Card className="yhg-card">
+      <Card className="yhg-card asset-library-card">
         <Flex justify="space-between" gap={12} wrap="wrap" className="toolbar-row">
           <Input className="search-input" prefix={<SearchOutlined />} placeholder={t("search")} value={keyword} onChange={(event) => setKeyword(event.target.value)} />
           <Space wrap>
@@ -1860,22 +1849,22 @@ function AssetsModule({
               <Col xs={24} md={12} xl={8} key={asset.id}>
                 <Card
                   className="asset-card"
-                  bodyStyle={{ display: "flex", flexDirection: "column", height: 200, padding: "20px 22px 16px" }}
+                  bodyStyle={{ display: "flex", flexDirection: "column", height: 220, padding: "18px 22px 16px" }}
                   actions={[<Tooltip title={t("editAsset")} key="edit"><EditOutlined onClick={() => { setEditing(asset); setDrawerOpen(true); }} /></Tooltip>, <Tooltip title={t("cloneAsset")} key="clone"><CopyOutlined onClick={() => cloneAsset(asset)} /></Tooltip>, <Tooltip title={t("deleteAsset")} key="delete"><DeleteOutlined onClick={() => deleteAsset(asset.id)} /></Tooltip>]}
                 >
                   <div className="asset-card-head">
-                    <div>
-                      <Title level={4} style={{ marginBottom: 2 }}>{asset.name}</Title>
-                      {asset.account || asset.accountType ? <Text type="secondary" style={{ fontSize: 12 }}>{asset.accountType ? `账号 / 标识：${accountTypeLabel(asset.accountType)}${asset.account ? ` · ${asset.account}` : ""}` : `账号 / 标识：${asset.account}`}</Text> : null}
+                    <div className="asset-card-title-block">
+                      <Title level={4} className="asset-card-title">{asset.name}</Title>
+                      {asset.account || asset.accountType ? <Text className="asset-card-account">{asset.accountType ? `账号 / 标识：${accountTypeLabel(asset.accountType)}${asset.account ? ` · ${asset.account}` : ""}` : `账号 / 标识：${asset.account}`}</Text> : null}
                     </div>
+                    <Text className={asset.price === 0 ? "asset-card-price is-free" : "asset-card-price"}>{cardPriceLabel(asset)}</Text>
                   </div>
                   <div className="asset-card-chips">
                     <Space wrap size={[6, 6]}><Tag color={typeTone[normalizeAssetType(asset.type)]}>{assetTypeLabel(normalizeAssetType(asset.type), settings.language)}</Tag><Tag>{asset.provider}</Tag>{asset.hostProvider ? <Tag>{t("hostPrefix")}：{asset.hostProvider}</Tag> : null}</Space>
                   </div>
                   <Divider style={{ margin: "12px 0" }} />
                   <div className="asset-card-foot">
-                    <Text className="muted">{t("renewal")}：{renewalText(asset, settings.language)} · {dayUnit(asset.renewalDate, asset.cycle, settings.language)}</Text>
-                    <Text>{formatPreferredAmount(asset.price, asset.currency, preferredCurrency)} / {displayCycleLabel(asset, settings.language)}</Text>
+                    <Text className="muted">{t("renewal")}：{cardRenewalLabel(asset)}</Text>
                   </div>
                 </Card>
               </Col>

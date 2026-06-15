@@ -805,12 +805,67 @@ body::after {
 
 .asset-card .asset-card-head {
   display: flex;
+  gap: 16px;
   align-items: flex-start;
-  margin-bottom: 14px;
+  justify-content: space-between;
+  min-height: 54px;
+  margin-bottom: 12px;
+}
+
+.asset-card .asset-card-title-block {
+  min-width: 0;
+  flex: 1;
+}
+
+.asset-card .asset-card-title {
+  max-width: 100%;
+  margin: 0 0 4px !important;
+  overflow: hidden;
+  color: #f6ead5;
+  font-size: 21px !important;
+  line-height: 1.25 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asset-card .asset-card-account {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  color: rgba(255, 242, 214, 0.46) !important;
+  font-size: 12px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asset-card .asset-card-price {
+  flex: 0 0 auto;
+  max-width: 120px;
+  padding: 5px 10px;
+  overflow: hidden;
+  color: #1a0d03;
+  font-weight: 900;
+  line-height: 18px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: linear-gradient(135deg, var(--gold), var(--gold-2));
+  border: 1px solid rgba(255, 215, 128, 0.62);
+  border-radius: 999px;
+  box-shadow: 0 8px 22px rgba(245, 158, 11, 0.18);
+}
+
+.asset-card .asset-card-price.is-free {
+  min-width: 52px;
+  text-align: center;
 }
 
 .asset-card .asset-card-chips {
-  margin-bottom: 4px;
+  min-height: 32px;
+  max-height: 58px;
+  margin-bottom: 0;
+  overflow: hidden;
 }
 
 .asset-card .asset-card-foot {
@@ -818,6 +873,14 @@ body::after {
   flex-direction: column;
   gap: 4px;
   margin-top: auto;
+  min-height: 22px;
+}
+
+.asset-card .asset-card-foot .ant-typography {
+  overflow: hidden;
+  line-height: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 
@@ -1116,12 +1179,17 @@ body::after {
 }
 
 .metric-card:hover,
-.yhg-card:hover,
 .asset-card:hover,
 .day-cell:hover {
   border-color: rgba(255, 184, 77, 0.45) !important;
   box-shadow: 0 22px 74px rgba(245, 158, 11, 0.15), inset 0 0 28px rgba(245, 158, 11, 0.035);
   transform: translateY(-2px);
+}
+
+.asset-library-card:hover {
+  border-color: rgba(255, 184, 77, 0.24) !important;
+  box-shadow: 0 18px 56px rgba(0, 0, 0, 0.28), inset 0 1px rgba(255, 255, 255, 0.035);
+  transform: none;
 }
 
 .metric-card::before,
@@ -2640,23 +2708,4 @@ body .ant-tooltip.yhg-sorter-tooltip.ant-tooltip-placement-bottom .ant-tooltip-a
   background: var(--gold) !important;
 }
 
-/* 去掉外层卡片悬停动效 */
-.assets-module > .ant-card {
-  transition: none !important;
-}
-
-.assets-module > .ant-card:hover {
-  transform: none !important;
-  box-shadow: none !important;
-  border-color: rgba(245, 158, 11, 0.3) !important;
-}
-
-/* 调整卡片布局间距 */
-.asset-card-head {
-  margin-bottom: 8px !important;
-}
-
-.asset-card-chips {
-  margin-bottom: 8px !important;
-}
 
