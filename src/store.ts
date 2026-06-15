@@ -90,6 +90,8 @@ interface YiHuoState {
   channels: NotificationChannel[];
   aiConfig: AiConfig;
   settings: AppSettings;
+  currencyRatesToCny: Record<string, number>;
+  setCurrencyRates: (rates: Record<string, number>) => void;
   addAsset: (asset: Omit<Asset, "id" | "status"> & Partial<Pick<Asset, "status">>) => void;
   updateAsset: (asset: Asset) => void;
   deleteAsset: (id: string) => void;
@@ -115,6 +117,10 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
   channels: channelsSeed,
   aiConfig: aiConfigSeed,
   settings: settingsSeed,
+  currencyRatesToCny: {},
+  setCurrencyRates: (rates) => {
+    set({ currencyRatesToCny: rates });
+  },
 
   addAsset: (asset) => {
     const nextAsset: Asset = {

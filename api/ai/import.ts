@@ -198,7 +198,7 @@ Project asset schema:
 - hostProvider/hostUrl: for domain DNS/hosting/nameserver provider and its console URL.
 - account: login email/account/instance ID/IP if present; leave empty if a domain has no independent account.
 - renewalDate: YYYY-MM-DD from expiry/expiration/next billing/renewal date; infer only when explicit enough.
-- price/currency/cycle: price number, currency such as CNY/USD/HKD/JPY/EUR, cycle only daily/weekly/monthly/quarterly/semiannual/yearly/biennial/triennial/decennial/lifetime/custom. For custom cycle, include customCycle as {years,months,days}.
+- price/currency/cycle: price number, currency such as CNY/USD/HKD/JPY/EUR/TRY, cycle only daily/weekly/monthly/quarterly/semiannual/yearly/biennial/triennial/decennial/lifetime/custom. For custom cycle, include customCycle as {years,months,days}.
 - url: management console URL if it is the main management address.
 - tags: do not invent decorative tags; never add decorative AI tags automatically.
 - notes: keep useful non-sensitive context; never return raw password/token/secret/API key.

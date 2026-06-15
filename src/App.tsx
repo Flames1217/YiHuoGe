@@ -146,6 +146,17 @@ async function hydrateFromServer(key: string) {
   }
 }
 
+async function hydrateExchangeRates() {
+  try {
+    const response = await fetch("/api/exchange-rates");
+    if (!response.ok) return;
+    const data = await response.json() as { ratesToCny?: Record<string, number> };
+    if (data.ratesToCny) useYiHuoStore.getState().setCurrencyRates(data.ratesToCny);
+  } catch (error) {
+    console.warn("[YiHuoGe] 汇率更新失败，使用内置汇率", error);
+  }
+}
+
 const typeTone: Record<AssetType, string> = {
   domain: "volcano",
   vps: "geekblue",
@@ -306,6 +317,7 @@ const currencySymbols: Record<string, string> = {
   TWD: "NT$",
   NZD: "NZ$",
   INR: "\u20b9",
+  TRY: "\u20ba",
 };
 
 const currencyOptions = Object.keys(currencySymbols).map((value) => ({
@@ -328,6 +340,7 @@ const currencyRatesToCny: Record<string, number> = {
   TWD: 0.23,
   NZD: 4.35,
   INR: 0.087,
+  TRY: 0.18,
 };
 
 type ProviderOption = { value: string; label: string; url?: string };
@@ -963,14 +976,15 @@ function isWhoisUsable(whois: { registrar?: string; expiresAt?: string; dns?: st
   );
 }
 
-function convertCurrency(amount: number, from: string, to: string) {
-  const fromRate = currencyRatesToCny[from] ?? 1;
-  const toRate = currencyRatesToCny[to] ?? 1;
+function convertCurrency(amount: number, from: string, to: string, liveRates: Record<string, number> = {}) {
+  const rates = { ...currencyRatesToCny, ...liveRates };
+  const fromRate = rates[from] ?? 1;
+  const toRate = rates[to] ?? 1;
   return (amount * fromRate) / toRate;
 }
 
-function formatPreferredAmount(amount: number, from: string, preferred: string) {
-  const converted = convertCurrency(amount, from, preferred);
+function formatPreferredAmount(amount: number, from: string, preferred: string, liveRates: Record<string, number> = {}) {
+  const converted = convertCurrency(amount, from, preferred, liveRates);
   const symbol = currencySymbols[preferred] ?? "";
   return `${symbol}${converted.toFixed(2)}`;
 }
@@ -1239,9 +1253,12 @@ function OverviewModule({
   const assets = useYiHuoStore((state) => state.assets);
   const channels = useYiHuoStore((state) => state.channels);
   const settings = useYiHuoStore((state) => state.settings);
+  const currencyRates = useYiHuoStore((state) => state.currencyRatesToCny);
   const hydrating = useYiHuoStore((state) => state.hydrating);
   const urgent = assets.filter((asset) => asset.cycle !== "lifetime" && daysUntil(asset.renewalDate, asset.cycle) <= 14);
-  const monthlyCost = assets.reduce((sum, asset) => sum + convertCurrency(asset.price, asset.currency, settings.currency), 0);
+  const monthlyCost = assets
+    .filter((asset) => asset.autoRenew !== false)
+    .reduce((sum, asset) => sum + convertCurrency(asset.price, asset.currency, settings.currency, currencyRates), 0);
   const healthPercent = Math.round((assets.filter((asset) => asset.status === "healthy").length / Math.max(assets.length, 1)) * 100);
 
   return (
@@ -1652,6 +1669,7 @@ function AssetsModule({
   const importAssets = useYiHuoStore((state) => state.importAssets);
   const toggleAutoRenew = useYiHuoStore((state) => state.toggleAutoRenew);
   const settings = useYiHuoStore((state) => state.settings);
+  const currencyRates = useYiHuoStore((state) => state.currencyRatesToCny);
   const preferredCurrency = settings.currency;
   const hydrating = useYiHuoStore((state) => state.hydrating);
   const [view, setView] = useState<ViewMode>("table");
@@ -1760,7 +1778,7 @@ function AssetsModule({
 
   const cardPriceLabel = (asset: Asset) => {
     if (asset.price === 0) return settings.language === "en" ? "Free" : "免费";
-    return formatPreferredAmount(asset.price, asset.currency, preferredCurrency);
+    return formatPreferredAmount(asset.price, asset.currency, preferredCurrency, currencyRates);
   };
 
   const cardRenewalLabel = (asset: Asset) => {
@@ -1856,7 +1874,7 @@ function AssetsModule({
       key: "price",
       width: columnWidths.price,
       sorter: (a, b) => a.price - b.price,
-      render: (_, record) => formatPreferredAmount(record.price, record.currency, preferredCurrency),
+      render: (_, record) => formatPreferredAmount(record.price, record.currency, preferredCurrency, currencyRates),
     },
     {
       title: columnTitle("manage", t("manageUrl"), 130),
@@ -2675,6 +2693,7 @@ export default function App() {
       window.localStorage.setItem(ADMIN_KEY_STORAGE, key);
       setSavedAccessKey(key);
       await hydrateFromServer(key);
+      void hydrateExchangeRates();
       setAccessState("unlocked");
       return true;
     } catch {
@@ -2689,6 +2708,11 @@ export default function App() {
     setSavedAccessKey(stored);
     setAccessState("unlocked");
     void hydrateFromServer(stored);
+    void hydrateExchangeRates();
+  }, []);
+
+  useEffect(() => {
+    void hydrateExchangeRates();
   }, []);
 
   useEffect(() => {
