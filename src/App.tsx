@@ -126,6 +126,26 @@ async function verifyAdminKey(key: string) {
   return response.ok;
 }
 
+function settingsWithAssetPresets(settings: AppSettings, assets: Asset[]) {
+  const accountTypePresets = [...(settings.accountTypePresets ?? [])];
+  const accountValuePresets: Record<string, string[]> = { ...(settings.accountValuePresets ?? {}) };
+  const providerPresets: Partial<Record<AssetType, string[]>> = { ...(settings.providerPresets ?? {}) };
+  const hostProviderPresets = [...(settings.hostProviderPresets ?? [])];
+  const addUnique = (list: string[], value?: string, limit = 50) => {
+    const item = value?.trim();
+    if (item && !list.includes(item)) list.unshift(item);
+    if (list.length > limit) list.length = limit;
+  };
+  for (const asset of assets) {
+    const assetType = normalizeAssetType(asset.type);
+    addUnique(providerPresets[assetType] ?? (providerPresets[assetType] = []), asset.provider);
+    addUnique(hostProviderPresets, asset.hostProvider);
+    addUnique(accountTypePresets, asset.accountType);
+    if (asset.accountType && asset.account) addUnique(accountValuePresets[asset.accountType] ?? (accountValuePresets[asset.accountType] = []), asset.account, 20);
+  }
+  return { ...settings, accountTypePresets, accountValuePresets, providerPresets, hostProviderPresets };
+}
+
 async function hydrateFromServer(key: string) {
   useYiHuoStore.setState({ hydrating: true });
   try {
@@ -139,7 +159,7 @@ async function hydrateFromServer(key: string) {
       domains: Array.isArray(data.domains) ? data.domains : state.domains,
       channels: Array.isArray(data.channels) ? data.channels : state.channels,
       aiConfig: data.ai ? { ...state.aiConfig, ...data.ai } : state.aiConfig,
-      settings: data.settings ? { ...state.settings, ...data.settings } : state.settings,
+      settings: settingsWithAssetPresets(data.settings ? { ...state.settings, ...data.settings } : state.settings, Array.isArray(data.assets) ? data.assets : state.assets),
     }));
   } finally {
     useYiHuoStore.setState({ hydrating: false, hydrated: true });
@@ -369,7 +389,7 @@ const providerCatalog: Record<AssetType, ProviderOption[]> = {
     { value: "OVHcloud", label: "OVHcloud", url: "https://www.ovh.com/manager/" },
     { value: "IONOS", label: "IONOS", url: "https://my.ionos.com/domains" },
     { value: "Hostinger", label: "Hostinger", url: "https://hpanel.hostinger.com/domains" },
-    { value: "Squarespace Domains", label: "Squarespace Domains", url: "https://domains.squarespace.com/" },
+    { value: "Squarespace Domains", label: "Squarespace Domains", url: "https://account.squarespace.com/domains" },
     { value: "Tucows / OpenSRS", label: "Tucows / OpenSRS", url: "https://manage.opensrs.com/" },
     { value: "Hover", label: "Hover", url: "https://www.hover.com/control_panel" },
     { value: "Enom", label: "Enom", url: "https://www.enom.com/apilogin.aspx" },
@@ -1137,7 +1157,7 @@ function parseImportedAssets(text: string): Asset[] {
 }
 
 async function lookupDomainWhois(domain: string) {
-  const response = await fetch(`/api/whois?domain=${encodeURIComponent(domain)}`);
+  const response = await fetch(`/api/whois/${encodeURIComponent(domain)}`);
   if (!response.ok) throw new Error("WHOIS 查询失败");
   return (await response.json()) as Partial<{
     name: string;
@@ -1354,8 +1374,8 @@ function AssetDrawer({
   const watchedCycle = Form.useWatch("cycle", form) ?? editing?.cycle ?? "yearly";
   const watchedProvider = Form.useWatch("provider", form) ?? editing?.provider;
   const watchedHostProvider = Form.useWatch("hostProvider", form) ?? editing?.hostProvider;
-  const activeProviderOptions = providerOptionsFor(watchedType, [watchedProvider, editing?.provider, ...savedProviderNames(assets, watchedType)]);
-  const activeHostProviderOptions = domainHostOptionsFor([watchedHostProvider, editing?.hostProvider, ...savedHostProviderNames(assets)]);
+  const activeProviderOptions = providerOptionsFor(watchedType, [watchedProvider, editing?.provider, ...(settings.providerPresets?.[watchedType] ?? []), ...savedProviderNames(assets, watchedType)]);
+  const activeHostProviderOptions = domainHostOptionsFor([watchedHostProvider, editing?.hostProvider, ...(settings.hostProviderPresets ?? []), ...savedHostProviderNames(assets)]);
   const replicaOptions = useMemo(() => (
     assets
       .filter((asset) => asset.id !== editing?.id)
@@ -1544,7 +1564,9 @@ function AssetDrawer({
               const text = `${option?.label ?? ""} ${(option as { searchText?: string } | undefined)?.searchText ?? ""}`.toLowerCase();
               return text.includes(input.toLowerCase());
             }}
-            onChange={(value) => setReplicaAssetId(value)}
+            onChange={(value) => {
+              if (!value) setReplicaAssetId(undefined);
+            }}
             onSelect={(value) => applyAssetReplica(String(value))}
           />
         </Form.Item>

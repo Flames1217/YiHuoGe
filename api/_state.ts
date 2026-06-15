@@ -54,6 +54,8 @@ const seed: YiHuoStateData = {
     backupTargets: [],
     accountTypePresets: [],
     accountValuePresets: {},
+    providerPresets: {},
+    hostProviderPresets: [],
   },
 };
 

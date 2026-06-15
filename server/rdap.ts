@@ -1,4 +1,5 @@
 import { resolveNs } from "node:dns/promises";
+import net from "node:net";
 
 interface RdapEntity {
   roles?: string[];
@@ -44,8 +45,8 @@ export interface DomainWhoisLookup {
   expiresAt: string;
   dns: string[];
   whoisStatus: string[];
-  rawWhois?: RdapResponse;
-  source: "rdap";
+  rawWhois?: RdapResponse | string;
+  source: "rdap" | "whois";
 }
 
 const delegatedFreeDomainProviders: Array<{
@@ -59,6 +60,10 @@ const delegatedFreeDomainProviders: Array<{
     status: "subdomain-expiry-private",
   },
 ];
+
+const whoisFallbackServers: Record<string, string> = {
+  eu: "whois.eu",
+};
 
 function cleanDomain(value: string) {
   return value
@@ -85,6 +90,30 @@ async function fetchJson<T>(url: string, timeoutMs = 12000): Promise<T> {
   }
 }
 
+function fetchWhois(server: string, query: string, timeoutMs = 12000) {
+  return new Promise<string>((resolve, reject) => {
+    const socket = net.createConnection(43, server);
+    let data = "";
+    const timeout = setTimeout(() => {
+      socket.destroy();
+      reject(new Error(`${server} WHOIS 查询超时`));
+    }, timeoutMs);
+    socket.setEncoding("utf8");
+    socket.on("connect", () => socket.write(`${query}\r\n`));
+    socket.on("data", (chunk) => {
+      data += chunk;
+    });
+    socket.on("end", () => {
+      clearTimeout(timeout);
+      resolve(data);
+    });
+    socket.on("error", (error) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+  });
+}
+
 function dateOnly(value?: string) {
   if (!value) return "";
   const parsed = new Date(value);
@@ -104,6 +133,56 @@ function expirationDate(events: RdapEvent[] | undefined) {
     return action === "expiration" || action === "expiry" || action === "record expires" || action.includes("expire");
   });
   return dateOnly(found?.eventDate);
+}
+
+function whoisField(text: string, labels: string[]) {
+  for (const label of labels) {
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const match = text.match(new RegExp(`^[ \\t]*${escaped}[ \\t]*:[ \\t]*(.+)$`, "im"));
+    if (match?.[1]?.trim()) return match[1].trim();
+  }
+  return "";
+}
+
+function parseWhoisNameservers(text: string) {
+  const nameservers: string[] = [];
+  let inNameServerBlock = false;
+  for (const line of text.split(/\r?\n/)) {
+    const direct = line.match(/^\s*(?:Name Server|Nameserver|nserver)\s*:\s*(.+)$/i)?.[1];
+    if (direct) {
+      nameservers.push(direct.split(/\s+/)[0]);
+      continue;
+    }
+    if (/^\s*Name servers\s*:\s*$/i.test(line)) {
+      inNameServerBlock = true;
+      continue;
+    }
+    if (!inNameServerBlock) continue;
+    if (!line.trim()) continue;
+    if (/^\S/.test(line)) {
+      inNameServerBlock = false;
+      continue;
+    }
+    const value = line.trim();
+    if (/^[a-z0-9.-]+\.[a-z]{2,}\.?$/i.test(value)) nameservers.push(value);
+  }
+  return [...new Set(nameservers.map((item) => item.replace(/\.$/, "").toLowerCase()))];
+}
+
+function parseWhoisResponse(domain: string, text: string): DomainWhoisLookup {
+  const registrar = whoisField(text, ["Registrar", "Registrar Name", "Sponsoring Registrar", "Name"]) || "WHOIS Registrar";
+  const createdAt = dateOnly(whoisField(text, ["Creation Date", "Created", "Registered", "Registration Date"]));
+  const expiresAt = dateOnly(whoisField(text, ["Expiry Date", "Expiration Date", "Registry Expiry Date", "paid-till", "Renewal Date"]));
+  return {
+    name: domain,
+    registrar,
+    createdAt,
+    expiresAt,
+    dns: parseWhoisNameservers(text),
+    whoisStatus: ["whois-fallback"],
+    rawWhois: text,
+    source: "whois",
+  };
 }
 
 function vcardText(entity: RdapEntity | undefined, key: string) {
@@ -237,6 +316,17 @@ export async function lookupDomainRdap(input: string): Promise<DomainWhoisLookup
   if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)) throw new Error("域名格式无效");
 
   const errors: string[] = [];
+  const tld = domain.split(".").pop() ?? "";
+  const whoisServer = whoisFallbackServers[tld];
+  if (whoisServer) {
+    try {
+      const text = await fetchWhois(whoisServer, domain);
+      const result = parseWhoisResponse(domain, text);
+      if (result.registrar || result.dns.length || result.expiresAt) return result;
+    } catch (error) {
+      errors.push(`${domain}: ${error instanceof Error ? error.message : "WHOIS 查询失败"}`);
+    }
+  }
   for (const candidate of parentDomainCandidates(domain)) {
     try {
       const result = await lookupExactDomainRdap(candidate);

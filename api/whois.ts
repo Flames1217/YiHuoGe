@@ -30,7 +30,7 @@ export default async function handler(req: any, res: any) {
   try {
     res.status(200).json(await lookupDomainRdap(requestedDomain));
   } catch (error) {
-    res.status(502).json({
+    res.status(200).json({
       name: requestedDomain,
       registrar: "RDAP lookup failed",
       createdAt: "",

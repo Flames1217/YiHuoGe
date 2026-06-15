@@ -4,13 +4,21 @@ import { aiConfigSeed, assetsSeed, channelsSeed, domainsSeed, settingsSeed } fro
 import type { AiConfig, AppSettings, Asset, DomainRecord, Language, NotificationChannel } from "./types";
 import { statusByDate } from "./utils/calendar";
 
-function mergeAccountTypePreset(current: string[] | undefined, next: string | undefined) {
-  if (!next) return current;
-  const trimmed = next.trim();
-  if (!trimmed) return current;
+function normalizeAssetType(type?: string) {
+  return type === "cloud" ? "hosting" : type || "custom";
+}
+
+function mergeListPreset(current: string[] | undefined, next: string | undefined, limit = 50) {
+  const item = next?.trim();
+  if (!item) return current;
   const list = current ?? [];
-  if (list.includes(trimmed)) return list;
-  return [...list, trimmed];
+  if (list.includes(item)) return current;
+  return [item, ...list].slice(0, limit);
+}
+
+function mergeAccountTypePreset(current: string[] | undefined, next: string | undefined) {
+  const merged = mergeListPreset(current, next);
+  return merged === current ? current : [...(current ?? []), next!.trim()].filter((value, index, list) => value && list.indexOf(value) === index);
 }
 
 function mergeAccountValuePreset(current: Record<string, string[]> | undefined, type: string | undefined, value: string | undefined) {
@@ -32,8 +40,21 @@ function mergeAccountPresets(settings: AppSettings, type: string | undefined, va
   return nextSettings;
 }
 
-function persistAccountPresets(settings: AppSettings, type: string | undefined, value: string | undefined) {
-  const nextSettings = mergeAccountPresets(settings, type, value);
+function mergeAssetPresets(settings: AppSettings, asset: Pick<Asset, "type" | "provider" | "hostProvider" | "accountType" | "account">) {
+  let nextSettings = mergeAccountPresets(settings, asset.accountType, asset.account);
+  const assetType = normalizeAssetType(asset.type);
+  const providerPresets = nextSettings.providerPresets ?? {};
+  const mergedProviders = mergeListPreset(providerPresets[assetType as keyof typeof providerPresets], asset.provider);
+  if (mergedProviders !== providerPresets[assetType as keyof typeof providerPresets]) {
+    nextSettings = { ...nextSettings, providerPresets: { ...providerPresets, [assetType]: mergedProviders } };
+  }
+  const mergedHostProviders = mergeListPreset(nextSettings.hostProviderPresets, asset.hostProvider);
+  if (mergedHostProviders !== nextSettings.hostProviderPresets) nextSettings = { ...nextSettings, hostProviderPresets: mergedHostProviders };
+  return nextSettings;
+}
+
+function persistAssetPresets(settings: AppSettings, asset: Pick<Asset, "type" | "provider" | "hostProvider" | "accountType" | "account">) {
+  const nextSettings = mergeAssetPresets(settings, asset);
   if (nextSettings !== settings) persistSettings(nextSettings);
   return nextSettings;
 }
@@ -132,7 +153,7 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
       autoRenew: asset.cycle === "lifetime" ? false : asset.autoRenew ?? true,
     };
     set((state) => {
-      const settings = persistAccountPresets(state.settings, asset.accountType, asset.account);
+      const settings = persistAssetPresets(state.settings, nextAsset);
       return { assets: [nextAsset, ...state.assets], settings };
     });
     persistAsset(nextAsset);
@@ -141,7 +162,7 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
   updateAsset: (asset) => {
     const nextAsset = { ...asset, status: statusByDate(asset.renewalDate, asset.cycle), customCycle: asset.cycle === "custom" ? asset.customCycle : undefined, autoRenew: asset.cycle === "lifetime" ? false : asset.autoRenew ?? true };
     set((state) => {
-      const settings = persistAccountPresets(state.settings, asset.accountType, asset.account);
+      const settings = persistAssetPresets(state.settings, nextAsset);
       return { assets: state.assets.map((item) => (item.id === asset.id ? nextAsset : item)), settings };
     });
     persistAsset(nextAsset, "PUT");
@@ -155,7 +176,7 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
   importAssets: (assets) => {
     const nextAssets = assets.map((asset) => ({ ...asset, id: asset.id || nanoid(10), status: statusByDate(asset.renewalDate, asset.cycle), customCycle: asset.cycle === "custom" ? asset.customCycle : undefined, autoRenew: asset.cycle === "lifetime" ? false : asset.autoRenew ?? true }));
     set((state) => {
-      const settings = nextAssets.reduce((current, asset) => mergeAccountPresets(current, asset.accountType, asset.account), state.settings);
+      const settings = nextAssets.reduce((current, asset) => mergeAssetPresets(current, asset), state.settings);
       if (settings !== state.settings) persistSettings(settings);
       return { assets: [...nextAssets, ...state.assets], settings };
     });

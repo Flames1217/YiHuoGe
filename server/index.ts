@@ -188,7 +188,7 @@ async function handleWhoisLookup(requested: unknown, res: express.Response) {
   try {
     res.json(await lookupDomainRdap(requestedDomain));
   } catch (error) {
-    res.status(502).json({
+    res.status(200).json({
       name: requestedDomain,
       registrar: "RDAP lookup failed",
       createdAt: "",
@@ -199,6 +199,14 @@ async function handleWhoisLookup(requested: unknown, res: express.Response) {
     });
   }
 }
+
+app.use("/api/whois", async (req, res, next) => {
+  if (req.method !== "GET" || req.path !== "/") {
+    next();
+    return;
+  }
+  await handleWhoisLookup(req.query.domain, res);
+});
 
 app.get("/api/whois", async (req, res) => {
   await handleWhoisLookup(req.query.domain, res);

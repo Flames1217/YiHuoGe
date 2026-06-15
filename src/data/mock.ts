@@ -25,6 +25,8 @@ export const settingsSeed: AppSettings = {
   backupTargets: [],
   accountTypePresets: [],
   accountValuePresets: {},
+  providerPresets: {},
+  hostProviderPresets: [],
 };
 
 export const providerPresets = [

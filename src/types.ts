@@ -107,6 +107,8 @@ export interface AppSettings {
   backupTargets: BackupTarget[];
   accountTypePresets?: string[];
   accountValuePresets?: Record<string, string[]>;
+  providerPresets?: Partial<Record<AssetType, string[]>>;
+  hostProviderPresets?: string[];
 }
 
 export interface CalendarItem {
