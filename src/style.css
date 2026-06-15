@@ -2656,3 +2656,25 @@ body .asset-table .ant-table-tbody .ant-space-vertical {
   border-color: rgba(245, 158, 11, 0.3) !important;
 }
 
+
+/* 修改排序提示tooltip样式 */
+.ant-tooltip .ant-tooltip-inner {
+  background-color: var(--gold) !important;
+  color: #000 !important;
+}
+.ant-tooltip .ant-tooltip-arrow::before {
+  background-color: var(--gold) !important;
+}
+
+/* 去掉排序列的底部加粗边框 */
+.ant-table-thead th.ant-table-column-sort {
+  border-bottom: 1px solid rgba(245, 158, 11, 0.2) !important;
+  box-shadow: none !important;
+}
+
+/* 去掉外层卡片容器悬停效果 */
+.assets-module > .ant-card:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
