@@ -214,6 +214,29 @@ function cycleLabel(cycle: Asset["cycle"], language: Language) {
   return language === "en" ? cycleNameEn[cycle] : cycleName[cycle];
 }
 
+function customCycleLabel(customCycle: Asset["customCycle"], language: Language) {
+  const normalized = normalizeCustomCycle(customCycle);
+  if (!normalized) return cycleLabel("custom", language);
+  if (language === "en") {
+    const parts = [
+      normalized.years ? `${normalized.years}y` : "",
+      normalized.months ? `${normalized.months}mo` : "",
+      normalized.days ? `${normalized.days}d` : "",
+    ].filter(Boolean);
+    return `Every ${parts.join(" ")}`;
+  }
+  const parts = [
+    normalized.years ? `${normalized.years}年` : "",
+    normalized.months ? `${normalized.months}月` : "",
+    normalized.days ? `${normalized.days}日` : "",
+  ].filter(Boolean);
+  return `${parts.join("")}付`;
+}
+
+function assetCycleLabel(asset: Pick<Asset, "cycle" | "customCycle">, language: Language) {
+  return asset.cycle === "custom" ? customCycleLabel(asset.customCycle, language) : cycleLabel(asset.cycle, language);
+}
+
 function normalizeCustomCycle(value: unknown): Asset["customCycle"] {
   const source = value && typeof value === "object" ? value as Record<string, unknown> : {};
   const years = Math.max(0, Math.floor(Number(source.years ?? 0) || 0));
@@ -1726,6 +1749,7 @@ function AssetsModule({
       price: asset.price,
       currency: asset.currency,
       cycle: asset.cycle,
+      customCycle: asset.customCycle,
       url: asset.url,
       tags: [...(asset.tags ?? [])],
       notes: asset.notes,
@@ -1804,7 +1828,7 @@ function AssetsModule({
       width: columnWidths.cycle,
       filters: assetCycles.map((item) => ({ text: cycleLabel(item, settings.language), value: item })),
       onFilter: (value, record) => record.cycle === value,
-      render: (value: Asset["cycle"]) => <Tag color={value === "lifetime" ? "green" : value === "custom" ? "purple" : "gold"}>{cycleLabel(value, settings.language)}</Tag>,
+      render: (value: Asset["cycle"], record) => <Tag color={value === "lifetime" ? "green" : value === "custom" ? "purple" : "gold"}>{assetCycleLabel(record, settings.language)}</Tag>,
     },
     {
       title: columnTitle("autoRenew", t("autoRenew"), 104),
