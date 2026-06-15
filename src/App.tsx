@@ -311,15 +311,15 @@ const aiProviderOptions = [
 ];
 
 const timezoneOptions = [
-  { value: "Asia/Shanghai", label: "亚洲/上海" },
-  { value: "Asia/Tokyo", label: "亚洲/东京" },
-  { value: "Asia/Singapore", label: "亚洲/新加坡" },
-  { value: "Asia/Hong_Kong", label: "亚洲/香港" },
-  { value: "Europe/London", label: "欧洲/伦敦" },
-  { value: "Europe/Berlin", label: "欧洲/柏林" },
-  { value: "America/New_York", label: "美洲/纽约" },
-  { value: "America/Los_Angeles", label: "美洲/洛杉矶" },
-  { value: "UTC", label: "协调世界时" },
+  { value: "Asia/Shanghai", label: "Asia/Shanghai" },
+  { value: "Asia/Tokyo", label: "Asia/Tokyo" },
+  { value: "Asia/Singapore", label: "Asia/Singapore" },
+  { value: "Asia/Hong_Kong", label: "Asia/Hong_Kong" },
+  { value: "Europe/London", label: "Europe/London" },
+  { value: "Europe/Berlin", label: "Europe/Berlin" },
+  { value: "America/New_York", label: "America/New_York" },
+  { value: "America/Los_Angeles", label: "America/Los_Angeles" },
+  { value: "UTC", label: "UTC" },
 ];
 
 const currencySymbols: Record<string, string> = {
@@ -711,11 +711,13 @@ function assetHostManageUrl(asset: Asset) {
 }
 
 const backupTypeName: Record<BackupTarget["type"], string> = {
-  WebDAV: "网盘协议",
+  WebDAV: "WebDAV",
   S3: "对象存储",
 };
 
-const themePalettes = {
+type ThemeId = AppSettings["theme"];
+
+const themePalettes: Record<ThemeId, { primary: string; primary2: string; accent: string; bg: string; text: string }> = {
   "dark-fire": {
     primary: "#f59e0b",
     primary2: "#ffb84d",
@@ -723,21 +725,61 @@ const themePalettes = {
     bg: "#0b0b0f",
     text: "#f7efe0",
   },
-  "abyss-purple": {
-    primary: "#8b5cf6",
-    primary2: "#c4b5fd",
-    accent: "#f59e0b",
-    bg: "#090713",
-    text: "#f4efff",
+  "fallen-heart": {
+    primary: "#d44000",
+    primary2: "#ffaa44",
+    accent: "#8c2000",
+    bg: "#100400",
+    text: "#fff2e6",
   },
-  "ink-gold": {
-    primary: "#d6a84f",
-    primary2: "#ffe4a3",
-    accent: "#2dd4bf",
-    bg: "#070909",
-    text: "#fff7df",
+  "bone-cold": {
+    primary: "#7abedd",
+    primary2: "#e8f6ff",
+    accent: "#ffffff",
+    bg: "#0a2e44",
+    text: "#f4fbff",
+  },
+  "sanqian-flame": {
+    primary: "#9b30ff",
+    primary2: "#d4a0ff",
+    accent: "#5500cc",
+    bg: "#0c0020",
+    text: "#f7efff",
+  },
+  "sea-heart": {
+    primary: "#1a6ecc",
+    primary2: "#88bbee",
+    accent: "#003a80",
+    bg: "#000d1a",
+    text: "#eef7ff",
+  },
+  "pure-lotus": {
+    primary: "#ff4488",
+    primary2: "#ffd0e8",
+    accent: "#cc1155",
+    bg: "#1a0010",
+    text: "#fff0f7",
   },
 };
+
+const themeOptions: { value: ThemeId; label: string }[] = [
+  { value: "dark-fire", label: "九玄金雷" },
+  { value: "fallen-heart", label: "陨落心炎" },
+  { value: "bone-cold", label: "骨灵冷火" },
+  { value: "sanqian-flame", label: "三千焱炎火" },
+  { value: "sea-heart", label: "海心焰" },
+  { value: "pure-lotus", label: "净莲妖火" },
+];
+
+const legacyThemeMap: Record<string, ThemeId> = {
+  "abyss-purple": "sanqian-flame",
+  "ink-gold": "dark-fire",
+};
+
+function normalizeTheme(theme?: string): ThemeId {
+  if (theme && theme in themePalettes) return theme as ThemeId;
+  return legacyThemeMap[theme ?? ""] ?? "dark-fire";
+}
 
 const channelTypeName: Record<NotifyType, string> = {
   Email: "Email",
@@ -2473,6 +2515,7 @@ function SettingsModule() {
   const [api, contextHolder] = message.useMessage();
   const backupTargets = settings.backupTargets ?? [];
   const visibleModuleOrder = settings.moduleOrder.filter((key) => moduleKeys.includes(key));
+  const activeTheme = normalizeTheme(settings.theme);
 
   const exportJson = () => {
     const blob = new Blob([JSON.stringify({ settings: { ...settings, backupTargets }, assets, domains, channels, aiConfig }, null, 2)], { type: "application/json" });
@@ -2540,7 +2583,7 @@ function SettingsModule() {
               <Form.Item label="默认提醒天数"><Select mode="tags" value={settings.reminderDays.map(String)} onChange={(values) => updateSettings({ reminderDays: values.map(Number).filter((value) => !Number.isNaN(value)) })} /></Form.Item>
               <Form.Item label="默认通知功法"><Select value={settings.defaultChannel} onChange={(defaultChannel) => updateSettings({ defaultChannel })} options={channels.map((channel) => ({ value: channel.id, label: channel.name }))} /></Form.Item>
               <Form.Item label="模块顺序"><Select mode="multiple" value={visibleModuleOrder} onChange={(moduleOrder) => updateSettings({ moduleOrder })} options={moduleKeys.map((key) => ({ value: key, label: moduleName[key] ?? key }))} /></Form.Item>
-              <Form.Item label="外观主题"><Select value={settings.theme} onChange={(theme) => updateSettings({ theme })} options={[{ value: "dark-fire", label: "玄墨异火" }, { value: "abyss-purple", label: "幽冥紫炎" }, { value: "ink-gold", label: "墨金阁令" }]} /></Form.Item>
+              <Form.Item label="外观主题"><Select value={activeTheme} onChange={(theme: ThemeId) => updateSettings({ theme })} options={themeOptions} /></Form.Item>
               <Form.Item label="管理密钥">
                 <Space.Compact style={{ width: "100%" }}>
                   <Input.Password value={adminKey} onChange={(event) => setAdminKey(event.target.value)} placeholder="输入 .env.local / Vercel 中的 YIHUOGE_ADMIN_KEY" />
@@ -2701,6 +2744,7 @@ export default function App() {
   const assets = useYiHuoStore((state) => state.assets);
   const channels = useYiHuoStore((state) => state.channels);
   const setLanguage = useYiHuoStore((state) => state.setLanguage);
+  const updateSettings = useYiHuoStore((state) => state.updateSettings);
   const [active, setActive] = useState("overview");
   const [globalSearch, setGlobalSearch] = useState("");
   const [quickCreateNonce, setQuickCreateNonce] = useState(0);
@@ -2710,6 +2754,8 @@ export default function App() {
     window.localStorage.getItem(ADMIN_KEY_STORAGE) ? "unlocked" : "locked",
   );
   const [savedAccessKey, setSavedAccessKey] = useState(() => window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "");
+  const activeTheme = normalizeTheme(settings.theme);
+  const activeThemeLabel = themeOptions.find((option) => option.value === activeTheme)?.label ?? "九玄金雷";
 
 
   useRenewalWatcher(assets, channels, settings);
@@ -2763,11 +2809,15 @@ export default function App() {
   }, [active]);
 
   useEffect(() => {
-    document.body.dataset.theme = settings.theme;
+    if (settings.theme !== activeTheme) {
+      updateSettings({ theme: activeTheme });
+      return;
+    }
+    document.body.dataset.theme = activeTheme;
     return () => {
       delete document.body.dataset.theme;
     };
-  }, [settings.theme]);
+  }, [activeTheme, settings.theme, updateSettings]);
 
   const openQuickCreate = () => {
     setActive("assets");
@@ -2789,7 +2839,13 @@ export default function App() {
     ai: <AiModule onForgeDone={() => setActive("assets")} />,
     settings: <SettingsModule />,
   }[active];
-  const palette = themePalettes[settings.theme] ?? themePalettes["dark-fire"];
+  const cycleTheme = () => {
+    const currentIndex = themeOptions.findIndex((option) => option.value === activeTheme);
+    const nextTheme = themeOptions[(currentIndex + 1) % themeOptions.length]?.value ?? "dark-fire";
+    updateSettings({ theme: nextTheme });
+  };
+
+  const palette = themePalettes[activeTheme] ?? themePalettes["dark-fire"];
 
   return (
     <ConfigProvider
@@ -2821,7 +2877,7 @@ export default function App() {
       {accessState !== "unlocked" ? (
         <AccessGate initialKey={savedAccessKey} checking={accessState === "checking"} onUnlock={unlock} />
       ) : (
-        <Layout className={`app-shell theme-${settings.theme}`}>
+        <Layout className={`app-shell theme-${activeTheme}`}>
         <Sider width={268} className="side-nav" breakpoint="lg" collapsedWidth={0}>
           <div className="brand-mark">
             <img className="brand-logo" src="/logo.png" alt="异火阁" />
@@ -2852,6 +2908,7 @@ export default function App() {
                 <button className={settings.language === "zh" ? "active" : ""} onClick={() => setLanguage("zh")}>中文</button>
                 <button className={settings.language === "en" ? "active" : ""} onClick={() => setLanguage("en")}>英</button>
               </div>
+              <Button className="theme-cycle-button" title={`切换主题：当前 ${activeThemeLabel}`} icon={<FireOutlined />} onClick={cycleTheme} aria-label="切换主题" />
             </Space>
           </Header>
           <Content className="content-canvas">{module}</Content>

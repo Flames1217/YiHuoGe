@@ -17,7 +17,7 @@
 - **通知渠道**：Email、Telegram、Discord、Slack、Webhook、钉钉、企业微信、飞书、Bark、ServerChan、PushPlus、ntfy、Gotify、Pushover、Teams、Google Chat、Matrix、Mattermost、Rocket.Chat、Signal、LINE、AWS SNS、Twilio、自定义等。
 - **AI 炼化**：把 CSV、JSON、表格文本或资产清单炼化成资产数据；内置提示词会按项目字段解析类型、服务商、托管商、续期日、价格等。
 - **模型管理**：支持 OpenAI Compatible 接口，手动添加模型、获取 `/models` 列表、测试默认模型。
-- **主题界面**：暗色异火风格，统一顶部按钮、表格、筛选、下拉、悬停、弹窗等配色。
+- **主题界面**：内置六套异火主题：九玄金雷、陨落心炎、骨灵冷火、三千焱炎火、海心焰、净莲妖火；可在顶栏一键切换，也可在设置中精确选择。
 - **数据库存储**：结构化表存储，支持 MySQL/TiDB/MariaDB、PostgreSQL、SQLite、Cloudflare D1。
 
 ## 🚀 快速开始
@@ -80,7 +80,7 @@ MYSQL_URL=mysql://USER:PASSWORD@HOST:4000/yihuoge
 | `yh_asset_domain_details` | 域名扩展详情表：只保存域名额外 WHOIS/RDAP 信息，通过 `asset_id` 关联 `yh_assets.id`。 |
 | `yh_channels` | 通知渠道表：渠道类型、目标、密钥掩码、配置 JSON、模板、测试时间等。 |
 | `yh_ai_config` | AI 配置表：provider、apiKey、baseUrl、models、defaultModel。 |
-| `yh_settings` | 应用设置表：语言、时区、货币、提醒天数、模块顺序、备份目标等。 |
+| `yh_settings` | 应用设置表：语言、标准 IANA 时区、货币、提醒天数、模块顺序、外观主题、备份目标等。 |
 
 ### 旧数据迁移
 
@@ -89,7 +89,7 @@ MYSQL_URL=mysql://USER:PASSWORD@HOST:4000/yihuoge
 ## 💾 备份与导入
 
 - 支持本地导出 JSON，用于离线备份或迁移。
-- 备份目标只保留 WebDAV、S3/R2/MinIO 和自定义外部存储，避免和主数据库结构冲突。
+- 备份法阵只保留 WebDAV 和 S3/R2/MinIO 两类目标，避免和主数据库结构冲突。
 
 ## 🧪 AI 炼化说明
 
@@ -224,7 +224,7 @@ YiHuoGe/
 |   |-- utils/                  # 日期、农历、状态工具
 |   |-- App.tsx                 # 主界面和模块
 |   |-- store.ts                # Zustand 状态管理
-|   |-- style.css               # 异火阁主题样式
+|   |-- style.css               # 异火阁六主题样式
 |   `-- types.ts                # 类型定义
 |-- .env.example               # 环境变量示例
 |-- vercel.json                # Vercel 配置

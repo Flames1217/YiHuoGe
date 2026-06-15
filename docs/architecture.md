@@ -45,7 +45,7 @@
 
 - 部署：Cloudflare Workers/Pages、Vercel、Netlify、Deno Deploy、Docker、手动 VPS
 - 存储：Cloudflare D1、Postgres、MySQL/MariaDB/TiDB、SQLite、自定义 SQL 适配器
-- 备份：WebDAV、S3 兼容存储、自定义外部存储
+- 备份：WebDAV、S3/R2/MinIO 兼容存储
 - 通知：Email、Telegram、Discord、Slack、Webhook、钉钉、企业微信、飞书、Bark、ServerChan、PushPlus、自定义
 
 ## 本地运行

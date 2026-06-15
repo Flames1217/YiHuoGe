@@ -87,8 +87,7 @@
     ],
     "backupAdapters": [
       "WebDAV",
-      "S3",
-      "Custom external storage"
+      "S3"
     ]
   }
 }

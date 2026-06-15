@@ -102,7 +102,7 @@ export interface AppSettings {
   reminderDays: number[];
   defaultChannel: string;
   currency: string;
-  theme: "dark-fire" | "abyss-purple" | "ink-gold";
+  theme: "dark-fire" | "fallen-heart" | "bone-cold" | "sanqian-flame" | "sea-heart" | "pure-lotus";
   moduleOrder: string[];
   backupTargets: BackupTarget[];
   accountTypePresets?: string[];

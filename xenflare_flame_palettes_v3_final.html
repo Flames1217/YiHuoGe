@@ -1,0 +1,195 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.page {
+  padding: 24px 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+.card {
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1.5px solid rgba(255,255,255,0.10);
+}
+.card-header { padding: 18px 20px 14px; }
+.flame-name { font-size: 16px; font-weight: 700; letter-spacing: 0.03em; }
+.flame-desc { font-size: 11px; margin-top: 4px; opacity: 0.7; letter-spacing: 0.06em; }
+.flame-badge {
+  font-size: 10px; font-weight: 600; padding: 2px 9px;
+  border-radius: 999px; display: inline-block; margin-top: 7px; letter-spacing: 0.05em;
+}
+.swatches { display: flex; flex-direction: column; }
+.swatch {
+  height: 62px; display: flex; align-items: flex-end;
+  padding: 0 18px 9px;
+}
+.swatch-role { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; }
+.swatch-hex { font-size: 11px; font-weight: 400; margin-left: auto; font-family: monospace; opacity: 0.8; }
+</style>
+
+<div class="page">
+
+  <!-- 1. 青莲地心火：青为主，少蓝极少绿 -->
+  <div class="card" style="background:#001A18;">
+    <div class="card-header" style="background:linear-gradient(135deg,#00B8A0 0%,#0088B0 50%,#001A18 100%);">
+      <div class="flame-name" style="color:#001A18;">青莲地心火</div>
+      <div class="flame-desc" style="color:#001A18;">青为主 · 少蓝 · 极少绿 · 地心莲焰</div>
+      <span class="flame-badge" style="background:rgba(0,0,0,0.18);color:#001A18;">异火 #01 · 榜第19</span>
+    </div>
+    <div class="swatches">
+      <div class="swatch" style="background:#B0F0E8;">
+        <span class="swatch-role" style="color:#004A40;">高光</span>
+        <span class="swatch-hex" style="color:#004A40;">#B0F0E8</span>
+      </div>
+      <div class="swatch" style="background:#00B8A0;">
+        <span class="swatch-role" style="color:#001A18;">核心</span>
+        <span class="swatch-hex" style="color:#001A18;">#00B8A0</span>
+      </div>
+      <div class="swatch" style="background:#0088B0;">
+        <span class="swatch-role" style="color:#fff;">主焰</span>
+        <span class="swatch-hex" style="color:rgba(255,255,255,0.8);">#0088B0</span>
+      </div>
+      <div class="swatch" style="background:#00403A;">
+        <span class="swatch-role" style="color:#00B8A0;">暗青（浓郁）</span>
+        <span class="swatch-hex" style="color:#00B8A0;">#00403A</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 陨落心炎：暗橙红底+熔岩金橙裂纹 -->
+  <div class="card" style="background:#100400;">
+    <div class="card-header" style="background:linear-gradient(135deg,#D44000 0%,#8C2000 55%,#100400 100%);">
+      <div class="flame-name" style="color:#fff;">陨落心炎</div>
+      <div class="flame-desc" style="color:rgba(255,255,255,0.65);">暗橙红底 · 熔岩金裂纹 · 心火之焰</div>
+      <span class="flame-badge" style="background:rgba(255,255,255,0.15);color:#fff;">异火 #02 · 榜第14</span>
+    </div>
+    <div class="swatches">
+      <div class="swatch" style="background:#FFAA44;">
+        <span class="swatch-role" style="color:#4A1800;">熔岩裂纹</span>
+        <span class="swatch-hex" style="color:#4A1800;">#FFAA44</span>
+      </div>
+      <div class="swatch" style="background:#D44000;">
+        <span class="swatch-role" style="color:#fff;">核心</span>
+        <span class="swatch-hex" style="color:rgba(255,255,255,0.85);">#D44000</span>
+      </div>
+      <div class="swatch" style="background:#8C2000;">
+        <span class="swatch-role" style="color:#FFAA44;">主焰</span>
+        <span class="swatch-hex" style="color:#FFAA44;">#8C2000</span>
+      </div>
+      <div class="swatch" style="background:#2A0A00;">
+        <span class="swatch-role" style="color:#D44000;">暗底（熔岩底色）</span>
+        <span class="swatch-hex" style="color:#D44000;">#2A0A00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 骨灵冷火：纯白主体，冷蓝点缀，寒气/雪花感 -->
+  <div class="card" style="background:#B8D8EC;">
+    <div class="card-header" style="background:linear-gradient(135deg,#FFFFFF 0%,#E8F6FF 40%,#B8D8EC 100%);">
+      <div class="flame-name" style="color:#0A2E44;">骨灵冷火</div>
+      <div class="flame-desc" style="color:#0A2E44;">纯白主体 · 冷蓝点缀 · 寒气雪花形态</div>
+      <span class="flame-badge" style="background:rgba(10,46,68,0.1);color:#0A2E44;">异火 #04 · 榜第11</span>
+    </div>
+    <div class="swatches">
+      <div class="swatch" style="background:#FFFFFF; border-top:0.5px solid #C8E4F4;">
+        <span class="swatch-role" style="color:#0A2E44;">主体白（雪花）</span>
+        <span class="swatch-hex" style="color:#0A2E44;">#FFFFFF</span>
+      </div>
+      <div class="swatch" style="background:#E8F6FF;">
+        <span class="swatch-role" style="color:#0A2E44;">核心冷白</span>
+        <span class="swatch-hex" style="color:#0A2E44;">#E8F6FF</span>
+      </div>
+      <div class="swatch" style="background:#7ABEDD;">
+        <span class="swatch-role" style="color:#0A2E44;">冷蓝点缀</span>
+        <span class="swatch-hex" style="color:#0A2E44;">#7ABEDD</span>
+      </div>
+      <div class="swatch" style="background:#1A4A66;">
+        <span class="swatch-role" style="color:#E8F6FF;">深寒底</span>
+        <span class="swatch-hex" style="color:#E8F6FF;">#1A4A66</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 三千焱炎火：中高饱和亮紫，龙形气势，边缘亮紫 -->
+  <div class="card" style="background:#0C0020;">
+    <div class="card-header" style="background:linear-gradient(135deg,#9B30FF 0%,#5500CC 55%,#0C0020 100%);">
+      <div class="flame-name" style="color:#fff;">三千焱炎火</div>
+      <div class="flame-desc" style="color:rgba(255,255,255,0.65);">中高饱和紫 · 龙形 · 边缘亮紫气焰</div>
+      <span class="flame-badge" style="background:rgba(255,255,255,0.15);color:#fff;">异火 #05 · 榜第9</span>
+    </div>
+    <div class="swatches">
+      <div class="swatch" style="background:#D4A0FF;">
+        <span class="swatch-role" style="color:#0C0020;">边缘亮紫</span>
+        <span class="swatch-hex" style="color:#0C0020;">#D4A0FF</span>
+      </div>
+      <div class="swatch" style="background:#9B30FF;">
+        <span class="swatch-role" style="color:#fff;">核心</span>
+        <span class="swatch-hex" style="color:rgba(255,255,255,0.85);">#9B30FF</span>
+      </div>
+      <div class="swatch" style="background:#5500CC;">
+        <span class="swatch-role" style="color:#D4A0FF;">主焰</span>
+        <span class="swatch-hex" style="color:#D4A0FF;">#5500CC</span>
+      </div>
+      <div class="swatch" style="background:#0C0020;">
+        <span class="swatch-role" style="color:#9B30FF;">暗焰底色</span>
+        <span class="swatch-hex" style="color:#9B30FF;">#0C0020</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 海心焰：深海蓝，沉稳，蓝黑感 -->
+  <div class="card" style="background:#000D1A;">
+    <div class="card-header" style="background:linear-gradient(135deg,#1A6ECC 0%,#003A80 55%,#000D1A 100%);">
+      <div class="flame-name" style="color:#fff;">海心焰</div>
+      <div class="flame-desc" style="color:rgba(255,255,255,0.65);">深海蓝 · 沉稳厚重 · 蓝黑深邃</div>
+      <span class="flame-badge" style="background:rgba(255,255,255,0.15);color:#fff;">异火 #03 · 榜第15</span>
+    </div>
+    <div class="swatches">
+      <div class="swatch" style="background:#88BBEE;">
+        <span class="swatch-role" style="color:#001A40;">浪尖高光</span>
+        <span class="swatch-hex" style="color:#001A40;">#88BBEE</span>
+      </div>
+      <div class="swatch" style="background:#1A6ECC;">
+        <span class="swatch-role" style="color:#fff;">核心</span>
+        <span class="swatch-hex" style="color:rgba(255,255,255,0.85);">#1A6ECC</span>
+      </div>
+      <div class="swatch" style="background:#003A80;">
+        <span class="swatch-role" style="color:#88BBEE;">主焰</span>
+        <span class="swatch-hex" style="color:#88BBEE;">#003A80</span>
+      </div>
+      <div class="swatch" style="background:#000D1A;">
+        <span class="swatch-role" style="color:#1A6ECC;">深海底</span>
+        <span class="swatch-hex" style="color:#1A6ECC;">#000D1A</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. 净莲妖火：高饱和亮粉，洋红莲花，强光晕 -->
+  <div class="card" style="background:#1A0010;">
+    <div class="card-header" style="background:linear-gradient(135deg,#FF4488 0%,#CC1155 55%,#1A0010 100%);">
+      <div class="flame-name" style="color:#fff;">净莲妖火</div>
+      <div class="flame-desc" style="color:rgba(255,255,255,0.65);">高饱和亮粉 · 洋红莲形 · 强光晕净化感</div>
+      <span class="flame-badge" style="background:rgba(255,255,255,0.15);color:#fff;">异火 #06 · 榜第3</span>
+    </div>
+    <div class="swatches">
+      <div class="swatch" style="background:#FFD0E8;">
+        <span class="swatch-role" style="color:#66002A;">光晕白粉</span>
+        <span class="swatch-hex" style="color:#66002A;">#FFD0E8</span>
+      </div>
+      <div class="swatch" style="background:#FF4488;">
+        <span class="swatch-role" style="color:#fff;">核心亮粉</span>
+        <span class="swatch-hex" style="color:rgba(255,255,255,0.9);">#FF4488</span>
+      </div>
+      <div class="swatch" style="background:#CC1155;">
+        <span class="swatch-role" style="color:#FFD0E8;">花瓣深玫红</span>
+        <span class="swatch-hex" style="color:#FFD0E8;">#CC1155</span>
+      </div>
+      <div class="swatch" style="background:#660033;">
+        <span class="swatch-role" style="color:#FF4488;">莲心暗红</span>
+        <span class="swatch-hex" style="color:#FF4488;">#660033</span>
+      </div>
+    </div>
+  </div>
+
+</div>
