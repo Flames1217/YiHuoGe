@@ -2583,11 +2583,13 @@ body .asset-table .ant-table-tbody .ant-space-vertical {
   overflow: hidden;
 }
 
-/* Asset table sorter final fixes: keep AntD's small tooltip, remove active underline. */
+/* Asset table sorter final fixes: keep one continuous header line and the small AntD tooltip. */
+body .asset-table .ant-table-thead > tr > th,
+body .asset-table .ant-table-thead > tr > th:hover,
 body .asset-table .ant-table-thead > tr > th.ant-table-column-sort,
 body .asset-table .ant-table-thead > tr > th.ant-table-column-sort:hover,
 body .asset-table .ant-table-thead th.ant-table-column-has-sorters:hover {
-  border-bottom: 0 !important;
+  border-bottom: 2px solid var(--gold) !important;
   box-shadow: none !important;
 }
 
@@ -2608,6 +2610,33 @@ body .yhg-sorter-tooltip.ant-tooltip .ant-tooltip-inner {
 
 body .yhg-sorter-tooltip .ant-tooltip-arrow::before,
 body .yhg-sorter-tooltip .ant-tooltip-arrow::after {
+  background: var(--gold) !important;
+}
+
+body .ant-tooltip.yhg-sorter-tooltip,
+body .ant-tooltip.yhg-sorter-tooltip.ant-tooltip-placement-top,
+body .ant-tooltip.yhg-sorter-tooltip.ant-tooltip-placement-bottom {
+  --antd-arrow-background-color: var(--gold) !important;
+  --ant-tooltip-color-bg-spotlight: var(--gold) !important;
+}
+
+body .ant-tooltip.yhg-sorter-tooltip .ant-tooltip-content,
+body .ant-tooltip.yhg-sorter-tooltip .ant-tooltip-inner,
+body .ant-tooltip.yhg-sorter-tooltip.ant-tooltip-placement-top .ant-tooltip-inner,
+body .ant-tooltip.yhg-sorter-tooltip.ant-tooltip-placement-bottom .ant-tooltip-inner {
+  color: #1a0d03 !important;
+  background: var(--gold) !important;
+  background-image: linear-gradient(135deg, var(--gold), var(--gold-2)) !important;
+  border-color: rgba(255, 215, 128, 0.72) !important;
+  box-shadow: 0 10px 24px rgba(245, 158, 11, 0.28) !important;
+}
+
+body .ant-tooltip.yhg-sorter-tooltip .ant-tooltip-arrow::before,
+body .ant-tooltip.yhg-sorter-tooltip .ant-tooltip-arrow::after,
+body .ant-tooltip.yhg-sorter-tooltip.ant-tooltip-placement-top .ant-tooltip-arrow::before,
+body .ant-tooltip.yhg-sorter-tooltip.ant-tooltip-placement-top .ant-tooltip-arrow::after,
+body .ant-tooltip.yhg-sorter-tooltip.ant-tooltip-placement-bottom .ant-tooltip-arrow::before,
+body .ant-tooltip.yhg-sorter-tooltip.ant-tooltip-placement-bottom .ant-tooltip-arrow::after {
   background: var(--gold) !important;
 }
 

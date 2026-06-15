@@ -1831,7 +1831,7 @@ function AssetsModule({
             columns={columns}
             dataSource={sortedFiltered}
             tableLayout="fixed"
-            showSorterTooltip={{ rootClassName: "yhg-sorter-tooltip" }}
+            showSorterTooltip={{ color: "#f59e0b", rootClassName: "yhg-sorter-tooltip" }}
             pagination={{
               current: tablePage,
               pageSize: tablePageSize,
