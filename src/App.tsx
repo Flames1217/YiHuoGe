@@ -67,13 +67,14 @@ const { TextArea } = Input;
 const ADMIN_KEY_STORAGE = "yihuoge-admin-key";
 const ASSET_COLUMN_WIDTHS_STORAGE = "yihuoge-asset-column-widths";
 
-type AssetColumnKey = "name" | "type" | "provider" | "renewalDate" | "autoRenew" | "price" | "manage" | "action";
+type AssetColumnKey = "name" | "type" | "provider" | "renewalDate" | "cycle" | "autoRenew" | "price" | "manage" | "action";
 
 const defaultAssetColumnWidths: Record<AssetColumnKey, number> = {
   name: 300,
   type: 120,
   provider: 190,
   renewalDate: 220,
+  cycle: 120,
   autoRenew: 120,
   price: 110,
   manage: 150,
@@ -85,6 +86,7 @@ const maxAssetColumnWidths: Record<AssetColumnKey, number> = {
   type: 140,
   provider: 220,
   renewalDate: 240,
+  cycle: 140,
   autoRenew: 140,
   price: 130,
   manage: 170,
@@ -1313,6 +1315,24 @@ function AssetDrawer({
   const watchedHostProvider = Form.useWatch("hostProvider", form) ?? editing?.hostProvider;
   const activeProviderOptions = providerOptionsFor(watchedType, [watchedProvider, editing?.provider, ...savedProviderNames(assets, watchedType)]);
   const activeHostProviderOptions = domainHostOptionsFor([watchedHostProvider, editing?.hostProvider, ...savedHostProviderNames(assets)]);
+  const replicaOptions = useMemo(() => (
+    assets
+      .filter((asset) => asset.id !== editing?.id)
+      .map((asset) => ({
+        value: asset.id,
+        label: `${asset.name} · ${asset.provider || "未填"} · ${assetTypeLabel(normalizeAssetType(asset.type), settings.language)}`,
+        searchText: [
+          asset.name,
+          asset.provider,
+          asset.hostProvider,
+          asset.accountType,
+          asset.account,
+          asset.url,
+          asset.hostUrl,
+          asset.tags?.join(" "),
+        ].filter(Boolean).join(" ").toLowerCase(),
+      }))
+  ), [assets, editing?.id, settings.language]);
 
   const applyProviderChoice = (provider?: string) => {
     const option = findProviderOption(watchedType, provider);
@@ -1329,6 +1349,30 @@ function AssetDrawer({
       hostProvider: provider,
       hostUrl: option?.url || form.getFieldValue("hostUrl"),
     });
+  };
+
+  const applyAssetReplica = (assetId?: string) => {
+    const source = assets.find((asset) => asset.id === assetId);
+    if (!source) return;
+    form.setFieldsValue({
+      type: normalizeAssetType(source.type),
+      provider: source.provider,
+      providerUrl: source.providerUrl,
+      hostProvider: source.hostProvider,
+      hostUrl: source.hostUrl,
+      account: source.account,
+      accountType: source.accountType,
+      renewalDate: source.cycle === "lifetime" ? "" : source.renewalDate,
+      price: source.price,
+      currency: source.currency,
+      cycle: source.cycle,
+      customCycle: source.customCycle,
+      autoRenew: source.cycle === "lifetime" ? false : source.autoRenew,
+      url: source.url,
+      tags: [...(source.tags ?? [])],
+      notes: source.notes,
+    });
+    api.success(`已复刻：${source.name}`);
   };
 
   useEffect(() => {
@@ -1442,6 +1486,20 @@ function AssetDrawer({
     <Drawer size="large" open={open} onClose={onClose} title={editing ? "编辑资产" : t("addAsset")} extra={<Button title="封存当前资产；WHOIS 仅在点击占验按钮时手动执行" type="primary" onClick={submit}>保存</Button>}>
       {contextHolder}
       <Form form={form} layout="vertical">
+        <Form.Item label="复刻已有资产">
+          <Select
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            placeholder="搜索并选择一个已有资产，复刻其厂商、来源、账号、周期、价格等配置"
+            options={replicaOptions}
+            filterOption={(input, option) => {
+              const text = `${option?.label ?? ""} ${(option as { searchText?: string } | undefined)?.searchText ?? ""}`.toLowerCase();
+              return text.includes(input.toLowerCase());
+            }}
+            onSelect={(value) => applyAssetReplica(String(value))}
+          />
+        </Form.Item>
         <Form.Item name="name" label="名称" rules={[{ required: true }]}><Input placeholder="例如：yihuoge.dev / 开放智能接口额度" /></Form.Item>
         <Row gutter={12}>
           <Col span={12}><Form.Item name="type" label={t("type")}><Select options={assetTypes.map((value) => ({ value, label: assetTypeLabel(value, settings.language) }))} onChange={(nextType: AssetType) => {
@@ -1655,6 +1713,7 @@ function AssetsModule({
       hostProvider: asset.hostProvider,
       hostUrl: asset.hostUrl,
       account: asset.account,
+      accountType: asset.accountType,
       renewalDate: asset.renewalDate,
       price: asset.price,
       currency: asset.currency,
@@ -1729,6 +1788,15 @@ function AssetsModule({
         return dayjs(a.renewalDate).valueOf() - dayjs(b.renewalDate).valueOf();
       },
       render: (value: string, record) => <Space><CalendarOutlined />{renewalText(record, settings.language)}<Tag color={record.cycle === "lifetime" ? "green" : "orange"}>{dayUnit(value, record.cycle, settings.language)}</Tag></Space>,
+    },
+    {
+      title: columnTitle("cycle", "周期", 104),
+      dataIndex: "cycle",
+      key: "cycle",
+      width: columnWidths.cycle,
+      filters: assetCycles.map((item) => ({ text: cycleLabel(item, settings.language), value: item })),
+      onFilter: (value, record) => record.cycle === value,
+      render: (value: Asset["cycle"]) => <Tag color={value === "lifetime" ? "green" : value === "custom" ? "purple" : "gold"}>{cycleLabel(value, settings.language)}</Tag>,
     },
     {
       title: columnTitle("autoRenew", t("autoRenew"), 104),
@@ -1844,6 +1912,7 @@ function AssetsModule({
             tableLayout="fixed"
             showSorterTooltip={{ color: "#f59e0b", rootClassName: "yhg-sorter-tooltip" }}
             pagination={{
+              position: ["topRight", "bottomRight"],
               current: tablePage,
               pageSize: tablePageSize,
               total: sortedFiltered.length,
