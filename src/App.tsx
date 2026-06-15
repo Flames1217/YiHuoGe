@@ -1009,6 +1009,11 @@ function formatPreferredAmount(amount: number, from: string, preferred: string, 
   return `${symbol}${converted.toFixed(2)}`;
 }
 
+function formatOriginalAmount(amount: number, currency: string) {
+  const symbol = currencySymbols[currency] ?? "";
+  return `${symbol}${amount.toFixed(2)} ${currency}`;
+}
+
 function splitAssetCsvLine(line: string) {
   const cells: string[] = [];
   let current = "";
@@ -1896,7 +1901,12 @@ function AssetsModule({
       key: "price",
       width: columnWidths.price,
       sorter: (a, b) => a.price - b.price,
-      render: (_, record) => formatPreferredAmount(record.price, record.currency, preferredCurrency, currencyRates),
+      render: (_, record) => (
+        <Space direction="vertical" size={0}>
+          <Text>{formatPreferredAmount(record.price, record.currency, preferredCurrency, currencyRates)}</Text>
+          {record.currency !== preferredCurrency ? <Text className="muted asset-subline">原始金额：{formatOriginalAmount(record.price, record.currency)}</Text> : null}
+        </Space>
+      ),
     },
     {
       title: columnTitle("manage", t("manageUrl"), 130),
