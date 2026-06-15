@@ -719,11 +719,11 @@ type ThemeId = AppSettings["theme"];
 
 const themePalettes: Record<ThemeId, { primary: string; primary2: string; accent: string; bg: string; text: string }> = {
   "dark-fire": {
-    primary: "#f59e0b",
-    primary2: "#ffb84d",
-    accent: "#f97316",
-    bg: "#0b0b0f",
-    text: "#f7efe0",
+    primary: "#FFD700",
+    primary2: "#FFF5A0",
+    accent: "#FFFDE0",
+    bg: "#1A1000",
+    text: "#FFFDE0",
   },
   "fallen-heart": {
     primary: "#d44000",
@@ -2034,7 +2034,7 @@ function AssetsModule({
             columns={columns}
             dataSource={sortedFiltered}
             tableLayout="fixed"
-            showSorterTooltip={{ color: "#f59e0b", rootClassName: "yhg-sorter-tooltip" }}
+            showSorterTooltip={{ color: "#FFD700", rootClassName: "yhg-sorter-tooltip" }}
             pagination={{
               position: ["topRight", "bottomRight"],
               current: tablePage,
