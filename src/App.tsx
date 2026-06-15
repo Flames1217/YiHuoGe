@@ -1309,6 +1309,7 @@ function AssetDrawer({
   const preferredCurrency = settings.currency;
   const [api, contextHolder] = message.useMessage();
   const [whoisLoading, setWhoisLoading] = useState(false);
+  const [replicaAssetId, setReplicaAssetId] = useState<string | undefined>();
   const watchedType = normalizeAssetType(Form.useWatch("type", form) ?? editing?.type ?? "domain");
   const watchedCycle = Form.useWatch("cycle", form) ?? editing?.cycle ?? "yearly";
   const watchedProvider = Form.useWatch("provider", form) ?? editing?.provider;
@@ -1372,11 +1373,14 @@ function AssetDrawer({
       tags: [...(source.tags ?? [])],
       notes: source.notes,
     });
+    setReplicaAssetId(undefined);
     api.success(`已复刻：${source.name}`);
   };
 
   useEffect(() => {
     if (open) {
+      setReplicaAssetId(undefined);
+      form.resetFields();
       form.setFieldsValue(
         editing ?? {
           type: "domain",
@@ -1392,6 +1396,8 @@ function AssetDrawer({
           tags: [],
         },
       );
+    } else {
+      setReplicaAssetId(undefined);
     }
   }, [editing, form, open, preferredCurrency]);
 
@@ -1490,6 +1496,7 @@ function AssetDrawer({
           <Select
             allowClear
             showSearch
+            value={replicaAssetId}
             optionFilterProp="label"
             placeholder="搜索并选择一个已有资产，复刻其厂商、来源、账号、周期、价格等配置"
             options={replicaOptions}
@@ -1497,6 +1504,7 @@ function AssetDrawer({
               const text = `${option?.label ?? ""} ${(option as { searchText?: string } | undefined)?.searchText ?? ""}`.toLowerCase();
               return text.includes(input.toLowerCase());
             }}
+            onChange={(value) => setReplicaAssetId(value)}
             onSelect={(value) => applyAssetReplica(String(value))}
           />
         </Form.Item>
