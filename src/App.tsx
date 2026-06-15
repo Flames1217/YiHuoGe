@@ -185,9 +185,9 @@ const cycleName: Record<Asset["cycle"], string> = {
   quarterly: "季付",
   semiannual: "半年付",
   yearly: "年付",
-  biennial: "两年付",
-  triennial: "三年付",
-  decennial: "十年付",
+  biennial: "2年付",
+  triennial: "3年付",
+  decennial: "10年付",
   lifetime: "永久",
   custom: "自定",
 };
