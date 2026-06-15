@@ -13,12 +13,29 @@ function mergeAccountTypePreset(current: string[] | undefined, next: string | un
   return [...list, trimmed];
 }
 
-function persistAccountTypePresets(settings: AppSettings, next: string) {
-  const merged = mergeAccountTypePreset(settings.accountTypePresets, next);
-  if (merged === settings.accountTypePresets) return settings;
-  const updated = { ...settings, accountTypePresets: merged };
-  persistSettings(updated);
-  return updated;
+function mergeAccountValuePreset(current: Record<string, string[]> | undefined, type: string | undefined, value: string | undefined) {
+  const key = type?.trim();
+  const item = value?.trim();
+  if (!key || !item) return current;
+  const map = current ?? {};
+  const list = map[key] ?? [];
+  if (list.includes(item)) return current;
+  return { ...map, [key]: [item, ...list].slice(0, 20) };
+}
+
+function mergeAccountPresets(settings: AppSettings, type: string | undefined, value: string | undefined) {
+  let nextSettings = settings;
+  const mergedTypes = mergeAccountTypePreset(nextSettings.accountTypePresets, type);
+  if (mergedTypes !== nextSettings.accountTypePresets) nextSettings = { ...nextSettings, accountTypePresets: mergedTypes };
+  const mergedValues = mergeAccountValuePreset(nextSettings.accountValuePresets, type, value);
+  if (mergedValues !== nextSettings.accountValuePresets) nextSettings = { ...nextSettings, accountValuePresets: mergedValues };
+  return nextSettings;
+}
+
+function persistAccountPresets(settings: AppSettings, type: string | undefined, value: string | undefined) {
+  const nextSettings = mergeAccountPresets(settings, type, value);
+  if (nextSettings !== settings) persistSettings(nextSettings);
+  return nextSettings;
 }
 
 const ADMIN_KEY_STORAGE = "yihuoge-admin-key";
@@ -109,7 +126,7 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
       autoRenew: asset.cycle === "lifetime" ? false : asset.autoRenew ?? true,
     };
     set((state) => {
-      const settings = asset.accountType ? persistAccountTypePresets(state.settings, asset.accountType) : state.settings;
+      const settings = persistAccountPresets(state.settings, asset.accountType, asset.account);
       return { assets: [nextAsset, ...state.assets], settings };
     });
     persistAsset(nextAsset);
@@ -118,7 +135,7 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
   updateAsset: (asset) => {
     const nextAsset = { ...asset, status: statusByDate(asset.renewalDate, asset.cycle), customCycle: asset.cycle === "custom" ? asset.customCycle : undefined, autoRenew: asset.cycle === "lifetime" ? false : asset.autoRenew ?? true };
     set((state) => {
-      const settings = asset.accountType ? persistAccountTypePresets(state.settings, asset.accountType) : state.settings;
+      const settings = persistAccountPresets(state.settings, asset.accountType, asset.account);
       return { assets: state.assets.map((item) => (item.id === asset.id ? nextAsset : item)), settings };
     });
     persistAsset(nextAsset, "PUT");
@@ -131,7 +148,11 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
 
   importAssets: (assets) => {
     const nextAssets = assets.map((asset) => ({ ...asset, id: asset.id || nanoid(10), status: statusByDate(asset.renewalDate, asset.cycle), customCycle: asset.cycle === "custom" ? asset.customCycle : undefined, autoRenew: asset.cycle === "lifetime" ? false : asset.autoRenew ?? true }));
-    set((state) => ({ assets: [...nextAssets, ...state.assets] }));
+    set((state) => {
+      const settings = nextAssets.reduce((current, asset) => mergeAccountPresets(current, asset.accountType, asset.account), state.settings);
+      if (settings !== state.settings) persistSettings(settings);
+      return { assets: [...nextAssets, ...state.assets], settings };
+    });
     nextAssets.forEach((asset) => persistAsset(asset));
   },
 

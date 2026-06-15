@@ -23,6 +23,8 @@ export const settingsSeed: AppSettings = {
   theme: "dark-fire",
   moduleOrder: ["overview", "assets", "notifications", "ai", "settings"],
   backupTargets: [],
+  accountTypePresets: [],
+  accountValuePresets: {},
 };
 
 export const providerPresets = [

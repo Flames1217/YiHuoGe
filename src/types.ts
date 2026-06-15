@@ -106,6 +106,7 @@ export interface AppSettings {
   moduleOrder: string[];
   backupTargets: BackupTarget[];
   accountTypePresets?: string[];
+  accountValuePresets?: Record<string, string[]>;
 }
 
 export interface CalendarItem {

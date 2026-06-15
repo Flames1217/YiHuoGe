@@ -878,22 +878,22 @@ const heavenlyFlames = [
 
 const accountTypePresets: { value: string; placeholder: string }[] = [
   { value: "邮箱", placeholder: "you@example.com" },
-  { value: "GitHub OAuth", placeholder: "octocat" },
-  { value: "Google OAuth", placeholder: "you@gmail.com" },
-  { value: "Microsoft OAuth", placeholder: "you@outlook.com" },
-  { value: "Apple OAuth", placeholder: "Apple ID" },
-  { value: "X (Twitter) OAuth", placeholder: "@handle" },
-  { value: "Facebook OAuth", placeholder: "fb 用户名" },
-  { value: "自建 OAuth", placeholder: "client_id 或账号" },
-  { value: "用户名", placeholder: "用户名" },
-  { value: "API Key", placeholder: "sk-..." },
-  { value: "Access Token", placeholder: "ghp_..." },
-  { value: "实例 ID", placeholder: "i-0123..." },
-  { value: "服务器 IP", placeholder: "192.168.1.1" },
+  { value: "GitHub OAuth", placeholder: "@username" },
+  { value: "Google OAuth", placeholder: "Google Email，例如 you@gmail.com" },
+  { value: "Microsoft OAuth", placeholder: "Microsoft Email，例如 you@outlook.com" },
+  { value: "Apple OAuth", placeholder: "Apple ID Email，例如 you@icloud.com" },
+  { value: "X (Twitter) OAuth", placeholder: "@username" },
+  { value: "Facebook OAuth", placeholder: "Facebook 用户名或主页 ID" },
+  { value: "自建 OAuth", placeholder: "client_id / subject / username" },
+  { value: "用户名", placeholder: "username" },
+  { value: "API Key", placeholder: "sk-... / ak-..." },
+  { value: "Access Token", placeholder: "ghp_... / xoxb-..." },
+  { value: "实例 ID", placeholder: "i-0123456789abcdef0" },
+  { value: "服务器 IP", placeholder: "192.0.2.10" },
   { value: "SSH Key 指纹", placeholder: "SHA256:..." },
-  { value: "私钥指纹", placeholder: "fingerprint" },
+  { value: "私钥指纹", placeholder: "SHA256:..." },
   { value: "备注", placeholder: "自定义说明" },
-  { value: "其他", placeholder: "值" },
+  { value: "其他", placeholder: "按所选方式填写标识值" },
 ];
 
 function accountTypeOptionsFor(extra: string[]) {
@@ -911,7 +911,7 @@ function accountTypeOptionsFor(extra: string[]) {
 function accountTypePlaceholderFor(type: string | undefined, presets: { value: string; placeholder: string }[]) {
   if (!type) return "选择或输入类型（可选）";
   const found = presets.find((p) => p.value === type);
-  return found?.placeholder ?? "值";
+  return found?.placeholder ?? "按所选方式填写标识值";
 }
 
 function accountTypeLabel(type: string | undefined) {
@@ -1463,16 +1463,25 @@ function AssetDrawer({
             const accountType = (form.getFieldValue("accountType") as string | undefined) || "";
             const account = (form.getFieldValue("account") as string | undefined) || "";
             const userPresets = (settings.accountTypePresets ?? []).filter(Boolean);
-            const typeOptions = accountTypeOptionsFor(userPresets).map((p) => ({ value: p.value, label: p.value }));
+            const accountTypePresetsForUser = accountTypeOptionsFor(userPresets);
+            const typeOptions = accountTypePresetsForUser.map((p) => ({ value: p.value, label: p.value }));
+            const accountValueOptions = [...new Set([
+              ...(accountType ? settings.accountValuePresets?.[accountType] ?? [] : []),
+              ...assets
+                .filter((asset) => asset.accountType === accountType && asset.account)
+                .map((asset) => asset.account),
+            ])].map((value) => ({ value, label: value }));
             const accountTypeNode = (
               <Form.Item name="accountType" label="账号 / 标识（可选）" tooltip="可填登录邮箱、GitHub/Google/Microsoft/Apple OAuth 账号、API Key、实例 ID 等；直接输入新文本会保存为自定义项。">
                 <AutoComplete
                   allowClear
                   placeholder="选择或输入类型（可选）"
                   options={typeOptions}
-                  filterOption={(input, option) =>
-                    !input || String(option?.value ?? "").toLowerCase().includes(input.toLowerCase())
-                  }
+                  filterOption={(input, option) => {
+                    const selected = form.getFieldValue("accountType");
+                    if (!input || input === selected) return true;
+                    return String(option?.value ?? "").toLowerCase().includes(input.toLowerCase());
+                  }}
                 />
               </Form.Item>
             );
@@ -1487,7 +1496,20 @@ function AssetDrawer({
             return (
               <Row gutter={12}>
                 <Col span={8}>{accountTypeNode}</Col>
-                <Col span={16}><Form.Item name="account" label=" " colon={false} tooltip={accountType ? "" : "先选类型再填值"}><Input placeholder={accountTypePlaceholderFor(accountType, accountTypeOptionsFor(userPresets))} /></Form.Item></Col>
+                <Col span={16}>
+                  <Form.Item name="account" label=" " colon={false} tooltip={accountType ? "" : "先选类型再填值"}>
+                    <AutoComplete
+                      allowClear
+                      options={accountValueOptions}
+                      placeholder={accountTypePlaceholderFor(accountType, accountTypePresetsForUser)}
+                      filterOption={(input, option) => {
+                        const selected = form.getFieldValue("account");
+                        if (!input || input === selected) return true;
+                        return String(option?.value ?? "").toLowerCase().includes(input.toLowerCase());
+                      }}
+                    />
+                  </Form.Item>
+                </Col>
               </Row>
             );
           }}

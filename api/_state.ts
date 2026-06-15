@@ -53,6 +53,7 @@ const seed: YiHuoStateData = {
     moduleOrder: ["overview", "assets", "notifications", "ai", "settings"],
     backupTargets: [],
     accountTypePresets: [],
+    accountValuePresets: {},
   },
 };
 
