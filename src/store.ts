@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import { create } from "zustand";
 import { aiConfigSeed, assetsSeed, channelsSeed, domainsSeed, settingsSeed } from "./data/mock";
+import { readStoredTheme } from "./theme";
 import type { AiConfig, AppSettings, Asset, DomainRecord, Language, NotificationChannel } from "./types";
 import { statusByDate } from "./utils/calendar";
 
@@ -60,6 +61,28 @@ function persistAssetPresets(settings: AppSettings, asset: Pick<Asset, "type" | 
 }
 
 const ADMIN_KEY_STORAGE = "yihuoge-admin-key";
+const SETTINGS_STORAGE = "yihuoge-settings";
+
+function readCachedSettings(): Partial<AppSettings> {
+  if (typeof window === "undefined") return {};
+  try {
+    const cached = JSON.parse(window.localStorage.getItem(SETTINGS_STORAGE) || "{}") as Partial<AppSettings>;
+    return cached && typeof cached === "object" ? cached : {};
+  } catch {
+    return {};
+  }
+}
+
+function cacheSettings(settings: AppSettings) {
+  if (typeof window !== "undefined") window.localStorage.setItem(SETTINGS_STORAGE, JSON.stringify(settings));
+}
+
+function initialSettings(): AppSettings {
+  const cached = readCachedSettings();
+  const storedTheme = readStoredTheme();
+  const settings = { ...settingsSeed, ...cached };
+  return storedTheme ? { ...settings, theme: storedTheme } : settings;
+}
 
 function authHeaders(): HeadersInit {
   const key = typeof window === "undefined" ? "" : window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "";
@@ -96,6 +119,7 @@ function persistDeleteChannel(id: string) {
 }
 
 function persistSettings(settings: AppSettings) {
+  cacheSettings(settings);
   void writeJson("/api/settings", "PUT", settings);
 }
 
@@ -137,7 +161,7 @@ export const useYiHuoStore = create<YiHuoState>((set) => ({
   domains: domainsSeed.map((domain) => ({ ...domain, status: statusByDate(domain.expiresAt, domain.cycle) })),
   channels: channelsSeed,
   aiConfig: aiConfigSeed,
-  settings: settingsSeed,
+  settings: initialSettings(),
   currencyRatesToCny: {},
   setCurrencyRates: (rates) => {
     set({ currencyRatesToCny: rates });

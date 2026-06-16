@@ -8,6 +8,48 @@
     <link rel="apple-touch-icon" href="/logo.png" />
     <link rel="preload" href="/fonts/NotoSansSC-VF.ttf" as="font" type="font/ttf" crossorigin />
     <link rel="preload" href="/fonts/STKAITI.TTF" as="font" type="font/ttf" crossorigin />
+    <script>
+      (function () {
+        try {
+          var palettes = {
+            "dark-fire": ["#FFD700", "#FFF5A0", "#1A1000", "#FFFDE0"],
+            "qing-lian": ["#00B8A0", "#B0F0E8", "#001A18", "#E8FFFB"],
+            "fallen-heart": ["#D44000", "#FFAA44", "#100400", "#FFF2E6"],
+            "bone-cold": ["#7ABEDD", "#E8F6FF", "#0A2E44", "#F4FBFF"],
+            "sanqian-flame": ["#9B30FF", "#D4A0FF", "#0C0020", "#F7EFFF"],
+            "sea-heart": ["#1A6ECC", "#88BBEE", "#000D1A", "#EEF7FF"],
+            "pure-lotus": ["#FF4488", "#FFD0E8", "#1A0010", "#FFF0F7"]
+          };
+          var theme = localStorage.getItem("yihuoge-theme");
+          if (!palettes[theme]) return;
+          var colors = palettes[theme];
+          var root = document.documentElement;
+          var vars = {
+            "--theme-core": colors[0],
+            "--theme-edge": colors[1],
+            "--theme-base": colors[2],
+            "--theme-light": colors[3],
+            "--ink": colors[2],
+            "--abyss": colors[2],
+            "--rock": colors[2],
+            "--gold": colors[0],
+            "--gold-2": colors[1],
+            "--orange": colors[3],
+            "--red": colors[2],
+            "--teal": colors[1],
+            "--purple": colors[0],
+            "--text": colors[3],
+            "--muted": "color-mix(in srgb, " + colors[3] + " 62%, transparent)"
+          };
+          Object.keys(vars).forEach(function (name) {
+            root.style.setProperty(name, vars[name]);
+          });
+          root.dataset.theme = theme;
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute("content", colors[2]);
+        } catch (error) {}
+      })();
+    </script>
     <title>异火阁-天下万火，尽纳于此</title>
   </head>
   <body>

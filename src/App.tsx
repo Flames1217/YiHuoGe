@@ -68,6 +68,7 @@ const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const ADMIN_KEY_STORAGE = "yihuoge-admin-key";
 const ASSET_COLUMN_WIDTHS_STORAGE = "yihuoge-asset-column-widths";
+const SETTINGS_STORAGE = "yihuoge-settings";
 
 type AssetColumnKey = "name" | "type" | "provider" | "renewalDate" | "cycle" | "autoRenew" | "price" | "manage" | "action";
 
@@ -156,14 +157,16 @@ async function hydrateFromServer(key: string) {
     });
     if (!response.ok) return;
     const data = await response.json();
-    const nextTheme = data.settings?.theme ? normalizeTheme(data.settings.theme) : undefined;
+    const nextSettings = data.settings ? { ...useYiHuoStore.getState().settings, ...data.settings } : undefined;
+    const nextTheme = nextSettings?.theme ? normalizeTheme(nextSettings.theme) : undefined;
     if (nextTheme) window.localStorage.setItem(THEME_STORAGE, nextTheme);
+    if (nextSettings) window.localStorage.setItem(SETTINGS_STORAGE, JSON.stringify({ ...nextSettings, theme: nextTheme ?? nextSettings.theme }));
     useYiHuoStore.setState((state) => ({
       assets: Array.isArray(data.assets) ? data.assets : state.assets,
       domains: Array.isArray(data.domains) ? data.domains : state.domains,
       channels: Array.isArray(data.channels) ? data.channels : state.channels,
       aiConfig: data.ai ? { ...state.aiConfig, ...data.ai } : state.aiConfig,
-      settings: settingsWithAssetPresets(data.settings ? { ...state.settings, ...data.settings } : state.settings, Array.isArray(data.assets) ? data.assets : state.assets),
+      settings: settingsWithAssetPresets(nextSettings ?? state.settings, Array.isArray(data.assets) ? data.assets : state.assets),
     }));
   } finally {
     useYiHuoStore.setState({ hydrating: false, hydrated: true });
@@ -1312,10 +1315,12 @@ function OverviewModule({
         <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricUrgent")} value={urgent.length} prefix={<ThunderboltOutlined />} /></Card></Col>
         <Col xs={24} md={12} xl={6}>
           <Card className="metric-card budget-metric-card">
-            <Statistic title={t("metricBudget")} value={monthlyCost} precision={2} prefix={<DatabaseOutlined />} suffix={currencySymbol} />
-            <div className="budget-yearly-line">
-              <Text className="muted">年付预算支出</Text>
-              <Text strong>{yearlyCost.toFixed(2)} {currencySymbol}</Text>
+            <div className="budget-duo">
+              <Statistic title={t("metricBudget")} value={monthlyCost} precision={2} prefix={<DatabaseOutlined />} suffix={currencySymbol} />
+              <div className="budget-yearly-line">
+                <Text className="muted">年付预算支出</Text>
+                <Text strong>{yearlyCost.toFixed(2)} {currencySymbol}</Text>
+              </div>
             </div>
           </Card>
         </Col>

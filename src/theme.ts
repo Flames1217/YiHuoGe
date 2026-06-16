@@ -116,6 +116,19 @@ export function applyThemeVariables(palette: ThemePalette) {
 export function applyStoredTheme() {
   if (typeof window === "undefined") return;
   const theme = normalizeTheme(window.localStorage.getItem(THEME_STORAGE) ?? undefined);
-  applyThemeVariables(themePalettes[theme]);
+  const palette = themePalettes[theme];
+  applyThemeVariables(palette);
   document.body.dataset.theme = theme;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", palette.colors.base);
+}
+
+export function readStoredTheme(): ThemeId | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const value = window.localStorage.getItem(THEME_STORAGE);
+    return value ? normalizeTheme(value) : undefined;
+  } catch {
+    return undefined;
+  }
 }

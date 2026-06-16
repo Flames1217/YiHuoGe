@@ -886,21 +886,38 @@ body::after {
   white-space: nowrap;
 }
 
-.budget-metric-card .ant-statistic {
-  margin-bottom: 14px;
+.budget-metric-card > .ant-card-body {
+  display: flex;
+  align-items: center;
+}
+
+.budget-duo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(96px, 0.9fr);
+  gap: 16px;
+  align-items: end;
+  width: 100%;
+}
+
+.budget-duo .ant-statistic-content {
+  white-space: nowrap;
 }
 
 .budget-yearly-line {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding-top: 10px;
-  border-top: 1px solid color-mix(in srgb, var(--theme-core) 18%, transparent);
+  min-width: 0;
+  padding-left: 16px;
+  border-left: 1px solid color-mix(in srgb, var(--theme-core) 18%, transparent);
 }
 
 .budget-yearly-line strong {
-  font-size: 18px;
+  overflow: hidden;
+  font-size: 16px;
   font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 
