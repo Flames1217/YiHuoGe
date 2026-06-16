@@ -74,15 +74,15 @@ async function assertProviderAccepted(response: Response, provider: string) {
   if (typeof data.StatusCode === "number" && data.StatusCode !== 0) fail(`${provider} 返回 ${data.StatusCode}${data.StatusMessage ? `：${data.StatusMessage}` : ""}`);
 }
 
-async function sendWebhook(channel: NotificationChannelPayload, message: string) {
+async function sendWebhook(channel: NotificationChannelPayload, message: string, subject = title) {
   const url = requireValue(channel.target, "Webhook 地址");
   const method = (channel.config?.method || "POST").toUpperCase();
   const headers = parseJsonObject(channel.config?.headers);
   if (channel.secretMasked) headers.Authorization = headers.Authorization || `Bearer ${channel.secretMasked}`;
   const payloadTemplate = channel.config?.payload?.trim();
   const payload = payloadTemplate
-    ? JSON.parse(payloadTemplate.replaceAll("{{message}}", message).replaceAll("{{title}}", title))
-    : { title, text: message, source: "YiHuoGe" };
+    ? JSON.parse(payloadTemplate.replaceAll("{{message}}", message).replaceAll("{{title}}", subject))
+    : { title: subject, text: message, source: "YiHuoGe" };
   const response = await fetch(url, {
     method,
     headers: { "Content-Type": "application/json", ...headers },
@@ -119,6 +119,7 @@ function splitList(value?: string) {
 
 export async function sendNotificationTest(channel: NotificationChannelPayload, override?: { message?: string; subject?: string }): Promise<NotifySendResult> {
   const message = override?.message?.trim() || textOf(channel);
+  const subject = override?.subject || title;
   const provider = channel.type;
   let response: Response | undefined;
   let messageId: string | undefined;
@@ -137,7 +138,7 @@ export async function sendNotificationTest(channel: NotificationChannelPayload, 
       const info = await transporter.sendMail({
         from: channel.config?.from || user,
         to: requireValue(channel.target, "收件邮箱"),
-        subject: override?.subject || title,
+        subject,
         text: message,
       });
       messageId = info.messageId;
@@ -158,7 +159,7 @@ export async function sendNotificationTest(channel: NotificationChannelPayload, 
       break;
     case "Webhook":
     case "Custom":
-      response = await sendWebhook(channel, message);
+      response = await sendWebhook(channel, message, subject);
       break;
     case "DingTalk": {
       let url = dingtalkUrl(channel);
@@ -191,7 +192,7 @@ export async function sendNotificationTest(channel: NotificationChannelPayload, 
     case "Bark": {
       const target = requireValue(channel.target, "Bark Server / Device Key");
       const url = target.startsWith("http") ? target : `https://api.day.app/${encodeURIComponent(target)}`;
-      response = await postJson(url, { title, body: message, group: channel.config?.group, sound: channel.config?.sound });
+      response = await postJson(url, { title: subject, body: message, group: channel.config?.group, sound: channel.config?.sound });
       break;
     }
     case "ServerChan": {
@@ -199,7 +200,7 @@ export async function sendNotificationTest(channel: NotificationChannelPayload, 
       response = await fetch(`https://sctapi.ftqq.com/${encodeURIComponent(sendKey)}.send`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ title, desp: message }),
+        body: new URLSearchParams({ title: subject, desp: message }),
       });
       if (!response.ok) fail(`Server酱 返回 ${response.status}`);
       break;
@@ -207,7 +208,7 @@ export async function sendNotificationTest(channel: NotificationChannelPayload, 
     case "PushPlus":
       response = await postJson("https://www.pushplus.plus/send", {
         token: requireValue(channel.target, "PushPlus Token"),
-        title,
+        title: subject,
         content: message,
         topic: channel.config?.topic,
       });
@@ -219,7 +220,7 @@ export async function sendNotificationTest(channel: NotificationChannelPayload, 
         method: "POST",
         headers: {
           "Content-Type": "text/plain; charset=utf-8",
-          Title: title,
+          Title: subject,
           ...(channel.secretMasked ? { Authorization: `Bearer ${channel.secretMasked}` } : {}),
           ...(channel.config?.priority ? { Priority: channel.config.priority } : {}),
           ...(channel.config?.tags ? { Tags: channel.config.tags } : {}),
@@ -233,7 +234,7 @@ export async function sendNotificationTest(channel: NotificationChannelPayload, 
       const server = requireValue(channel.target, "Gotify Server").replace(/\/$/, "");
       const token = requireValue(channel.secretMasked, "Application Token");
       response = await postJson(`${server}/message?token=${encodeURIComponent(token)}`, {
-        title,
+        title: subject,
         message,
         priority: Number(channel.config?.priority || 5),
       });
@@ -246,7 +247,7 @@ export async function sendNotificationTest(channel: NotificationChannelPayload, 
         body: new URLSearchParams({
           token: requireValue(channel.secretMasked, "Application Token"),
           user: requireValue(channel.target, "User / Group Key"),
-          title,
+          title: subject,
           message,
           priority: channel.config?.priority || "0",
         }),
@@ -337,29 +338,93 @@ export interface NotificationDispatchPayload {
   asset: {
     id: string;
     name: string;
+    type?: string;
+    provider?: string;
+    providerUrl?: string;
+    hostProvider?: string;
+    hostUrl?: string;
+    account?: string;
+    accountType?: string;
     renewalDate: string;
+    price?: number;
+    currency?: string;
     cycle: string;
     daysUntil: number;
   };
 }
 
+const assetTypeName: Record<string, string> = {
+  domain: "域名",
+  vps: "VPS",
+  hosting: "虚拟主机",
+  cloud: "虚拟主机",
+  ai: "AI订阅",
+  membership: "会员订阅",
+  custom: "自定义",
+};
+
+const cycleName: Record<string, string> = {
+  daily: "日付",
+  weekly: "周付",
+  monthly: "月付",
+  quarterly: "季付",
+  semiannual: "半年付",
+  yearly: "年付",
+  biennial: "2年付",
+  triennial: "3年付",
+  decennial: "10年付",
+  lifetime: "永久",
+  custom: "自定",
+};
+
+const currencySymbols: Record<string, string> = { CNY: "¥", USD: "$", EUR: "€", HKD: "HK$", JPY: "¥", GBP: "£" };
+
+function blankFallback(value: unknown, fallback = "未填") {
+  const text = String(value ?? "").trim();
+  return text || fallback;
+}
+
+function priceText(price: unknown, currency: unknown) {
+  const amount = Number(price ?? 0);
+  const unit = String(currency ?? "CNY");
+  const symbol = currencySymbols[unit] ?? `${unit} `;
+  return `${symbol}${amount.toFixed(2)}`;
+}
+
+function serviceUrlText(asset: NotificationDispatchPayload["asset"]) {
+  const urls = [
+    asset.providerUrl ? `服务商地址：${asset.providerUrl}` : "",
+    asset.hostUrl ? `托管地址：${asset.hostUrl}` : "",
+  ].filter(Boolean);
+  return urls.length ? urls.join("\n") : "服务商地址：未填";
+}
+
+function renewalMessage(asset: NotificationDispatchPayload["asset"]) {
+  const days = Number(asset.daysUntil);
+  const daysText = Number.isFinite(days) ? `${days}天后` : "永久";
+  const typeText = assetTypeName[asset.type ?? ""] ?? blankFallback(asset.type, "自定义");
+  const cycleText = cycleName[asset.cycle] ?? blankFallback(asset.cycle, "自定");
+  const accountText = asset.account || asset.accountType
+    ? `账号/标识：${[asset.accountType, asset.account].filter(Boolean).join(" · ")}`
+    : "";
+  return [
+    "【异火阁 · 续期提醒】",
+    `资产名称：${blankFallback(asset.name)}`,
+    `资产类型：${typeText}`,
+    `价格：${priceText(asset.price, asset.currency)}`,
+    `续期日：${blankFallback(asset.renewalDate)}（${daysText}）`,
+    `周期：${cycleText}`,
+    `服务商：${blankFallback(asset.provider)}`,
+    asset.hostProvider ? `托管服务：${asset.hostProvider}` : "",
+    accountText,
+    serviceUrlText(asset),
+    "",
+    "收诸般异火，掌万般续期。",
+    "                    ——异火阁",
+  ].filter((line) => line !== "").join("\n");
+}
+
 export async function sendNotificationDispatch(payload: NotificationDispatchPayload): Promise<NotifySendResult> {
   const { channel, asset } = payload;
-  const days = asset.daysUntil;
-  const cycleText = asset.cycle === "lifetime" ? "永久" : asset.cycle;
-  const replacement: Record<string, string> = {
-    "{{name}}": asset.name,
-    "{{days}}": String(days),
-    "{{date}}": asset.renewalDate || "-",
-    "{{cycle}}": cycleText,
-  };
-  const baseTemplate = channel.template?.trim();
-  const finalTemplate = baseTemplate || [
-    "🔥【异火阁 · 续期提醒】",
-    "火种「{{name}}」将于 {{days}} 天后（{{date}}）到达续期节点，周期：{{cycle}}。",
-    "阁令已达，异火未熄。",
-  ].join("\n");
-  const message = finalTemplate.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match, key) => replacement[`{{${key}}}`] ?? `{{${key}}}`);
-  const subject = "【异火阁】续期提醒";
-  return sendNotificationTest(channel, { message, subject });
+  return sendNotificationTest(channel, { message: renewalMessage(asset), subject: "【异火阁】续期提醒" });
 }

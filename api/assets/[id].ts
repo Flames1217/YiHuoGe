@@ -1,4 +1,4 @@
-import { hasValidAdminKey, readState, writeState } from "../_state.js";
+import { hasValidAdminKey, normalizeStoredAsset, readState, writeState } from "../_state.js";
 
 export default async function handler(req: any, res: any) {
   if (!hasValidAdminKey(req)) {
@@ -14,9 +14,9 @@ export default async function handler(req: any, res: any) {
     db.assets = db.assets.map((asset) => {
       if (asset.id !== id) return asset;
       found = true;
-      return { ...asset, ...req.body, id };
+      return normalizeStoredAsset({ ...asset, ...req.body, id });
     });
-    if (!found) db.assets.unshift({ ...req.body, id });
+    if (!found) db.assets.unshift(normalizeStoredAsset({ ...req.body, id }));
     if (req.body?.type && req.body.type !== "domain") db.domains = db.domains.filter((domain) => domain.id !== id);
     await writeState(db);
     res.status(200).json(db.assets.find((asset) => asset.id === id));

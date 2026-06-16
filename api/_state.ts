@@ -208,7 +208,9 @@ const domainDetailColumns = ["asset_id", "registrar", "domain_created_at", "expi
 const channelColumns = ["id", "name", "type", "enabled", "target", "last_test", "secret_masked", "config_json", "template"];
 
 function assetValues(asset: any) {
-  return [asset.id, asset.name, asset.type, asset.provider ?? "", asset.providerUrl ?? "", asset.hostProvider ?? "", asset.hostUrl ?? "", asset.account ?? "", asset.accountType ?? "", asset.renewalDate, Number(asset.price ?? 0), asset.currency ?? "CNY", asset.cycle ?? "custom", json(asset.cycle === "custom" ? asset.customCycle ?? null : null), asset.status ?? "healthy", asset.autoRenew === false ? 0 : 1, asset.url ?? "", json(asset.tags ?? []), asset.notes ?? ""];
+  const account = asset.account ?? asset.account_value ?? "";
+  const accountType = asset.accountType ?? asset.account_type ?? "";
+  return [asset.id, asset.name, asset.type, asset.provider ?? "", asset.providerUrl ?? "", asset.hostProvider ?? "", asset.hostUrl ?? "", account, accountType, asset.renewalDate, Number(asset.price ?? 0), asset.currency ?? "CNY", asset.cycle ?? "custom", json(asset.cycle === "custom" ? asset.customCycle ?? null : null), asset.status ?? "healthy", asset.autoRenew === false ? 0 : 1, asset.url ?? "", json(asset.tags ?? []), asset.notes ?? ""];
 }
 
 function domainDetailValues(domain: any) {
@@ -240,6 +242,16 @@ function rowToAsset(row: any) {
     url: row.url ?? undefined,
     tags: parseJson<string[]>(row.tags_json, []),
     notes: row.notes ?? undefined,
+  };
+}
+
+export function normalizeStoredAsset(asset: any) {
+  const account = String(asset.account ?? asset.account_value ?? "").trim();
+  const accountType = String(asset.accountType ?? asset.account_type ?? "").trim();
+  return {
+    ...asset,
+    account,
+    accountType: account ? accountType : "",
   };
 }
 

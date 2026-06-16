@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { nanoid } from "nanoid";
-import { readState, writeState } from "./_state.js";
+import { normalizeStoredAsset, readState, writeState } from "./_state.js";
 import { getExchangeRates } from "../server/exchangeRates.js";
 import { sendNotificationDispatch, sendNotificationTest, type NotificationDispatchPayload } from "../server/notify.js";
 import { lookupDomainRdap } from "../server/rdap.js";
@@ -149,7 +149,7 @@ app.get("/api/assets", async (_req, res) => {
 
 app.post("/api/assets", async (req, res) => {
   const db = await readDb();
-  const asset = { id: nanoid(10), status: "healthy", autoRenew: true, tags: [], ...req.body } as Asset;
+  const asset = normalizeStoredAsset({ id: nanoid(10), status: "healthy", autoRenew: true, tags: [], ...req.body }) as Asset;
   db.assets.unshift(asset);
   await writeDb(db);
   res.status(201).json(asset);
@@ -157,7 +157,7 @@ app.post("/api/assets", async (req, res) => {
 
 app.put("/api/assets/:id", async (req, res) => {
   const db = await readDb();
-  db.assets = db.assets.map((asset) => (asset.id === req.params.id ? { ...asset, ...req.body, id: asset.id } : asset));
+  db.assets = db.assets.map((asset) => (asset.id === req.params.id ? normalizeStoredAsset({ ...asset, ...req.body, id: asset.id }) : asset));
   if (req.body?.type && req.body.type !== "domain") db.domains = db.domains.filter((domain) => domain.id !== req.params.id);
   await writeDb(db);
   res.json(db.assets.find((asset) => asset.id === req.params.id));
