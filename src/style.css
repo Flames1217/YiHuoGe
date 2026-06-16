@@ -886,6 +886,23 @@ body::after {
   white-space: nowrap;
 }
 
+.budget-metric-card .ant-statistic {
+  margin-bottom: 14px;
+}
+
+.budget-yearly-line {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--theme-core) 18%, transparent);
+}
+
+.budget-yearly-line strong {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
 
 .eyebrow {
   display: inline-flex;
@@ -909,7 +926,7 @@ body::after {
   font-family: "YiHuoKai", "KaiTi", serif !important;
   font-size: clamp(58px, 5.5vw, 90px);
   font-weight: 700;
-  line-height: 0.98;
+  line-height: 1.12;
   letter-spacing: 0;
   text-shadow: 0 2px 0 rgba(255, 184, 77, 0.18), 0 0 36px rgba(245, 158, 11, 0.18), 0 18px 40px rgba(0, 0, 0, 0.44);
 }
@@ -922,13 +939,14 @@ body::after {
 }
 
 .hero-title-line + .hero-title-line {
+  margin-top: 10px;
   margin-left: clamp(26px, 4.2vw, 72px);
 }
 
 .hero-panel p,
 .hero-mantra {
   max-width: 58ch;
-  margin-top: 18px;
+  margin-top: 34px !important;
   color: #ffd79a;
   font-size: 20px;
   font-family: var(--font-display) !important;

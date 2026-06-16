@@ -60,6 +60,8 @@ import "./i18n";
 import { useYiHuoStore } from "./store";
 import type { Asset, AssetType, BackupTarget, Language, NotificationChannel, NotifyType, ViewMode, AppSettings } from "./types";
 import { daysUntil, topbarDate } from "./utils/calendar";
+import { THEME_STORAGE, applyThemeVariables, normalizeTheme, themePalettes } from "./theme";
+import type { ThemeId } from "./theme";
 
 const { Header, Sider, Content } = Layout;
 const { Title, Text, Paragraph } = Typography;
@@ -154,6 +156,8 @@ async function hydrateFromServer(key: string) {
     });
     if (!response.ok) return;
     const data = await response.json();
+    const nextTheme = data.settings?.theme ? normalizeTheme(data.settings.theme) : undefined;
+    if (nextTheme) window.localStorage.setItem(THEME_STORAGE, nextTheme);
     useYiHuoStore.setState((state) => ({
       assets: Array.isArray(data.assets) ? data.assets : state.assets,
       domains: Array.isArray(data.domains) ? data.domains : state.domains,
@@ -715,121 +719,10 @@ const backupTypeName: Record<BackupTarget["type"], string> = {
   S3: "对象存储",
 };
 
-type ThemeId = AppSettings["theme"];
-
-type ThemePalette = {
-  label: string;
-  colors: {
-    core: string;
-    edge: string;
-    base: string;
-    light: string;
-  };
-};
-
-const themePalettes: Record<ThemeId, ThemePalette> = {
-  "dark-fire": {
-    label: "九玄金雷",
-    colors: {
-      core: "#FFD700",
-      edge: "#FFF5A0",
-      base: "#1A1000",
-      light: "#FFFDE0",
-    },
-  },
-  "qing-lian": {
-    label: "青莲地心火",
-    colors: {
-      core: "#00B8A0",
-      edge: "#B0F0E8",
-      base: "#001A18",
-      light: "#E8FFFB",
-    },
-  },
-  "fallen-heart": {
-    label: "陨落心炎",
-    colors: {
-      core: "#D44000",
-      edge: "#FFAA44",
-      base: "#100400",
-      light: "#FFF2E6",
-    },
-  },
-  "bone-cold": {
-    label: "骨灵冷火",
-    colors: {
-      core: "#7ABEDD",
-      edge: "#E8F6FF",
-      base: "#0A2E44",
-      light: "#F4FBFF",
-    },
-  },
-  "sanqian-flame": {
-    label: "三千焱炎火",
-    colors: {
-      core: "#9B30FF",
-      edge: "#D4A0FF",
-      base: "#0C0020",
-      light: "#F7EFFF",
-    },
-  },
-  "sea-heart": {
-    label: "海心焰",
-    colors: {
-      core: "#1A6ECC",
-      edge: "#88BBEE",
-      base: "#000D1A",
-      light: "#EEF7FF",
-    },
-  },
-  "pure-lotus": {
-    label: "净莲妖火",
-    colors: {
-      core: "#FF4488",
-      edge: "#FFD0E8",
-      base: "#1A0010",
-      light: "#FFF0F7",
-    },
-  },
-};
-
 const themeOptions: { value: ThemeId; label: string }[] = Object.entries(themePalettes).map(([value, palette]) => ({
   value: value as ThemeId,
   label: palette.label,
 }));
-
-const legacyThemeMap: Record<string, ThemeId> = {
-  "abyss-purple": "sanqian-flame",
-  "ink-gold": "dark-fire",
-};
-
-function normalizeTheme(theme?: string): ThemeId {
-  if (theme && theme in themePalettes) return theme as ThemeId;
-  return legacyThemeMap[theme ?? ""] ?? "dark-fire";
-}
-
-function applyThemeVariables(palette: ThemePalette) {
-  const root = document.documentElement;
-  const { core, edge, base, light } = palette.colors;
-  const variables: Record<string, string> = {
-    "--theme-core": core,
-    "--theme-edge": edge,
-    "--theme-base": base,
-    "--theme-light": light,
-    "--ink": base,
-    "--abyss": base,
-    "--rock": base,
-    "--gold": core,
-    "--gold-2": edge,
-    "--orange": light,
-    "--red": base,
-    "--teal": edge,
-    "--purple": core,
-    "--text": light,
-    "--muted": `color-mix(in srgb, ${light} 62%, transparent)`,
-  };
-  Object.entries(variables).forEach(([name, value]) => root.style.setProperty(name, value));
-}
 
 const channelTypeName: Record<NotifyType, string> = {
   Email: "Email",
@@ -1067,6 +960,43 @@ function convertCurrency(amount: number, from: string, to: string, liveRates: Re
   const fromRate = rates[from] ?? 1;
   const toRate = rates[to] ?? 1;
   return (amount * fromRate) / toRate;
+}
+
+function cycleMonths(asset: Pick<Asset, "cycle" | "customCycle">) {
+  if (asset.cycle === "lifetime") return Number.POSITIVE_INFINITY;
+  if (asset.cycle === "custom") {
+    const normalized = normalizeCustomCycle(asset.customCycle);
+    if (!normalized) return 1;
+    return Math.max((normalized.years ?? 0) * 12 + (normalized.months ?? 0) + (normalized.days ?? 0) / 30, 1 / 30);
+  }
+  const monthsByCycle: Record<Exclude<Asset["cycle"], "custom" | "lifetime">, number> = {
+    daily: 1 / 30,
+    weekly: 7 / 30,
+    monthly: 1,
+    quarterly: 3,
+    semiannual: 6,
+    yearly: 12,
+    biennial: 24,
+    triennial: 36,
+    decennial: 120,
+  };
+  return monthsByCycle[asset.cycle] ?? 1;
+}
+
+function recurringBudgetCost(
+  assets: Asset[],
+  targetCurrency: string,
+  liveRates: Record<string, number>,
+  period: "monthly" | "yearly",
+) {
+  return assets
+    .filter((asset) => asset.cycle !== "lifetime" && asset.autoRenew !== false)
+    .reduce((sum, asset) => {
+      const months = cycleMonths(asset);
+      if (!Number.isFinite(months) || months <= 0) return sum;
+      const converted = convertCurrency(asset.price, asset.currency, targetCurrency, liveRates);
+      return sum + (period === "monthly" ? converted / months : converted * (12 / months));
+    }, 0);
 }
 
 function formatPreferredAmount(amount: number, from: string, preferred: string, liveRates: Record<string, number> = {}) {
@@ -1347,9 +1277,9 @@ function OverviewModule({
   const currencyRates = useYiHuoStore((state) => state.currencyRatesToCny);
   const hydrating = useYiHuoStore((state) => state.hydrating);
   const urgent = assets.filter((asset) => asset.cycle !== "lifetime" && daysUntil(asset.renewalDate, asset.cycle) <= 14);
-  const monthlyCost = assets
-    .filter((asset) => asset.cycle !== "lifetime" && asset.autoRenew !== false)
-    .reduce((sum, asset) => sum + convertCurrency(asset.price, asset.currency, settings.currency, currencyRates), 0);
+  const monthlyCost = recurringBudgetCost(assets, settings.currency, currencyRates, "monthly");
+  const yearlyCost = recurringBudgetCost(assets, settings.currency, currencyRates, "yearly");
+  const currencySymbol = currencySymbols[settings.currency] ?? settings.currency;
   const heroTitleLines = settings.language === "en"
     ? ["Gather rare flames", "command every renewal"]
     : ["收诸般异火", "掌万般续期"];
@@ -1380,7 +1310,15 @@ function OverviewModule({
       <Row gutter={[24, 24]}>
         <Col xs={24} md={12} xl={6}><Card className="metric-card">{hydrating ? <SummonLoading title={t("metricAssets")} /> : <Statistic title={t("metricAssets")} value={assets.length} prefix={<AppstoreOutlined />} />}</Card></Col>
         <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricUrgent")} value={urgent.length} prefix={<ThunderboltOutlined />} /></Card></Col>
-        <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricBudget")} value={monthlyCost} precision={2} prefix={<DatabaseOutlined />} suffix={currencySymbols[settings.currency] ?? settings.currency} /></Card></Col>
+        <Col xs={24} md={12} xl={6}>
+          <Card className="metric-card budget-metric-card">
+            <Statistic title={t("metricBudget")} value={monthlyCost} precision={2} prefix={<DatabaseOutlined />} suffix={currencySymbol} />
+            <div className="budget-yearly-line">
+              <Text className="muted">年付预算支出</Text>
+              <Text strong>{yearlyCost.toFixed(2)} {currencySymbol}</Text>
+            </div>
+          </Card>
+        </Col>
         <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricChannels")} value={channels.filter((item) => item.enabled).length} suffix={`/ ${channels.length}`} prefix={<BellOutlined />} /></Card></Col>
       </Row>
     </div>
@@ -2818,6 +2756,7 @@ export default function App() {
       return;
     }
     applyThemeVariables(themePalettes[activeTheme]);
+    window.localStorage.setItem(THEME_STORAGE, activeTheme);
     document.body.dataset.theme = activeTheme;
     return () => {
       delete document.body.dataset.theme;
