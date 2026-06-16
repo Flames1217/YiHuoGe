@@ -1316,10 +1316,13 @@ function OverviewModule({
         <Col xs={24} md={12} xl={6}>
           <Card className="metric-card budget-metric-card">
             <div className="budget-duo">
-              <Statistic title={t("metricBudget")} value={monthlyCost} precision={2} prefix={<DatabaseOutlined />} suffix={currencySymbol} />
-              <div className="budget-yearly-line">
-                <Text className="muted">年付预算支出</Text>
-                <Text strong>{yearlyCost.toFixed(2)} {currencySymbol}</Text>
+              <div className="budget-line">
+                <Text className="budget-label">{t("metricBudget")}</Text>
+                <div className="budget-value"><DatabaseOutlined /> {monthlyCost.toFixed(2)}{currencySymbol}</div>
+              </div>
+              <div className="budget-line budget-yearly-line">
+                <Text className="budget-label">年付预算支出</Text>
+                <div className="budget-value">{yearlyCost.toFixed(2)}{currencySymbol}</div>
               </div>
             </div>
           </Card>

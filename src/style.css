@@ -895,29 +895,42 @@ body::after {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(96px, 0.9fr);
   gap: 16px;
-  align-items: end;
+  align-items: center;
   width: 100%;
 }
 
-.budget-duo .ant-statistic-content {
+.budget-line {
+  min-width: 0;
+}
+
+.budget-label {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--gold-2) !important;
+  font-weight: 800;
+}
+
+.budget-value {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--font-number);
+  font-size: 26px;
+  line-height: 1;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .budget-yearly-line {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
   min-width: 0;
   padding-left: 16px;
   border-left: 1px solid color-mix(in srgb, var(--theme-core) 18%, transparent);
 }
 
-.budget-yearly-line strong {
-  overflow: hidden;
-  font-size: 16px;
-  font-variant-numeric: tabular-nums;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.budget-yearly-line .budget-value {
+  font-size: 18px;
 }
 
 
@@ -1364,6 +1377,17 @@ body::after {
 .asset-card > .ant-card-body,
 .metric-card > .ant-card-body {
   padding: 34px !important;
+}
+
+.metric-card > .ant-card-body {
+  min-height: 132px;
+  display: flex;
+  align-items: center;
+}
+
+.metric-card .ant-statistic,
+.metric-card .summon-loading {
+  width: 100%;
 }
 
 .ai-config-stack {
@@ -2589,7 +2613,7 @@ body .ant-select-dropdown .ant-select-item-option.ant-select-item-option-selecte
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 48px;
+  min-height: 64px;
 }
 
 .summon-sigil {
