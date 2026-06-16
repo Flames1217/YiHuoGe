@@ -17,7 +17,7 @@
 - **通知渠道**：Email、Telegram、Discord、Slack、Webhook、钉钉、企业微信、飞书、Bark、ServerChan、PushPlus、ntfy、Gotify、Pushover、Teams、Google Chat、Matrix、Mattermost、Rocket.Chat、Signal、LINE、AWS SNS、Twilio、自定义等。
 - **AI 炼化**：把 CSV、JSON、表格文本或资产清单炼化成资产数据；内置提示词会按项目字段解析类型、服务商、托管商、续期日、价格等。
 - **模型管理**：支持 OpenAI Compatible 接口，手动添加模型、获取 `/models` 列表、测试默认模型。
-- **主题界面**：内置六套异火主题：九玄金雷、陨落心炎、骨灵冷火、三千焱炎火、海心焰、净莲妖火；可在顶栏一键切换，也可在设置中精确选择。
+- **主题界面**：内置七套异火主题：九玄金雷、青莲地心火、陨落心炎、骨灵冷火、三千焱炎火、海心焰、净莲妖火；可在顶栏展开主题菜单选择，也可在设置中精确选择。
 - **数据库存储**：结构化表存储，支持 MySQL/TiDB/MariaDB、PostgreSQL、SQLite、Cloudflare D1。
 
 ## 🚀 快速开始

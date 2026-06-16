@@ -25,6 +25,7 @@ import {
   Col,
   ConfigProvider,
   Divider,
+  Dropdown,
   Drawer,
   Flex,
   Form,
@@ -734,6 +735,15 @@ const themePalettes: Record<ThemeId, ThemePalette> = {
       edge: "#FFF5A0",
       base: "#1A1000",
       light: "#FFFDE0",
+    },
+  },
+  "qing-lian": {
+    label: "青莲地心火",
+    colors: {
+      core: "#00B8A0",
+      edge: "#B0F0E8",
+      base: "#001A18",
+      light: "#E8FFFB",
     },
   },
   "fallen-heart": {
@@ -2815,12 +2825,6 @@ export default function App() {
     ai: <AiModule onForgeDone={() => setActive("assets")} />,
     settings: <SettingsModule />,
   }[active];
-  const cycleTheme = () => {
-    const currentIndex = themeOptions.findIndex((option) => option.value === activeTheme);
-    const nextTheme = themeOptions[(currentIndex + 1) % themeOptions.length]?.value ?? "dark-fire";
-    updateSettings({ theme: nextTheme });
-  };
-
   const palette = themePalettes[activeTheme] ?? themePalettes["dark-fire"];
   const paletteColors = palette.colors;
 
@@ -2885,7 +2889,17 @@ export default function App() {
                 <button className={settings.language === "zh" ? "active" : ""} onClick={() => setLanguage("zh")}>中文</button>
                 <button className={settings.language === "en" ? "active" : ""} onClick={() => setLanguage("en")}>英</button>
               </div>
-              <Button className="theme-cycle-button" title={`当前主题：${activeThemeLabel}`} onClick={cycleTheme}>切换主题</Button>
+              <Dropdown
+                trigger={["click"]}
+                menu={{
+                  selectable: true,
+                  selectedKeys: [activeTheme],
+                  onClick: ({ key }) => updateSettings({ theme: key as ThemeId }),
+                  items: themeOptions.map((option) => ({ key: option.value, label: option.label })),
+                }}
+              >
+                <Button className="theme-cycle-button" title={`当前主题：${activeThemeLabel}`}>切换主题</Button>
+              </Dropdown>
             </Space>
           </Header>
           <Content className="content-canvas">{module}</Content>

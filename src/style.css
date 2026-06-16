@@ -2744,7 +2744,6 @@ body .ant-tooltip.yhg-sorter-tooltip .ant-tooltip-inner {
 .ant-form,
 .ant-table,
 .ant-menu,
-.ant-tag,
 .ant-select,
 .ant-input,
 .ant-btn,
@@ -2780,11 +2779,40 @@ body .ant-tooltip.yhg-sorter-tooltip .ant-tooltip-inner {
 
 .brand-logo,
 .summon-sigil,
-.flame-orb,
 .user-avatar {
   background:
     radial-gradient(circle, var(--theme-light) 0 12%, var(--theme-edge) 26%, var(--theme-core) 62%, var(--theme-base) 100%) !important;
   box-shadow: 0 0 32px color-mix(in srgb, var(--theme-core) 38%, transparent) !important;
+}
+
+.flame-orb {
+  background: transparent !important;
+  border-radius: 50% !important;
+  box-shadow: none !important;
+}
+
+.ant-tag,
+.ant-table-wrapper .ant-tag,
+.model-list .ant-tag,
+.template-vars .ant-tag {
+  color: var(--theme-light) !important;
+  background: color-mix(in srgb, var(--theme-base) 78%, var(--theme-core)) !important;
+  border-color: color-mix(in srgb, var(--theme-core) 42%, transparent) !important;
+}
+
+.ant-tag .ant-tag-close-icon,
+.ant-tag .anticon {
+  color: var(--theme-edge) !important;
+}
+
+.ant-switch.ant-switch-checked,
+.ant-switch.ant-switch-checked:hover {
+  background: var(--theme-core) !important;
+}
+
+.ant-switch:not(.ant-switch-checked),
+.ant-switch:not(.ant-switch-checked):hover {
+  background: color-mix(in srgb, var(--theme-base) 78%, var(--theme-light)) !important;
 }
 
 
