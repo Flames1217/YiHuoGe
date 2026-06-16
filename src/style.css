@@ -1,14 +1,18 @@
 :root {
   color-scheme: dark;
-  --ink: #0b0b0f;
-  --abyss: #121217;
-  --rock: #181a20;
+  --ink: #1A1000;
+  --theme-core: #FFD700;
+  --theme-edge: #FFF5A0;
+  --theme-base: #1A1000;
+  --theme-light: #FFFDE0;
+  --abyss: #1A1000;
+  --rock: #1A1000;
   --gold: #FFD700;
   --gold-2: #FFF5A0;
   --orange: #FFFDE0;
-  --red: #b91c1c;
-  --teal: #2dd4bf;
-  --purple: #8b5cf6;
+  --red: #1A1000;
+  --teal: #FFF5A0;
+  --purple: #FFD700;
   --text: #FFFDE0;
   --muted: rgba(255, 253, 224, 0.62);
   --font-ui: "YiHuoNotoSans", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", "PingFang SC", system-ui, sans-serif;
@@ -50,10 +54,10 @@ body,
   min-height: 100%;
   margin: 0;
   background:
-    radial-gradient(ellipse at 22% -10%, rgba(255, 215, 0, 0.2), transparent 38rem),
-    radial-gradient(ellipse at 78% 8%, rgba(255, 245, 160, 0.16), transparent 34rem),
-    radial-gradient(ellipse at 52% 105%, rgba(255, 253, 224, 0.12), transparent 42rem),
-    linear-gradient(135deg, #060400 0%, #1A1000 45%, #090500 100%);
+    radial-gradient(ellipse at 22% -10%, color-mix(in srgb, var(--theme-core, #FFD700) 20%, transparent), transparent 38rem),
+    radial-gradient(ellipse at 78% 8%, color-mix(in srgb, var(--theme-edge, #FFF5A0) 16%, transparent), transparent 34rem),
+    radial-gradient(ellipse at 52% 105%, color-mix(in srgb, var(--theme-light, #FFFDE0) 12%, transparent), transparent 42rem),
+    linear-gradient(135deg, var(--theme-base, #1A1000) 0%, color-mix(in srgb, var(--theme-base, #1A1000) 82%, var(--theme-core, #FFD700)) 45%, var(--theme-base, #1A1000) 100%);
 }
 
 body {
@@ -62,89 +66,14 @@ body {
   overflow-x: hidden;
 }
 
-body[data-theme="fallen-heart"] {
-  --gold: #d44000;
-  --gold-2: #ffaa44;
-  --orange: #8c2000;
-  --red: #2a0a00;
-  --teal: #ffaa44;
-  --purple: #d44000;
-  --text: #fff2e6;
-  --muted: rgba(255, 242, 230, 0.66);
-  background:
-    radial-gradient(ellipse at 22% -10%, rgba(255, 170, 68, 0.22), transparent 38rem),
-    radial-gradient(ellipse at 78% 8%, rgba(212, 64, 0, 0.22), transparent 34rem),
-    linear-gradient(135deg, #100400 0%, #2a0a00 48%, #080100 100%);
-}
-
-body[data-theme="bone-cold"] {
-  --gold: #7abedd;
-  --gold-2: #e8f6ff;
-  --orange: #b8d8ec;
-  --red: #1a4a66;
-  --teal: #ffffff;
-  --purple: #7abedd;
-  --text: #f4fbff;
-  --muted: rgba(244, 251, 255, 0.68);
-  background:
-    radial-gradient(ellipse at 22% -10%, rgba(255, 255, 255, 0.2), transparent 38rem),
-    radial-gradient(ellipse at 78% 8%, rgba(122, 190, 221, 0.22), transparent 34rem),
-    linear-gradient(135deg, #071c28 0%, #0a2e44 46%, #031019 100%);
-}
-
-body[data-theme="sanqian-flame"] {
-  --gold: #9b30ff;
-  --gold-2: #d4a0ff;
-  --orange: #5500cc;
-  --red: #0c0020;
-  --teal: #d4a0ff;
-  --purple: #9b30ff;
-  --text: #f7efff;
-  --muted: rgba(247, 239, 255, 0.66);
-  background:
-    radial-gradient(ellipse at 22% -10%, rgba(212, 160, 255, 0.22), transparent 38rem),
-    radial-gradient(ellipse at 78% 8%, rgba(85, 0, 204, 0.28), transparent 34rem),
-    linear-gradient(135deg, #0c0020 0%, #1b073a 46%, #05000e 100%);
-}
-
-body[data-theme="sea-heart"] {
-  --gold: #1a6ecc;
-  --gold-2: #88bbee;
-  --orange: #003a80;
-  --red: #000d1a;
-  --teal: #88bbee;
-  --purple: #1a6ecc;
-  --text: #eef7ff;
-  --muted: rgba(238, 247, 255, 0.66);
-  background:
-    radial-gradient(ellipse at 22% -10%, rgba(136, 187, 238, 0.18), transparent 38rem),
-    radial-gradient(ellipse at 78% 8%, rgba(26, 110, 204, 0.24), transparent 34rem),
-    linear-gradient(135deg, #000d1a 0%, #062247 46%, #00060d 100%);
-}
-
-body[data-theme="pure-lotus"] {
-  --gold: #ff4488;
-  --gold-2: #ffd0e8;
-  --orange: #cc1155;
-  --red: #660033;
-  --teal: #ffd0e8;
-  --purple: #ff4488;
-  --text: #fff0f7;
-  --muted: rgba(255, 240, 247, 0.66);
-  background:
-    radial-gradient(ellipse at 22% -10%, rgba(255, 208, 232, 0.2), transparent 38rem),
-    radial-gradient(ellipse at 78% 8%, rgba(255, 68, 136, 0.24), transparent 34rem),
-    linear-gradient(135deg, #1a0010 0%, #3a061f 46%, #0b0007 100%);
-}
-
 body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
   content: "";
   background-image:
-    linear-gradient(rgba(255, 215, 0, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 245, 160, 0.03) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--theme-core) 3.5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-edge) 3%, transparent) 1px, transparent 1px);
   background-size: 42px 42px;
   mask-image: linear-gradient(to bottom, black, transparent 85%);
 }
@@ -157,9 +86,9 @@ body::after {
   content: "";
   opacity: 0.34;
   background:
-    radial-gradient(circle at 10% 20%, rgba(255, 215, 0, 0.18) 0 1px, transparent 2px),
-    radial-gradient(circle at 76% 35%, rgba(255, 245, 160, 0.14) 0 1px, transparent 2px),
-    radial-gradient(circle at 45% 78%, rgba(255, 253, 224, 0.12) 0 1px, transparent 2px);
+    radial-gradient(circle at 10% 20%, color-mix(in srgb, var(--theme-core) 18%, transparent) 0 1px, transparent 2px),
+    radial-gradient(circle at 76% 35%, color-mix(in srgb, var(--theme-edge) 14%, transparent) 0 1px, transparent 2px),
+    radial-gradient(circle at 45% 78%, color-mix(in srgb, var(--theme-light) 12%, transparent) 0 1px, transparent 2px);
   background-size: 120px 90px, 150px 120px, 180px 130px;
   animation: emberDrift 18s linear infinite;
 }
@@ -172,71 +101,6 @@ body::after {
 
 .app-shell {
   min-height: 100dvh;
-}
-
-.theme-fallen-heart {
-  --gold: #d44000;
-  --gold-2: #ffaa44;
-  --orange: #8c2000;
-  --purple: #d44000;
-  --text: #fff2e6;
-  --muted: rgba(255, 242, 230, 0.66);
-  background:
-    radial-gradient(ellipse at 22% -10%, rgba(255, 170, 68, 0.22), transparent 38rem),
-    radial-gradient(ellipse at 78% 8%, rgba(212, 64, 0, 0.22), transparent 34rem),
-    linear-gradient(135deg, #100400 0%, #2a0a00 48%, #080100 100%) !important;
-}
-
-.theme-bone-cold {
-  --gold: #7abedd;
-  --gold-2: #e8f6ff;
-  --orange: #b8d8ec;
-  --purple: #7abedd;
-  --text: #f4fbff;
-  --muted: rgba(244, 251, 255, 0.68);
-  background:
-    radial-gradient(ellipse at 22% -10%, rgba(255, 255, 255, 0.2), transparent 38rem),
-    radial-gradient(ellipse at 78% 8%, rgba(122, 190, 221, 0.22), transparent 34rem),
-    linear-gradient(135deg, #071c28 0%, #0a2e44 46%, #031019 100%) !important;
-}
-
-.theme-sanqian-flame {
-  --gold: #9b30ff;
-  --gold-2: #d4a0ff;
-  --orange: #5500cc;
-  --purple: #9b30ff;
-  --text: #f7efff;
-  --muted: rgba(247, 239, 255, 0.66);
-  background:
-    radial-gradient(ellipse at 22% -10%, rgba(212, 160, 255, 0.22), transparent 38rem),
-    radial-gradient(ellipse at 78% 8%, rgba(85, 0, 204, 0.28), transparent 34rem),
-    linear-gradient(135deg, #0c0020 0%, #1b073a 46%, #05000e 100%) !important;
-}
-
-.theme-sea-heart {
-  --gold: #1a6ecc;
-  --gold-2: #88bbee;
-  --orange: #003a80;
-  --purple: #1a6ecc;
-  --text: #eef7ff;
-  --muted: rgba(238, 247, 255, 0.66);
-  background:
-    radial-gradient(ellipse at 22% -10%, rgba(136, 187, 238, 0.18), transparent 38rem),
-    radial-gradient(ellipse at 78% 8%, rgba(26, 110, 204, 0.24), transparent 34rem),
-    linear-gradient(135deg, #000d1a 0%, #062247 46%, #00060d 100%) !important;
-}
-
-.theme-pure-lotus {
-  --gold: #ff4488;
-  --gold-2: #ffd0e8;
-  --orange: #cc1155;
-  --purple: #ff4488;
-  --text: #fff0f7;
-  --muted: rgba(255, 240, 247, 0.66);
-  background:
-    radial-gradient(ellipse at 22% -10%, rgba(255, 208, 232, 0.2), transparent 38rem),
-    radial-gradient(ellipse at 78% 8%, rgba(255, 68, 136, 0.24), transparent 34rem),
-    linear-gradient(135deg, #1a0010 0%, #3a061f 46%, #0b0007 100%) !important;
 }
 
 .side-nav {
@@ -401,9 +265,11 @@ body::after {
 }
 
 .theme-cycle-button {
-  width: 38px !important;
+  min-width: 82px !important;
   height: 38px !important;
+  padding: 0 14px !important;
   color: #160d04 !important;
+  font-weight: 900 !important;
   background: linear-gradient(135deg, var(--gold), var(--gold-2)) !important;
   border-color: color-mix(in srgb, var(--gold-2) 58%, transparent) !important;
   border-radius: 12px !important;
@@ -2813,6 +2679,112 @@ body .ant-tooltip.yhg-sorter-tooltip.ant-tooltip-placement-top .ant-tooltip-arro
 body .ant-tooltip.yhg-sorter-tooltip.ant-tooltip-placement-bottom .ant-tooltip-arrow::before,
 body .ant-tooltip.yhg-sorter-tooltip.ant-tooltip-placement-bottom .ant-tooltip-arrow::after {
   background: var(--gold) !important;
+}
+
+/* Theme template guard: visible app chrome should be painted from the active
+   palette's four source colors only: base, core, edge and light. */
+body,
+.app-shell,
+.side-nav,
+.topbar,
+.content-canvas,
+.hero-panel,
+.access-page,
+.access-card,
+.access-panel,
+.yhg-card,
+.metric-card,
+.backup-row,
+.asset-table .ant-table,
+.asset-table .ant-table-container,
+.asset-table .ant-table-content,
+.ant-modal-content,
+.ant-drawer-content,
+.ant-select-dropdown,
+.ant-dropdown-menu {
+  color: var(--theme-light) !important;
+  background-color: var(--theme-base) !important;
+  border-color: color-mix(in srgb, var(--theme-core) 32%, transparent) !important;
+}
+
+.side-nav,
+.hero-panel,
+.access-card,
+.access-panel,
+.yhg-card,
+.metric-card,
+.backup-row,
+.ant-modal-content,
+.ant-drawer-content,
+.ant-select-dropdown,
+.ant-dropdown-menu {
+  background-image:
+    radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--theme-core) 18%, transparent), transparent 38%),
+    radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--theme-edge) 14%, transparent), transparent 34%),
+    linear-gradient(145deg, var(--theme-base), color-mix(in srgb, var(--theme-base) 82%, var(--theme-core))) !important;
+  box-shadow:
+    0 24px 72px color-mix(in srgb, var(--theme-base) 78%, transparent),
+    0 0 34px color-mix(in srgb, var(--theme-core) 16%, transparent) !important;
+}
+
+.ant-btn-primary,
+.language-switch button.active,
+.theme-cycle-button,
+.ant-pagination .ant-pagination-item-active,
+body .ant-select-dropdown .ant-select-item-option-selected,
+body .ant-dropdown-menu .ant-dropdown-menu-item-selected,
+body .yhg-sorter-tooltip .ant-tooltip-inner,
+body .ant-tooltip.yhg-sorter-tooltip .ant-tooltip-inner {
+  color: var(--theme-base) !important;
+  background: linear-gradient(135deg, var(--theme-core), var(--theme-edge)) !important;
+  border-color: var(--theme-edge) !important;
+}
+
+.ant-typography,
+.ant-form,
+.ant-table,
+.ant-menu,
+.ant-tag,
+.ant-select,
+.ant-input,
+.ant-btn,
+.brand-mark strong,
+.hero-panel h1,
+.hero-mantra,
+.summon-text {
+  color: var(--theme-light) !important;
+}
+
+.muted,
+.brand-mark span,
+.asset-subline,
+.access-hint,
+.ant-select-selection-placeholder {
+  color: color-mix(in srgb, var(--theme-light) 62%, transparent) !important;
+}
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-select-selector,
+.ant-picker,
+.ant-table-thead > tr > th,
+.ant-table-tbody > tr > td,
+.ant-menu-item,
+.date-tag,
+.top-action,
+.language-switch {
+  color: var(--theme-light) !important;
+  background: color-mix(in srgb, var(--theme-base) 88%, var(--theme-core)) !important;
+  border-color: color-mix(in srgb, var(--theme-core) 30%, transparent) !important;
+}
+
+.brand-logo,
+.summon-sigil,
+.flame-orb,
+.user-avatar {
+  background:
+    radial-gradient(circle, var(--theme-light) 0 12%, var(--theme-edge) 26%, var(--theme-core) 62%, var(--theme-base) 100%) !important;
+  box-shadow: 0 0 32px color-mix(in srgb, var(--theme-core) 38%, transparent) !important;
 }
 
 

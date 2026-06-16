@@ -34,7 +34,6 @@ import {
   Menu,
   Modal,
   Popconfirm,
-  Progress,
   Radio,
   Row,
   Select,
@@ -717,59 +716,77 @@ const backupTypeName: Record<BackupTarget["type"], string> = {
 
 type ThemeId = AppSettings["theme"];
 
-const themePalettes: Record<ThemeId, { primary: string; primary2: string; accent: string; bg: string; text: string }> = {
+type ThemePalette = {
+  label: string;
+  colors: {
+    core: string;
+    edge: string;
+    base: string;
+    light: string;
+  };
+};
+
+const themePalettes: Record<ThemeId, ThemePalette> = {
   "dark-fire": {
-    primary: "#FFD700",
-    primary2: "#FFF5A0",
-    accent: "#FFFDE0",
-    bg: "#1A1000",
-    text: "#FFFDE0",
+    label: "九玄金雷",
+    colors: {
+      core: "#FFD700",
+      edge: "#FFF5A0",
+      base: "#1A1000",
+      light: "#FFFDE0",
+    },
   },
   "fallen-heart": {
-    primary: "#d44000",
-    primary2: "#ffaa44",
-    accent: "#8c2000",
-    bg: "#100400",
-    text: "#fff2e6",
+    label: "陨落心炎",
+    colors: {
+      core: "#D44000",
+      edge: "#FFAA44",
+      base: "#100400",
+      light: "#FFF2E6",
+    },
   },
   "bone-cold": {
-    primary: "#7abedd",
-    primary2: "#e8f6ff",
-    accent: "#ffffff",
-    bg: "#0a2e44",
-    text: "#f4fbff",
+    label: "骨灵冷火",
+    colors: {
+      core: "#7ABEDD",
+      edge: "#E8F6FF",
+      base: "#0A2E44",
+      light: "#F4FBFF",
+    },
   },
   "sanqian-flame": {
-    primary: "#9b30ff",
-    primary2: "#d4a0ff",
-    accent: "#5500cc",
-    bg: "#0c0020",
-    text: "#f7efff",
+    label: "三千焱炎火",
+    colors: {
+      core: "#9B30FF",
+      edge: "#D4A0FF",
+      base: "#0C0020",
+      light: "#F7EFFF",
+    },
   },
   "sea-heart": {
-    primary: "#1a6ecc",
-    primary2: "#88bbee",
-    accent: "#003a80",
-    bg: "#000d1a",
-    text: "#eef7ff",
+    label: "海心焰",
+    colors: {
+      core: "#1A6ECC",
+      edge: "#88BBEE",
+      base: "#000D1A",
+      light: "#EEF7FF",
+    },
   },
   "pure-lotus": {
-    primary: "#ff4488",
-    primary2: "#ffd0e8",
-    accent: "#cc1155",
-    bg: "#1a0010",
-    text: "#fff0f7",
+    label: "净莲妖火",
+    colors: {
+      core: "#FF4488",
+      edge: "#FFD0E8",
+      base: "#1A0010",
+      light: "#FFF0F7",
+    },
   },
 };
 
-const themeOptions: { value: ThemeId; label: string }[] = [
-  { value: "dark-fire", label: "九玄金雷" },
-  { value: "fallen-heart", label: "陨落心炎" },
-  { value: "bone-cold", label: "骨灵冷火" },
-  { value: "sanqian-flame", label: "三千焱炎火" },
-  { value: "sea-heart", label: "海心焰" },
-  { value: "pure-lotus", label: "净莲妖火" },
-];
+const themeOptions: { value: ThemeId; label: string }[] = Object.entries(themePalettes).map(([value, palette]) => ({
+  value: value as ThemeId,
+  label: palette.label,
+}));
 
 const legacyThemeMap: Record<string, ThemeId> = {
   "abyss-purple": "sanqian-flame",
@@ -779,6 +796,29 @@ const legacyThemeMap: Record<string, ThemeId> = {
 function normalizeTheme(theme?: string): ThemeId {
   if (theme && theme in themePalettes) return theme as ThemeId;
   return legacyThemeMap[theme ?? ""] ?? "dark-fire";
+}
+
+function applyThemeVariables(palette: ThemePalette) {
+  const root = document.documentElement;
+  const { core, edge, base, light } = palette.colors;
+  const variables: Record<string, string> = {
+    "--theme-core": core,
+    "--theme-edge": edge,
+    "--theme-base": base,
+    "--theme-light": light,
+    "--ink": base,
+    "--abyss": base,
+    "--rock": base,
+    "--gold": core,
+    "--gold-2": edge,
+    "--orange": light,
+    "--red": base,
+    "--teal": edge,
+    "--purple": core,
+    "--text": light,
+    "--muted": `color-mix(in srgb, ${light} 62%, transparent)`,
+  };
+  Object.entries(variables).forEach(([name, value]) => root.style.setProperty(name, value));
 }
 
 const channelTypeName: Record<NotifyType, string> = {
@@ -949,32 +989,6 @@ function defaultNotifyTemplate(_type: NotifyType) {
 }
 
 const assetTypes: AssetType[] = ["domain", "vps", "hosting", "ai", "membership", "custom"];
-
-const heavenlyFlames = [
-  "帝炎",
-  "虚无吞炎",
-  "净莲妖火",
-  "金帝焚天炎",
-  "生灵之焱",
-  "八荒破灭焱",
-  "九幽金祖火",
-  "红莲业火",
-  "三千焱炎火",
-  "九幽风炎",
-  "骨灵冷火",
-  "九龙雷罡火",
-  "龟灵地火",
-  "陨落心炎",
-  "海心焰",
-  "火云水炎",
-  "火山石焰",
-  "风雷怒焱",
-  "青莲地心火",
-  "幽冥毒火",
-  "阴阳双炎",
-  "万兽灵火",
-  "玄黄炎",
-];
 
 const accountTypePresets: { value: string; placeholder: string }[] = [
   { value: "邮箱", placeholder: "you@example.com" },
@@ -1326,8 +1340,6 @@ function OverviewModule({
   const monthlyCost = assets
     .filter((asset) => asset.autoRenew !== false)
     .reduce((sum, asset) => sum + convertCurrency(asset.price, asset.currency, settings.currency, currencyRates), 0);
-  const healthPercent = Math.round((assets.filter((asset) => asset.status === "healthy").length / Math.max(assets.length, 1)) * 100);
-
   return (
     <div className="module-stack">
       <section className="hero-panel">
@@ -1341,7 +1353,7 @@ function OverviewModule({
             <Button title="进入 AI 炼化炉，将文本与表格炼成资产火种" icon={<ImportOutlined />} onClick={() => setActive("ai")}>{t("aiImport")}</Button>
           </Space>
         </div>
-        <div className="hero-visual" aria-label="异火榜续期告警">
+        <div className="hero-visual" aria-label="续期告警">
           <div className="flame-orb">
             <span />
             <strong>{urgent.length}</strong>
@@ -1352,46 +1364,9 @@ function OverviewModule({
 
       <Row gutter={[18, 18]}>
         <Col xs={24} md={12} xl={6}><Card className="metric-card">{hydrating ? <SummonLoading title={t("metricAssets")} /> : <Statistic title={t("metricAssets")} value={assets.length} prefix={<AppstoreOutlined />} />}</Card></Col>
-        <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricUrgent")} value={urgent.length} styles={{ content: { color: "#ffb84d" } }} prefix={<ThunderboltOutlined />} /></Card></Col>
+        <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricUrgent")} value={urgent.length} prefix={<ThunderboltOutlined />} /></Card></Col>
         <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricBudget")} value={monthlyCost} precision={2} prefix={<DatabaseOutlined />} suffix={currencySymbols[settings.currency] ?? settings.currency} /></Card></Col>
         <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricChannels")} value={channels.filter((item) => item.enabled).length} suffix={`/ ${channels.length}`} prefix={<BellOutlined />} /></Card></Col>
-      </Row>
-
-      <Row gutter={[18, 18]}>
-        <Col xs={24} xl={14}>
-          <Card className="yhg-card" title="续期态势">
-            <Progress percent={healthPercent} strokeColor={{ "0%": "#b91c1c", "60%": "#f59e0b", "100%": "#2dd4bf" }} />
-            <div className="timeline-list">
-              {assets
-                .slice()
-                .sort((a, b) => {
-                  if (a.cycle === "lifetime" && b.cycle !== "lifetime") return 1;
-                  if (a.cycle !== "lifetime" && b.cycle === "lifetime") return -1;
-                  return dayjs(a.renewalDate).valueOf() - dayjs(b.renewalDate).valueOf();
-                })
-                .slice(0, 6)
-                .map((asset) => (
-                  <button className="timeline-row" key={asset.id} onClick={() => setActive("assets")}>
-                    <span>{asset.name}</span>
-                    <Tag color={asset.cycle === "lifetime" ? "green" : daysUntil(asset.renewalDate, asset.cycle) <= 14 ? "error" : "gold"}>{dayUnit(asset.renewalDate, asset.cycle, settings.language)}</Tag>
-                    <Text>{renewalText(asset, settings.language)}</Text>
-                  </button>
-                ))}
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} xl={10}>
-          <Card className="yhg-card flame-board-card" title="异火榜">
-            <div className="flame-board">
-              {heavenlyFlames.map((name, index) => (
-                <div className="flame-board-row" key={name}>
-                  <span className="flame-rank">{String(index + 1).padStart(2, "0")}</span>
-                  <span className="flame-name">{name}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </Col>
       </Row>
     </div>
   );
@@ -2034,7 +2009,7 @@ function AssetsModule({
             columns={columns}
             dataSource={sortedFiltered}
             tableLayout="fixed"
-            showSorterTooltip={{ color: "#FFD700", rootClassName: "yhg-sorter-tooltip" }}
+            showSorterTooltip={{ color: "var(--theme-core)", rootClassName: "yhg-sorter-tooltip" }}
             pagination={{
               position: ["topRight", "bottomRight"],
               current: tablePage,
@@ -2813,6 +2788,7 @@ export default function App() {
       updateSettings({ theme: activeTheme });
       return;
     }
+    applyThemeVariables(themePalettes[activeTheme]);
     document.body.dataset.theme = activeTheme;
     return () => {
       delete document.body.dataset.theme;
@@ -2846,28 +2822,29 @@ export default function App() {
   };
 
   const palette = themePalettes[activeTheme] ?? themePalettes["dark-fire"];
+  const paletteColors = palette.colors;
 
   return (
     <ConfigProvider
       locale={settings.language === "zh" ? zhCN : enUS}
       theme={{
         token: {
-          colorPrimary: palette.primary,
-          colorBgBase: palette.bg,
-          colorTextBase: palette.text,
-          colorBorder: `${palette.primary}44`,
-          colorBgSpotlight: "rgba(13, 10, 9, 0.98)",
+          colorPrimary: paletteColors.core,
+          colorBgBase: paletteColors.base,
+          colorTextBase: paletteColors.light,
+          colorBorder: `${paletteColors.core}44`,
+          colorBgSpotlight: paletteColors.base,
           borderRadius: 14,
           fontFamily: "YiHuoNotoSans, 'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'PingFang SC', system-ui, sans-serif",
         },
         components: {
-          Layout: { siderBg: "#0b0b0f", headerBg: "rgba(11,11,15,.88)", bodyBg: "#0b0b0f" },
-          Card: { colorBgContainer: "rgba(24,26,32,.82)" },
+          Layout: { siderBg: paletteColors.base, headerBg: paletteColors.base, bodyBg: paletteColors.base },
+          Card: { colorBgContainer: paletteColors.base },
           Table: {
-            colorBgContainer: "rgba(18,18,23,.72)",
-            headerBg: "rgba(14,13,17,.92)",
-            headerSortActiveBg: "rgba(14,13,17,.92)",
-            headerSortHoverBg: "rgba(24,18,13,.96)",
+            colorBgContainer: paletteColors.base,
+            headerBg: paletteColors.base,
+            headerSortActiveBg: paletteColors.base,
+            headerSortHoverBg: paletteColors.base,
             bodySortBg: "transparent",
           },
         },
@@ -2908,7 +2885,7 @@ export default function App() {
                 <button className={settings.language === "zh" ? "active" : ""} onClick={() => setLanguage("zh")}>中文</button>
                 <button className={settings.language === "en" ? "active" : ""} onClick={() => setLanguage("en")}>英</button>
               </div>
-              <Button className="theme-cycle-button" title={`切换主题：当前 ${activeThemeLabel}`} icon={<FireOutlined />} onClick={cycleTheme} aria-label="切换主题" />
+              <Button className="theme-cycle-button" title={`当前主题：${activeThemeLabel}`} onClick={cycleTheme}>切换主题</Button>
             </Space>
           </Header>
           <Content className="content-canvas">{module}</Content>
