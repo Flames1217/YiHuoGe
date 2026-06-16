@@ -2815,4 +2815,53 @@ body .ant-tooltip.yhg-sorter-tooltip .ant-tooltip-inner {
   background: color-mix(in srgb, var(--theme-base) 78%, var(--theme-light)) !important;
 }
 
+/* Dark interactive surfaces: avoid bright blocks with unreadable light text. */
+.theme-cycle-button,
+.hero-actions .ant-btn-primary,
+.module-head .ant-btn-primary,
+.asset-toolbar .ant-btn-primary,
+.ant-btn-primary,
+.ant-pagination .ant-pagination-item-active,
+body .ant-tooltip .ant-tooltip-inner,
+body .yhg-sorter-tooltip .ant-tooltip-inner,
+body .ant-tooltip.yhg-sorter-tooltip .ant-tooltip-inner {
+  color: var(--theme-light) !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-base) 88%, var(--theme-core)), var(--theme-base)) !important;
+  border-color: var(--theme-core) !important;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--theme-core) 22%, transparent) !important;
+}
+
+.theme-cycle-button:hover,
+.theme-cycle-button:focus-visible,
+.hero-actions .ant-btn-primary:hover,
+.module-head .ant-btn-primary:hover,
+.asset-toolbar .ant-btn-primary:hover,
+.ant-btn-primary:hover,
+.ant-pagination .ant-pagination-item-active:hover {
+  color: var(--theme-light) !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-base) 72%, var(--theme-core)), var(--theme-base)) !important;
+  border-color: var(--theme-edge) !important;
+}
+
+body .ant-tooltip .ant-tooltip-arrow::before,
+body .ant-tooltip .ant-tooltip-arrow::after,
+body .yhg-sorter-tooltip .ant-tooltip-arrow::before,
+body .yhg-sorter-tooltip .ant-tooltip-arrow::after {
+  background: var(--theme-base) !important;
+}
+
+.side-nav .ant-menu-item {
+  width: calc(100% - 16px) !important;
+  min-height: 42px !important;
+  margin-inline: 8px !important;
+  padding-inline: 24px !important;
+  border-radius: 10px 18px 18px 10px !important;
+}
+
+.side-nav .ant-menu-item-selected {
+  color: var(--theme-light) !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-base) 76%, var(--theme-core)), var(--theme-base)) !important;
+  border: 1px solid color-mix(in srgb, var(--theme-core) 38%, transparent) !important;
+}
+
 

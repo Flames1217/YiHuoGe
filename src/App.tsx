@@ -311,15 +311,15 @@ const aiProviderOptions = [
 ];
 
 const timezoneOptions = [
-  { value: "Asia/Shanghai", label: "Asia/Shanghai" },
-  { value: "Asia/Tokyo", label: "Asia/Tokyo" },
-  { value: "Asia/Singapore", label: "Asia/Singapore" },
-  { value: "Asia/Hong_Kong", label: "Asia/Hong_Kong" },
-  { value: "Europe/London", label: "Europe/London" },
-  { value: "Europe/Berlin", label: "Europe/Berlin" },
-  { value: "America/New_York", label: "America/New_York" },
-  { value: "America/Los_Angeles", label: "America/Los_Angeles" },
-  { value: "UTC", label: "UTC" },
+  { value: "Asia/Shanghai", label: "Asia/Shanghai (UTC+08:00)" },
+  { value: "Asia/Tokyo", label: "Asia/Tokyo (UTC+09:00)" },
+  { value: "Asia/Singapore", label: "Asia/Singapore (UTC+08:00)" },
+  { value: "Asia/Hong_Kong", label: "Asia/Hong_Kong (UTC+08:00)" },
+  { value: "Europe/London", label: "Europe/London (UTC+00:00/+01:00)" },
+  { value: "Europe/Berlin", label: "Europe/Berlin (UTC+01:00/+02:00)" },
+  { value: "America/New_York", label: "America/New_York (UTC-05:00/-04:00)" },
+  { value: "America/Los_Angeles", label: "America/Los_Angeles (UTC-08:00/-07:00)" },
+  { value: "UTC", label: "UTC (UTC+00:00)" },
 ];
 
 const currencySymbols: Record<string, string> = {
