@@ -1350,12 +1350,17 @@ function OverviewModule({
   const monthlyCost = assets
     .filter((asset) => asset.cycle !== "lifetime" && asset.autoRenew !== false)
     .reduce((sum, asset) => sum + convertCurrency(asset.price, asset.currency, settings.currency, currencyRates), 0);
+  const heroTitleLines = settings.language === "en"
+    ? ["Gather rare flames", "command every renewal"]
+    : ["收诸般异火", "掌万般续期"];
   return (
     <div className="module-stack">
       <section className="hero-panel">
         <div className="hero-copy">
           <div className="eyebrow"><FireOutlined /> 异火阁</div>
-          <Title level={1}>{t("heroTitle")}</Title>
+          <Title level={1} className="hero-title">
+            {heroTitleLines.map((line) => <span className="hero-title-line" key={line}>{line}</span>)}
+          </Title>
           <Paragraph className="hero-mantra">{t("heroMantra")}</Paragraph>
           <Text className="muted">{t("heroDesc")}</Text>
           <Space wrap className="hero-actions">

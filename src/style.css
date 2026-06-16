@@ -840,22 +840,27 @@ body::after {
 .asset-card .asset-card-price {
   flex: 0 0 auto;
   max-width: 120px;
-  padding: 5px 10px;
+  padding: 6px 11px;
   overflow: hidden;
-  color: #1a0d03;
+  color: var(--theme-edge);
   font-weight: 900;
   line-height: 18px;
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: linear-gradient(135deg, var(--gold), var(--gold-2));
-  border: 1px solid rgba(255, 215, 128, 0.62);
+  background:
+    radial-gradient(circle at 28% 18%, color-mix(in srgb, var(--theme-edge) 18%, transparent), transparent 54%),
+    linear-gradient(135deg, color-mix(in srgb, var(--theme-base) 82%, var(--theme-core)), color-mix(in srgb, var(--theme-base) 92%, var(--theme-core)));
+  border: 1px solid color-mix(in srgb, var(--theme-core) 68%, transparent);
   border-radius: 999px;
-  box-shadow: 0 8px 22px rgba(245, 158, 11, 0.18);
+  box-shadow:
+    0 8px 22px color-mix(in srgb, var(--theme-core) 18%, transparent),
+    inset 0 1px color-mix(in srgb, var(--theme-light) 12%, transparent);
 }
 
 .asset-card .asset-card-price.is-free {
   min-width: 52px;
+  color: var(--theme-edge);
   text-align: center;
 }
 
@@ -897,16 +902,27 @@ body::after {
   border-radius: 999px 999px 999px 6px;
 }
 
-.hero-panel h1 {
+.hero-panel h1,
+.hero-title {
   max-width: 13.5ch;
   color: #f4ead6;
   font-family: "YiHuoKai", "KaiTi", serif !important;
   font-size: clamp(58px, 5.5vw, 90px);
   font-weight: 700;
   line-height: 0.98;
-  letter-spacing: -0.06em;
+  letter-spacing: 0;
   text-shadow: 0 2px 0 rgba(255, 184, 77, 0.18), 0 0 36px rgba(245, 158, 11, 0.18), 0 18px 40px rgba(0, 0, 0, 0.44);
-  text-wrap: balance;
+}
+
+.hero-title-line {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.hero-title-line + .hero-title-line {
+  margin-left: clamp(26px, 4.2vw, 72px);
 }
 
 .hero-panel p,
