@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { nanoid } from "nanoid";
 import { readState, writeState } from "../api/_state.js";
 import { getExchangeRates } from "./exchangeRates.js";
-import { sendNotificationTest } from "./notify.js";
+import { sendNotificationDispatch, sendNotificationTest, type NotificationDispatchPayload } from "./notify.js";
 import { lookupDomainRdap } from "./rdap.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -250,6 +250,20 @@ app.post("/api/notifications/test", async (req, res) => {
     res.json(result);
   } catch (error) {
     res.status(400).json({ ok: false, error: error instanceof Error ? error.message : "通知试炼失败" });
+  }
+});
+
+app.post("/api/notifications/dispatch", async (req, res) => {
+  try {
+    const payload = req.body as NotificationDispatchPayload | undefined;
+    if (!payload?.channel?.type || !payload?.asset?.id) {
+      res.status(400).json({ ok: false, error: "缺少通知渠道或资产信息" });
+      return;
+    }
+    const result = await sendNotificationDispatch(payload);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error instanceof Error ? error.message : "通知发送失败" });
   }
 });
 

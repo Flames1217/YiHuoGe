@@ -1992,7 +1992,7 @@ function AssetsModule({
               setTablePage(pagination.current ?? 1);
               setTablePageSize(pagination.pageSize ?? tablePageSize);
             }}
-            rowSelection={{ selectedRowKeys: selectedIds, onChange: (keys) => setSelectedIds(keys), preserveSelectedRowKeys: true }}
+            rowSelection={{ columnWidth: 46, selectedRowKeys: selectedIds, onChange: (keys) => setSelectedIds(keys), preserveSelectedRowKeys: true }}
           />
         ) : (
           <Row gutter={[22, 22]}>
@@ -2586,9 +2586,10 @@ const NOTIFIED_TODAY_STORAGE = "yihuoge-notified-today";
 
 async function dispatchRenewalNotification(asset: Asset, channel: NotificationChannel, daysLeft: number): Promise<boolean> {
   try {
+    const key = window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "";
     const response = await fetch("/api/notifications/dispatch", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(key ? { "x-admin-key": key } : {}) },
       body: JSON.stringify({
         channel: {
           id: channel.id,
@@ -2600,10 +2601,11 @@ async function dispatchRenewalNotification(asset: Asset, channel: NotificationCh
           template: channel.template,
         },
         asset: {
+          id: asset.id,
           name: asset.name,
           renewalDate: asset.renewalDate,
           cycle: asset.cycle,
-          daysLeft,
+          daysUntil: daysLeft,
         },
       }),
     });
@@ -2614,14 +2616,21 @@ async function dispatchRenewalNotification(asset: Asset, channel: NotificationCh
   }
 }
 
+function notificationToday() {
+  return dayjs().format("YYYY-MM-DD");
+}
+
+function notificationKey(asset: Asset, daysLeft: number) {
+  return `${asset.id}:${asset.renewalDate}:${daysLeft}`;
+}
+
 function checkAndNotifyAsset(asset: Asset, channels: NotificationChannel[], settings: AppSettings) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = notificationToday();
   const notifiedJson = localStorage.getItem(NOTIFIED_TODAY_STORAGE) || "{}";
   let notified: Record<string, string> = {};
   try {
     notified = JSON.parse(notifiedJson);
   } catch {}
-  if (notified[asset.id] === today) return;
   if (asset.cycle === "lifetime") return;
 
   const defaultChannel = channels.find((c) => c.id === settings.defaultChannel && c.enabled);
@@ -2629,10 +2638,13 @@ function checkAndNotifyAsset(asset: Asset, channels: NotificationChannel[], sett
 
   const days = daysUntil(asset.renewalDate, asset.cycle);
   const reminderDays = settings.reminderDays || [];
-  if (reminderDays.includes(days)) {
+  const reminderWindow = Math.max(30, ...reminderDays);
+  const key = notificationKey(asset, days);
+  if (notified[key] === today) return;
+  if (Number.isFinite(days) && days >= 0 && days <= reminderWindow) {
     void dispatchRenewalNotification(asset, defaultChannel, days).then((ok) => {
       if (ok) {
-        notified[asset.id] = today;
+        notified[key] = today;
         localStorage.setItem(NOTIFIED_TODAY_STORAGE, JSON.stringify(notified));
       }
     });
@@ -2645,26 +2657,27 @@ function useRenewalWatcher(assets: Asset[], channels: NotificationChannel[], set
     const defaultChannel = channels.find((c) => c.id === settings.defaultChannel && c.enabled);
     if (!defaultChannel) return;
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = notificationToday();
     const notifiedJson = localStorage.getItem(NOTIFIED_TODAY_STORAGE) || "{}";
     let notified: Record<string, string> = {};
     try {
       notified = JSON.parse(notifiedJson);
     } catch {}
-    // ?????????
     Object.keys(notified).forEach((id) => {
       if (notified[id] !== today) delete notified[id];
     });
 
     const reminderDays = settings.reminderDays || [];
+    const reminderWindow = Math.max(30, ...reminderDays);
     assets.forEach((asset) => {
       if (asset.cycle === "lifetime") return;
-      if (notified[asset.id] === today) return;
       const days = daysUntil(asset.renewalDate, asset.cycle);
-      if (reminderDays.includes(days)) {
+      const key = notificationKey(asset, days);
+      if (notified[key] === today) return;
+      if (Number.isFinite(days) && days >= 0 && days <= reminderWindow) {
         void dispatchRenewalNotification(asset, defaultChannel, days).then((ok) => {
           if (ok) {
-            notified[asset.id] = today;
+            notified[key] = today;
             localStorage.setItem(NOTIFIED_TODAY_STORAGE, JSON.stringify(notified));
           }
         });

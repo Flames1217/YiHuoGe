@@ -16,10 +16,13 @@ export default async function handler(req: any, res: any) {
     return;
   }
   try {
-    const payload = req.body as NotificationDispatchPayload | undefined;
+    const payload = req.body as (NotificationDispatchPayload & { asset?: NotificationDispatchPayload["asset"] & { daysLeft?: number } }) | undefined;
     if (!payload?.channel?.type || !payload?.asset?.id) {
       res.status(400).json({ ok: false, error: "缺少通知渠道或资产信息" });
       return;
+    }
+    if (payload.asset.daysUntil === undefined && payload.asset.daysLeft !== undefined) {
+      payload.asset.daysUntil = payload.asset.daysLeft;
     }
     const result = await sendNotificationDispatch(payload);
     res.status(200).json(result);

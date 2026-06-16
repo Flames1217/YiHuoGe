@@ -2706,6 +2706,28 @@ body .asset-table .ant-table-tbody > tr.ant-table-row-selected:hover > td {
   background: rgba(245, 158, 11, 0.12) !important;
 }
 
+body .asset-table .ant-table-selection-column {
+  width: 46px !important;
+  min-width: 46px !important;
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+  text-align: center !important;
+}
+
+body .asset-table .ant-table-selection {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+body .asset-table .ant-checkbox-wrapper,
+body .asset-table .ant-checkbox {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
 body .asset-table .ant-table-tbody .ant-space,
 body .asset-table .ant-table-tbody .ant-space-item,
 body .asset-table .ant-table-tbody .ant-typography,
