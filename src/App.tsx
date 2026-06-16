@@ -2440,6 +2440,8 @@ function SettingsModule() {
   const [backupForm] = Form.useForm<BackupTarget>();
   const [backupOpen, setBackupOpen] = useState(false);
   const [editingBackupId, setEditingBackupId] = useState<string>();
+  const [testingBackupId, setTestingBackupId] = useState<string>();
+  const [runningBackupId, setRunningBackupId] = useState<string>();
   const [adminKey, setAdminKey] = useState(() => window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "");
   const [api, contextHolder] = message.useMessage();
   const backupTargets = settings.backupTargets ?? [];
@@ -2470,13 +2472,48 @@ function SettingsModule() {
 
   const openBackupEditor = (target?: BackupTarget) => {
     setEditingBackupId(target?.id);
-    backupForm.setFieldsValue(target ?? { type: "WebDAV", enabled: true, name: "", target: "", notes: "" });
+    backupForm.setFieldsValue(target ?? {
+      type: "WebDAV",
+      enabled: true,
+      name: "",
+      target: "",
+      username: "",
+      password: "",
+      endpoint: "",
+      bucket: "",
+      region: "auto",
+      accessKeyId: "",
+      secretAccessKey: "",
+      prefix: "yihuoge",
+      pathStyle: true,
+      scheduleEnabled: false,
+      scheduleIntervalHours: 24,
+      retentionCount: 7,
+      notes: "",
+    });
     setBackupOpen(true);
+  };
+
+  const normalizeBackupForm = (values: BackupTarget): BackupTarget => {
+    const retentionCount = Math.max(1, Number(values.retentionCount ?? 7));
+    const scheduleIntervalHours = Math.max(1, Number(values.scheduleIntervalHours ?? 24));
+    const nextTarget = {
+      ...values,
+      id: editingBackupId ?? values.id ?? `backup-${Date.now()}`,
+      retentionCount,
+      scheduleIntervalHours,
+    };
+    if (nextTarget.type === "S3") {
+      nextTarget.endpoint = nextTarget.endpoint?.replace(/\/+$/, "");
+      nextTarget.prefix = nextTarget.prefix?.replace(/^\/+|\/+$/g, "");
+      nextTarget.target = [nextTarget.endpoint, nextTarget.bucket, nextTarget.prefix].filter(Boolean).join(" / ");
+    }
+    return nextTarget;
   };
 
   const saveBackupTarget = async () => {
     const values = await backupForm.validateFields();
-    const nextTarget: BackupTarget = { ...values, id: editingBackupId ?? `backup-${Date.now()}` };
+    const nextTarget = normalizeBackupForm(values);
     updateSettings({
       backupTargets: editingBackupId
         ? backupTargets.map((item) => (item.id === editingBackupId ? nextTarget : item))
@@ -2484,6 +2521,54 @@ function SettingsModule() {
     });
     setBackupOpen(false);
     api.success("备份法阵已刻录");
+  };
+
+  const authHeaders = () => {
+    const key = window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "";
+    return { "Content-Type": "application/json", ...(key ? { "x-admin-key": key } : {}) };
+  };
+
+  const mergeBackupTarget = (target?: BackupTarget) => {
+    if (!target) return;
+    updateSettings({ backupTargets: backupTargets.map((item) => (item.id === target.id ? target : item)) });
+  };
+
+  const testBackupTargetAction = async (target?: BackupTarget) => {
+    const candidate = target ?? normalizeBackupForm(await backupForm.validateFields());
+    setTestingBackupId(candidate.id);
+    try {
+      const response = await fetch("/api/backups/test", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ target: candidate }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? "连接测试失败");
+      mergeBackupTarget(data.target);
+      api.success(data.message ?? "连接测试成功");
+    } catch (error) {
+      api.error(error instanceof Error ? error.message : "连接测试失败");
+    } finally {
+      setTestingBackupId(undefined);
+    }
+  };
+
+  const runBackupNow = async (target: BackupTarget) => {
+    setRunningBackupId(target.id);
+    try {
+      const response = await fetch(`/api/backups/${target.id}/run`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? "备份执行失败");
+      mergeBackupTarget(data.target);
+      api.success(data.message ?? "备份已完成");
+    } catch (error) {
+      api.error(error instanceof Error ? error.message : "备份执行失败");
+    } finally {
+      setRunningBackupId(undefined);
+    }
   };
 
   const removeBackupTarget = (id: string) => {
@@ -2535,13 +2620,20 @@ function SettingsModule() {
                     <Space wrap>
                       <Tag color={target.enabled ? "cyan" : "default"}>{target.enabled ? "启用" : "停用"}</Tag>
                       <Tag color="purple">{backupTypeName[target.type]}</Tag>
+                      {target.scheduleEnabled && <Tag color="green">每 {target.scheduleIntervalHours ?? 24} 小时</Tag>}
+                      <Tag color="gold">保留 {target.retentionCount ?? 7} 份</Tag>
+                      {target.lastStatus && <Tag color={target.lastStatus === "success" ? "success" : "error"}>{target.lastStatus === "success" ? "正常" : "失败"}</Tag>}
                     </Space>
                     <Title level={5}>{target.name}</Title>
-                    <Text className="muted">{target.target}</Text>
+                    <Text className="muted">{target.target || [target.endpoint, target.bucket, target.prefix].filter(Boolean).join(" / ")}</Text>
+                    {target.lastBackupAt && <Paragraph className="muted backup-note">上次备份：{dayjs(target.lastBackupAt).format("YYYY-MM-DD HH:mm:ss")}{target.nextBackupAt ? ` · 下次：${dayjs(target.nextBackupAt).format("YYYY-MM-DD HH:mm:ss")}` : ""}</Paragraph>}
+                    {target.lastMessage && <Paragraph className="muted backup-note">状态：{target.lastMessage}</Paragraph>}
                     {target.notes && <Paragraph className="muted backup-note">{target.notes}</Paragraph>}
                   </div>
                   <Space wrap>
                     <Switch checked={target.enabled} checkedChildren="启用" unCheckedChildren="停用" onChange={(enabled) => updateSettings({ backupTargets: backupTargets.map((item) => item.id === target.id ? { ...item, enabled } : item) })} />
+                    <Button title="测试备份目标连接与权限" loading={testingBackupId === target.id} onClick={() => testBackupTargetAction(target)}>测试</Button>
+                    <Button title="立即执行一次备份并清理旧文件" loading={runningBackupId === target.id} onClick={() => runBackupNow(target)}>立即备份</Button>
                     <Button title="编辑该备份方式" icon={<EditOutlined />} onClick={() => openBackupEditor(target)}>编辑</Button>
                     <Popconfirm title="确认删除该备份方式？" onConfirm={() => removeBackupTarget(target.id)}>
                       <Button title="删除该备份方式" danger icon={<DeleteOutlined />}>删除</Button>
@@ -2561,13 +2653,47 @@ function SettingsModule() {
           </Card>
         </Col>
       </Row>
-      <Modal open={backupOpen} title={editingBackupId ? "编辑备份法阵" : "新增备份法阵"} onCancel={() => setBackupOpen(false)} onOk={saveBackupTarget} okText="保存">
+      <Modal open={backupOpen} title={editingBackupId ? "编辑备份法阵" : "新增备份法阵"} onCancel={() => setBackupOpen(false)} onOk={saveBackupTarget} okText="保存" width={720}>
         <Form form={backupForm} layout="vertical">
           <Form.Item name="name" label="名称" rules={[{ required: true, message: "请填写备份名称" }]}><Input placeholder="例如：网盘镜像 / 对象存储仓" /></Form.Item>
           <Form.Item name="type" label="类型"><Select options={(Object.keys(backupTypeName) as BackupTarget["type"][]).map((value) => ({ value, label: backupTypeName[value] }))} /></Form.Item>
-          <Form.Item name="target" label="目标地址" rules={[{ required: true, message: "请填写备份目标地址" }]}><Input placeholder="https://dav.example.local 或 s3://bucket/path" /></Form.Item>
-          <Form.Item name="enabled" label="启用" valuePropName="checked"><Switch /></Form.Item>
+          <Form.Item noStyle shouldUpdate={(prev, next) => prev.type !== next.type}>
+            {({ getFieldValue }) => getFieldValue("type") === "S3" ? (
+              <>
+                <Row gutter={12}>
+                  <Col xs={24} md={12}><Form.Item name="endpoint" label="Endpoint" rules={[{ required: true, message: "请填写 S3 Endpoint" }]}><Input placeholder="https://s3.example.com" /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item name="bucket" label="Bucket" rules={[{ required: true, message: "请填写 Bucket" }]}><Input placeholder="yihuoge-backup" /></Form.Item></Col>
+                </Row>
+                <Row gutter={12}>
+                  <Col xs={24} md={12}><Form.Item name="region" label="Region"><Input placeholder="auto / us-east-1 / cn-east-1" /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item name="prefix" label="目录前缀"><Input placeholder="backups/yihuoge" /></Form.Item></Col>
+                </Row>
+                <Row gutter={12}>
+                  <Col xs={24} md={12}><Form.Item name="accessKeyId" label="Access Key ID" rules={[{ required: true, message: "请填写 Access Key ID" }]}><Input autoComplete="off" /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item name="secretAccessKey" label="Secret Access Key" rules={[{ required: true, message: "请填写 Secret Access Key" }]}><Input.Password autoComplete="new-password" /></Form.Item></Col>
+                </Row>
+                <Form.Item name="pathStyle" label="Path Style 访问" valuePropName="checked"><Switch checkedChildren="启用" unCheckedChildren="关闭" /></Form.Item>
+              </>
+            ) : (
+              <>
+                <Form.Item name="target" label="WebDAV 地址" rules={[{ required: true, message: "请填写 WebDAV 地址" }]}><Input placeholder="https://dav.example.com/remote.php/dav/files/user/yihuoge/" /></Form.Item>
+                <Row gutter={12}>
+                  <Col xs={24} md={12}><Form.Item name="username" label="用户名"><Input autoComplete="username" /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item name="password" label="密码 / 应用密码"><Input.Password autoComplete="new-password" /></Form.Item></Col>
+                </Row>
+              </>
+            )}
+          </Form.Item>
+          <Row gutter={12}>
+            <Col xs={24} md={8}><Form.Item name="enabled" label="启用" valuePropName="checked"><Switch /></Form.Item></Col>
+            <Col xs={24} md={8}><Form.Item name="scheduleEnabled" label="定时备份" valuePropName="checked"><Switch /></Form.Item></Col>
+          </Row>
+          <Row gutter={12}>
+            <Col xs={24} md={12}><Form.Item name="scheduleIntervalHours" label="备份间隔（小时）" rules={[{ required: true, message: "请填写备份间隔" }]}><InputNumber min={1} max={8760} style={{ width: "100%" }} /></Form.Item></Col>
+            <Col xs={24} md={12}><Form.Item name="retentionCount" label="保留最新份数" rules={[{ required: true, message: "请选择保留份数" }]}><InputNumber min={1} max={100} style={{ width: "100%" }} /></Form.Item></Col>
+          </Row>
           <Form.Item name="notes" label="备注"><TextArea rows={3} /></Form.Item>
+          <Button title="保存前先测试当前填写的备份配置" loading={testingBackupId === (editingBackupId ?? "draft")} onClick={() => testBackupTargetAction()}>测试当前配置</Button>
         </Form>
       </Modal>
     </div>

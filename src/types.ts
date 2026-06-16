@@ -92,7 +92,24 @@ export interface BackupTarget {
   name: string;
   type: "WebDAV" | "S3";
   target: string;
+  username?: string;
+  password?: string;
+  endpoint?: string;
+  bucket?: string;
+  region?: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  prefix?: string;
+  pathStyle?: boolean;
+  scheduleEnabled?: boolean;
+  scheduleIntervalHours?: number;
+  lastBackupAt?: string;
+  nextBackupAt?: string;
+  retentionCount?: number;
   enabled: boolean;
+  lastTestAt?: string;
+  lastStatus?: "success" | "failed";
+  lastMessage?: string;
   notes?: string;
 }
 

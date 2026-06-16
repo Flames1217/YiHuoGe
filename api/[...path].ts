@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { nanoid } from "nanoid";
 import { normalizeStoredAsset, readState, writeState } from "./_state.js";
+import { normalizeBackupTarget, runBackupTarget, runDueBackups, testBackupTarget, type BackupTargetConfig } from "../server/backup.js";
 import { getExchangeRates } from "../server/exchangeRates.js";
 import { sendNotificationDispatch, sendNotificationTest, type NotificationDispatchPayload } from "../server/notify.js";
 import { lookupDomainRdap } from "../server/rdap.js";
@@ -78,6 +79,8 @@ interface NotificationChannel {
   template?: string;
 }
 
+interface BackupTarget extends BackupTargetConfig {}
+
 interface Database {
   assets: Asset[];
   domains: DomainRecord[];
@@ -88,7 +91,7 @@ interface Database {
     models: string[];
     defaultModel: string;
   };
-  settings: Record<string, unknown>;
+  settings: Record<string, unknown> & { backupTargets?: BackupTarget[] };
 }
 
 async function readDb(): Promise<Database> {
@@ -109,7 +112,7 @@ function hasValidAdminKey(req: Request) {
 
 app.use((req, res, next) => {
   const protectedMethod = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method);
-  const protectedRead = req.path.startsWith("/api/bootstrap") || req.path.startsWith("/api/assets") || req.path.startsWith("/api/channels") || req.path.startsWith("/api/settings");
+  const protectedRead = req.path.startsWith("/api/bootstrap") || req.path.startsWith("/api/assets") || req.path.startsWith("/api/channels") || req.path.startsWith("/api/settings") || req.path.startsWith("/api/backups");
   const publicPath = req.path === "/api/health" || req.path === "/api/auth/verify";
   if (publicPath || !adminKey || (!protectedMethod && !protectedRead)) {
     next();
@@ -684,6 +687,71 @@ app.put("/api/settings", async (req, res) => {
   db.settings = { ...db.settings, ...req.body };
   await writeDb(db);
   res.json(db.settings);
+});
+
+function backupTargetsFrom(db: Database) {
+  return Array.isArray(db.settings.backupTargets) ? db.settings.backupTargets.map(normalizeBackupTarget) : [];
+}
+
+async function updateBackupTargetStatus(id: string, patch: Partial<BackupTarget>) {
+  const db = await readDb();
+  const backupTargets = backupTargetsFrom(db).map((target) => (target.id === id ? normalizeBackupTarget({ ...target, ...patch }) : target));
+  db.settings = { ...db.settings, backupTargets };
+  await writeDb(db);
+  return backupTargets.find((target) => target.id === id);
+}
+
+app.post("/api/backups/test", async (req, res) => {
+  const target = normalizeBackupTarget(req.body?.target ?? req.body);
+  try {
+    const result = await testBackupTarget(target);
+    const saved = target.id ? await updateBackupTargetStatus(target.id, { lastTestAt: new Date().toISOString(), lastStatus: "success", lastMessage: result.message }) : undefined;
+    res.json({ ...result, target: saved });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "备份连接测试失败";
+    if (target.id) await updateBackupTargetStatus(target.id, { lastTestAt: new Date().toISOString(), lastStatus: "failed", lastMessage: message }).catch(() => undefined);
+    res.status(400).json({ ok: false, error: message });
+  }
+});
+
+app.post("/api/backups/:id/run", async (req, res) => {
+  const db = await readDb();
+  const target = backupTargetsFrom(db).find((item) => item.id === req.params.id);
+  if (!target) {
+    res.status(404).json({ ok: false, error: "backup target not found" });
+    return;
+  }
+  try {
+    const result = await runBackupTarget(target, db);
+    const saved = await updateBackupTargetStatus(target.id, { lastBackupAt: result.uploadedAt, nextBackupAt: result.nextBackupAt, lastStatus: "success", lastMessage: result.message });
+    res.json({ ...result, target: saved });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "备份执行失败";
+    await updateBackupTargetStatus(target.id, { lastStatus: "failed", lastMessage: message }).catch(() => undefined);
+    res.status(500).json({ ok: false, error: message });
+  }
+});
+
+app.post("/api/backups/run-scheduled", async (_req, res) => {
+  const db = await readDb();
+  const targets = backupTargetsFrom(db);
+  try {
+    const results = await runDueBackups(targets, db);
+    if (results.length) {
+      const resultMap = new Map(results.map((item) => [item.id, item.result]));
+      db.settings = {
+        ...db.settings,
+        backupTargets: targets.map((target) => {
+          const result = resultMap.get(target.id);
+          return result ? normalizeBackupTarget({ ...target, lastBackupAt: result.uploadedAt, nextBackupAt: result.nextBackupAt, lastStatus: "success", lastMessage: result.message }) : target;
+        }),
+      };
+      await writeDb(db);
+    }
+    res.json({ ok: true, count: results.length, results });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error instanceof Error ? error.message : "定时备份执行失败" });
+  }
 });
 
 export default app;

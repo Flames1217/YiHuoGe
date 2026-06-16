@@ -8,5 +8,11 @@
         "sin1"
       ]
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/backups/run-scheduled",
+      "schedule": "0 * * * *"
+    }
+  ]
 }
