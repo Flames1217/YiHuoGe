@@ -53,7 +53,7 @@ import enUS from "antd/locale/en_US";
 import zhCN from "antd/locale/zh_CN";
 import dayjs from "dayjs";
 import "dayjs/locale/zh-cn";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Key, MouseEvent as ReactMouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import "./i18n";
@@ -1348,7 +1348,7 @@ function OverviewModule({
   const hydrating = useYiHuoStore((state) => state.hydrating);
   const urgent = assets.filter((asset) => asset.cycle !== "lifetime" && daysUntil(asset.renewalDate, asset.cycle) <= 14);
   const monthlyCost = assets
-    .filter((asset) => asset.autoRenew !== false)
+    .filter((asset) => asset.cycle !== "lifetime" && asset.autoRenew !== false)
     .reduce((sum, asset) => sum + convertCurrency(asset.price, asset.currency, settings.currency, currencyRates), 0);
   return (
     <div className="module-stack">
@@ -1372,7 +1372,7 @@ function OverviewModule({
         </div>
       </section>
 
-      <Row gutter={[18, 18]}>
+      <Row gutter={[24, 24]}>
         <Col xs={24} md={12} xl={6}><Card className="metric-card">{hydrating ? <SummonLoading title={t("metricAssets")} /> : <Statistic title={t("metricAssets")} value={assets.length} prefix={<AppstoreOutlined />} />}</Card></Col>
         <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricUrgent")} value={urgent.length} prefix={<ThunderboltOutlined />} /></Card></Col>
         <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricBudget")} value={monthlyCost} precision={2} prefix={<DatabaseOutlined />} suffix={currencySymbols[settings.currency] ?? settings.currency} /></Card></Col>
@@ -2044,7 +2044,7 @@ function AssetsModule({
             rowSelection={{ selectedRowKeys: selectedIds, onChange: (keys) => setSelectedIds(keys), preserveSelectedRowKeys: true }}
           />
         ) : (
-          <Row gutter={[16, 16]}>
+          <Row gutter={[22, 22]}>
             {sortedFiltered.map((asset) => (
               <Col xs={24} md={12} xl={8} key={asset.id}>
                 <Card
@@ -2558,7 +2558,7 @@ function SettingsModule() {
       <Flex className="module-head" justify="space-between" wrap="wrap">
         <div><Title level={2}>设置</Title><Text className="muted">语言、时区、偏好币种、提醒策略、传讯阵法、模块顺序、主题、导入导出、AI 全局配置与备份法阵。</Text></div>
       </Flex>
-      <Row gutter={[18, 18]}>
+      <Row gutter={[24, 24]}>
         <Col xs={24} xl={12}>
           <Card className="yhg-card" title="全局偏好">
             <Form layout="vertical">
@@ -2739,6 +2739,9 @@ export default function App() {
     window.localStorage.getItem(ADMIN_KEY_STORAGE) ? "unlocked" : "locked",
   );
   const [savedAccessKey, setSavedAccessKey] = useState(() => window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "");
+  const [themeTransitionKey, setThemeTransitionKey] = useState(0);
+  const [themeTransitionActive, setThemeTransitionActive] = useState(false);
+  const previousThemeRef = useRef<ThemeId | null>(null);
   const activeTheme = normalizeTheme(settings.theme);
   const activeThemeLabel = themeOptions.find((option) => option.value === activeTheme)?.label ?? "九玄金雷";
 
@@ -2792,6 +2795,17 @@ export default function App() {
   useEffect(() => {
     if (!moduleKeys.includes(active)) setActive("overview");
   }, [active]);
+
+  useEffect(() => {
+    if (previousThemeRef.current && previousThemeRef.current !== activeTheme) {
+      setThemeTransitionActive(true);
+      setThemeTransitionKey((value) => value + 1);
+      const timer = window.setTimeout(() => setThemeTransitionActive(false), 620);
+      previousThemeRef.current = activeTheme;
+      return () => window.clearTimeout(timer);
+    }
+    previousThemeRef.current = activeTheme;
+  }, [activeTheme]);
 
   useEffect(() => {
     if (settings.theme !== activeTheme) {
@@ -2859,7 +2873,8 @@ export default function App() {
         <AccessGate initialKey={savedAccessKey} checking={accessState === "checking"} onUnlock={unlock} />
       ) : (
         <Layout className={`app-shell theme-${activeTheme}`}>
-        <Sider width={268} className="side-nav" breakpoint="lg" collapsedWidth={0}>
+        {themeTransitionActive && <div key={themeTransitionKey} className="theme-transition-veil" aria-hidden="true" />}
+        <Sider width={320} className="side-nav" breakpoint="lg" collapsedWidth={0}>
           <div className="brand-mark">
             <img className="brand-logo" src="/logo.png" alt="异火阁" />
             <div>

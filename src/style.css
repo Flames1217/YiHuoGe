@@ -64,6 +64,7 @@ body {
   color: var(--text);
   font-family: var(--font-ui);
   overflow-x: hidden;
+  transition: color 360ms ease, background-color 360ms ease;
 }
 
 body::before {
@@ -103,6 +104,30 @@ body::after {
   min-height: 100dvh;
 }
 
+.theme-transition-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 34%, color-mix(in srgb, var(--theme-light) 22%, transparent), transparent 24rem),
+    radial-gradient(circle at 50% 52%, color-mix(in srgb, var(--theme-core) 34%, transparent), transparent 30rem),
+    linear-gradient(135deg, color-mix(in srgb, var(--theme-base) 82%, transparent), color-mix(in srgb, var(--theme-core) 20%, transparent));
+  animation: themeVeilFade 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes themeVeilFade {
+  0% {
+    opacity: 0;
+  }
+  38% {
+    opacity: 0.72;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 .side-nav {
   position: sticky !important;
   top: 0;
@@ -126,9 +151,9 @@ body::after {
 .brand-mark {
   display: flex;
   align-items: center;
-  gap: 12px;
-  height: 86px;
-  padding: 20px 18px;
+  gap: 16px;
+  height: 104px;
+  padding: 24px 24px 22px;
 }
 
 .brand-sigil {
@@ -154,9 +179,9 @@ body::after {
 }
 
 .brand-logo {
-  width: 52px;
-  height: 52px;
-  flex: 0 0 52px;
+  width: 60px;
+  height: 60px;
+  flex: 0 0 60px;
   object-fit: contain;
   padding: 3px;
   background:
@@ -171,7 +196,7 @@ body::after {
 
 .brand-mark strong {
   display: block;
-  font-size: 19px;
+  font-size: 22px;
   font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -202,13 +227,13 @@ body::after {
 
 .side-footer {
   position: absolute;
-  right: 18px;
-  bottom: 18px;
-  left: 18px;
+  right: 24px;
+  bottom: 24px;
+  left: 24px;
   display: flex;
   gap: 8px;
   align-items: center;
-  padding: 12px;
+  padding: 14px 16px;
   color: rgba(255, 184, 77, 0.78);
   background: rgba(245, 158, 11, 0.08);
   border: 1px solid rgba(245, 158, 11, 0.18);
@@ -224,8 +249,8 @@ body::after {
   gap: 16px;
   align-items: center;
   justify-content: space-between;
-  height: 72px;
-  padding: 0 24px;
+  height: 80px;
+  padding: 0 36px;
   border-bottom: 1px solid rgba(255, 184, 77, 0.22);
   box-shadow: 0 12px 50px rgba(0, 0, 0, 0.22);
   backdrop-filter: blur(18px);
@@ -722,15 +747,15 @@ body::after {
 }
 
 .content-canvas {
-  width: min(100%, 1680px);
-  padding: 38px 44px 96px;
+  width: min(100%, 1760px);
+  padding: 48px 56px 112px;
   margin: 0 auto;
 }
 
 .module-stack {
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 34px;
 }
 
 .module-head h2,
@@ -742,9 +767,9 @@ body::after {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 420px;
-  gap: 32px;
-  min-height: 365px;
-  padding: 42px 34px 40px 42px;
+  gap: 44px;
+  min-height: 390px;
+  padding: 52px 46px 50px 54px;
   overflow: hidden;
   background:
     linear-gradient(90deg, rgba(16, 16, 20, 0.94), rgba(20, 16, 18, 0.82)),
@@ -1179,7 +1204,7 @@ body::after {
 }
 
 .toolbar-row {
-  margin-bottom: 16px;
+  margin-bottom: 22px;
 }
 
 .search-input {
@@ -1188,17 +1213,17 @@ body::after {
 
 .timeline-list {
   display: grid;
-  gap: 10px;
-  margin-top: 16px;
+  gap: 14px;
+  margin-top: 20px;
 }
 
 .timeline-row {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) auto auto;
-  gap: 12px;
+  gap: 16px;
   align-items: center;
   width: 100%;
-  padding: 13px 16px;
+  padding: 16px 18px;
   color: inherit;
   cursor: pointer;
   font-family: var(--font-ui);
@@ -1217,22 +1242,22 @@ body::after {
 }
 
 .flame-board-card .ant-card-body {
-  padding-top: 14px;
+  padding-top: 18px;
 }
 
 .flame-board {
   display: grid;
   grid-template-columns: repeat(3, minmax(132px, 1fr));
-  gap: 7px 10px;
+  gap: 11px 14px;
 }
 
 .flame-board-row {
   display: grid;
   grid-template-columns: 34px 1fr;
   align-items: center;
-  gap: 7px;
+  gap: 10px;
   min-width: 0;
-  padding: 6px 8px;
+  padding: 9px 10px;
   background: linear-gradient(90deg, rgba(255, 184, 77, 0.09), rgba(139, 92, 246, 0.04));
   border: 1px solid rgba(255, 184, 77, 0.16);
   border-radius: 10px 10px 16px 10px;
@@ -1287,11 +1312,11 @@ body::after {
 .yhg-card > .ant-card-body,
 .asset-card > .ant-card-body,
 .metric-card > .ant-card-body {
-  padding: 28px !important;
+  padding: 34px !important;
 }
 
 .ai-config-stack {
-  gap: 15px !important;
+  gap: 20px !important;
 }
 
 .ai-config-stack .field-label {
@@ -1367,15 +1392,15 @@ body::after {
 
 .backup-list {
   display: grid;
-  gap: 12px;
+  gap: 16px;
 }
 
 .backup-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
+  gap: 20px;
   align-items: center;
-  padding: 14px;
+  padding: 18px;
   background: linear-gradient(90deg, rgba(255, 184, 77, 0.08), rgba(139, 92, 246, 0.035));
   border: 1px solid rgba(255, 184, 77, 0.16);
   border-radius: 14px 14px 22px 14px;
@@ -1392,7 +1417,7 @@ body::after {
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(120px, 1fr));
-  gap: 12px;
+  gap: 16px;
 }
 
 .calendar-grid.week .day-cell {
@@ -1434,8 +1459,10 @@ body::after {
 }
 
 .ant-menu-item {
-  width: calc(100% - 24px) !important;
-  margin-inline: 12px !important;
+  width: calc(100% - 32px) !important;
+  height: 46px !important;
+  margin: 7px 16px !important;
+  padding-inline: 20px !important;
   border-radius: 7px 18px 18px 7px !important;
   transition: transform 180ms ease, background 180ms ease, color 180ms ease !important;
 }
@@ -1493,11 +1520,14 @@ body::after {
 }
 
 .ant-card-head {
+  min-height: 62px !important;
+  padding-inline: 28px !important;
   border-bottom-color: rgba(255, 184, 77, 0.14) !important;
 }
 
 .ant-table-wrapper .ant-table-tbody > tr > td,
 .ant-table-wrapper .ant-table-thead > tr > th {
+  padding: 16px 18px !important;
   border-bottom-color: rgba(255, 184, 77, 0.1) !important;
 }
 
@@ -2851,10 +2881,10 @@ body .yhg-sorter-tooltip .ant-tooltip-arrow::after {
 }
 
 .side-nav .ant-menu-item {
-  width: calc(100% - 16px) !important;
-  min-height: 42px !important;
-  margin-inline: 8px !important;
-  padding-inline: 24px !important;
+  width: calc(100% - 36px) !important;
+  min-height: 48px !important;
+  margin: 8px 18px !important;
+  padding-inline: 28px !important;
   border-radius: 10px 18px 18px 10px !important;
 }
 
