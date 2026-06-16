@@ -420,7 +420,7 @@ function renewalMessage(asset: NotificationDispatchPayload["asset"]) {
     serviceUrlText(asset),
     "",
     "收诸般异火，掌万般续期。",
-    "                    ——异火阁",
+    "——异火阁",
   ].filter((line) => line !== "").join("\n");
 }
 
