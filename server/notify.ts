@@ -408,7 +408,7 @@ function renewalMessage(asset: NotificationDispatchPayload["asset"]) {
     ? `账号/标识：${[asset.accountType, asset.account].filter(Boolean).join(" · ")}`
     : "";
   return [
-    "【异火阁 · 续期提醒】",
+    "🔥【异火阁 · 续期提醒】",
     `资产名称：${blankFallback(asset.name)}`,
     `资产类型：${typeText}`,
     `价格：${priceText(asset.price, asset.currency)}`,
@@ -426,5 +426,5 @@ function renewalMessage(asset: NotificationDispatchPayload["asset"]) {
 
 export async function sendNotificationDispatch(payload: NotificationDispatchPayload): Promise<NotifySendResult> {
   const { channel, asset } = payload;
-  return sendNotificationTest(channel, { message: renewalMessage(asset), subject: "【异火阁】续期提醒" });
+  return sendNotificationTest(channel, { message: renewalMessage(asset), subject: "🔥【异火阁 · 续期提醒】" });
 }
