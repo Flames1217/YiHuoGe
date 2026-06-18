@@ -58,7 +58,7 @@ import type { Key, MouseEvent as ReactMouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import "./i18n";
 import { useYiHuoStore } from "./store";
-import type { Asset, AssetType, BackupTarget, Language, NotificationChannel, NotifyType, ViewMode, AppSettings } from "./types";
+import type { Asset, AssetType, BackupTarget, Language, NotificationChannel, NotifyType, RemoteBackupFile, ViewMode, AppSettings } from "./types";
 import { daysUntil, topbarDate } from "./utils/calendar";
 import { THEME_STORAGE, applyTheme, normalizeTheme, themePalettes } from "./theme";
 import type { ThemeId } from "./theme";
@@ -2513,8 +2513,12 @@ function SettingsModule() {
   const [editingBackupId, setEditingBackupId] = useState<string>();
   const [testingBackupId, setTestingBackupId] = useState<string>();
   const [runningBackupId, setRunningBackupId] = useState<string>();
+  const [loadingBackupFilesId, setLoadingBackupFilesId] = useState<string>();
+  const [restoringBackupKey, setRestoringBackupKey] = useState<string>();
+  const [deletingBackupKey, setDeletingBackupKey] = useState<string>();
   const [savingBackupConfig, setSavingBackupConfig] = useState(false);
   const [backupFeedback, setBackupFeedback] = useState<{ type: "success" | "error" | "info"; message: string }>();
+  const [backupFiles, setBackupFiles] = useState<Record<string, RemoteBackupFile[]>>({});
   const [adminKey, setAdminKey] = useState(() => window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "");
   const [api, contextHolder] = message.useMessage();
   const backupTargets = settings.backupTargets ?? [];
@@ -2640,13 +2644,32 @@ function SettingsModule() {
     updateSettings({ backupTargets: backupTargets.map((item) => (item.id === target.id ? target : item)) });
   };
 
+  const fileSizeLabel = (size?: number) => {
+    if (!Number.isFinite(size ?? NaN)) return "";
+    if ((size ?? 0) < 1024) return `${size} B`;
+    if ((size ?? 0) < 1024 * 1024) return `${((size ?? 0) / 1024).toFixed(1)} KB`;
+    return `${((size ?? 0) / 1024 / 1024).toFixed(1)} MB`;
+  };
+
+  const refreshBackupFiles = async (target: BackupTarget) => {
+    setLoadingBackupFilesId(target.id);
+    try {
+      const response = await fetch(`/api/backups/${target.id}/files`, { headers: authHeaders() });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? "备份列表读取失败");
+      setBackupFiles((items) => ({ ...items, [target.id]: data.files ?? [] }));
+    } catch (error) {
+      api.error(error instanceof Error ? error.message : "备份列表读取失败");
+    } finally {
+      setLoadingBackupFilesId(undefined);
+    }
+  };
+
   const testBackupTargetAction = async (target?: BackupTarget) => {
     const candidate = target ?? normalizeBackupForm(await backupForm.validateFields());
     const actionId = target?.id ?? editingBackupId ?? "draft";
-    const key = `backup-test-${actionId}`;
     setTestingBackupId(actionId);
     setBackupFeedback({ type: "info", message: "正在测试备份连接与目录权限…" });
-    api.open({ key, type: "loading", content: "正在测试备份连接…", duration: 0 });
     try {
       const response = await fetch("/api/backups/test", {
         method: "POST",
@@ -2658,11 +2681,12 @@ function SettingsModule() {
       mergeBackupTarget(data.target);
       const message = data.message ?? "连接测试成功，目录可访问";
       setBackupFeedback({ type: "success", message });
-      api.open({ key, type: "success", content: message, duration: 3 });
+      if (target) api.success(message);
+      if (target) void refreshBackupFiles(target);
     } catch (error) {
       const message = error instanceof Error ? error.message : "连接测试失败";
       setBackupFeedback({ type: "error", message });
-      api.open({ key, type: "error", content: message, duration: 6 });
+      if (target) api.error(message);
     } finally {
       setTestingBackupId(undefined);
     }
@@ -2691,12 +2715,54 @@ function SettingsModule() {
       const message = data.message ?? "备份已完成";
       setBackupFeedback({ type: "success", message });
       api.open({ key, type: "success", content: message, duration: 4 });
+      void refreshBackupFiles(freshTarget);
     } catch (error) {
       const message = error instanceof Error ? error.message : "备份执行失败";
       setBackupFeedback({ type: "error", message });
       api.open({ key, type: "error", content: message, duration: 7 });
     } finally {
       setRunningBackupId(undefined);
+    }
+  };
+
+  const restoreBackupFile = async (target: BackupTarget, file: RemoteBackupFile) => {
+    setRestoringBackupKey(`${target.id}:${file.key}`);
+    const key = `backup-restore-${target.id}`;
+    api.open({ key, type: "loading", content: "正在恢复备份…", duration: 0 });
+    try {
+      const response = await fetch(`/api/backups/${target.id}/restore`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ key: file.key }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? "备份恢复失败");
+      api.open({ key, type: "success", content: data.message ?? "备份已恢复，正在刷新数据", duration: 3 });
+      const storedKey = window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "";
+      await hydrateFromServer(storedKey);
+    } catch (error) {
+      api.open({ key, type: "error", content: error instanceof Error ? error.message : "备份恢复失败", duration: 7 });
+    } finally {
+      setRestoringBackupKey(undefined);
+    }
+  };
+
+  const deleteBackupFile = async (target: BackupTarget, file: RemoteBackupFile) => {
+    setDeletingBackupKey(`${target.id}:${file.key}`);
+    try {
+      const response = await fetch(`/api/backups/${target.id}/files`, {
+        method: "DELETE",
+        headers: authHeaders(),
+        body: JSON.stringify({ key: file.key }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? "备份删除失败");
+      api.success(data.message ?? "备份文件已删除");
+      await refreshBackupFiles(target);
+    } catch (error) {
+      api.error(error instanceof Error ? error.message : "备份删除失败");
+    } finally {
+      setDeletingBackupKey(undefined);
     }
   };
 
@@ -2758,6 +2824,33 @@ function SettingsModule() {
                     {target.lastBackupAt && <Paragraph className="muted backup-note">上次备份：{dayjs(target.lastBackupAt).format("YYYY-MM-DD HH:mm:ss")}{target.nextBackupAt ? ` · 下次：${dayjs(target.nextBackupAt).format("YYYY-MM-DD HH:mm:ss")}` : ""}</Paragraph>}
                     {target.lastMessage && <Paragraph className="muted backup-note">状态：{target.lastMessage}</Paragraph>}
                     {target.notes && <Paragraph className="muted backup-note">{target.notes}</Paragraph>}
+                    <div className="remote-backup-panel">
+                      <Flex align="center" justify="space-between" wrap="wrap" gap={8}>
+                        <Text className="muted">远端备份</Text>
+                        <Button size="small" loading={loadingBackupFilesId === target.id} onClick={() => refreshBackupFiles(target)}>刷新列表</Button>
+                      </Flex>
+                      <div className="remote-backup-list">
+                        {(backupFiles[target.id] ?? []).map((file) => (
+                          <div className="remote-backup-row" key={file.key}>
+                            <div>
+                              <Text>{file.key}</Text>
+                              <Paragraph className="muted backup-note">
+                                {[file.lastModified ? dayjs(file.lastModified).format("YYYY-MM-DD HH:mm:ss") : "", fileSizeLabel(file.size)].filter(Boolean).join(" · ") || "远端文件"}
+                              </Paragraph>
+                            </div>
+                            <Space wrap>
+                              <Popconfirm title="确认恢复该备份？当前资产、通知、AI 配置会被覆盖。" onConfirm={() => restoreBackupFile(target, file)}>
+                                <Button size="small" loading={restoringBackupKey === `${target.id}:${file.key}`}>恢复</Button>
+                              </Popconfirm>
+                              <Popconfirm title="确认删除该远端备份文件？" onConfirm={() => deleteBackupFile(target, file)}>
+                                <Button size="small" danger loading={deletingBackupKey === `${target.id}:${file.key}`}>删除</Button>
+                              </Popconfirm>
+                            </Space>
+                          </div>
+                        ))}
+                        {!(backupFiles[target.id] ?? []).length && <Text className="muted">暂无已加载的远端备份，点击刷新列表查看。</Text>}
+                      </div>
+                    </div>
                   </div>
                   <Space wrap>
                     <Switch checked={target.enabled} checkedChildren="启用" unCheckedChildren="停用" onChange={(enabled) => updateSettings({ backupTargets: backupTargets.map((item) => item.id === target.id ? { ...item, enabled } : item) })} />

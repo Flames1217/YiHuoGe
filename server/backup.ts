@@ -37,10 +37,11 @@ export interface BackupDatabase {
   settings: Record<string, unknown>;
 }
 
-interface RemoteBackupFile {
+export interface RemoteBackupFile {
   key: string;
   url?: string;
   lastModified?: string;
+  size?: number;
 }
 
 export interface BackupActionResult {
@@ -207,18 +208,10 @@ async function ensureWebdavCollection(target: BackupTargetConfig) {
   for (const part of parts) {
     current = [current, part].filter(Boolean).join("/");
     const response = await fetch(webdavFileUrl({ ...target, backupDir: current }, ""), { method: "MKCOL", headers: webdavHeaders(target) });
-    if (![201, 405].includes(response.status)) {
+    if (![201, 405, 409].includes(response.status)) {
       const text = await response.text().catch(() => "");
       throw new Error(`WebDAV 目录不可用：HTTP ${response.status}${text ? ` ${text.slice(0, 120)}` : ""}`);
     }
-  }
-}
-
-async function probeWebdavCollection(target: BackupTargetConfig) {
-  const response = await fetch(webdavCollectionUrl(target), { method: "MKCOL", headers: webdavHeaders(target) });
-  if (![201, 405].includes(response.status)) {
-    const text = await response.text().catch(() => "");
-    throw new Error(`WebDAV 目录不可用：HTTP ${response.status}${text ? ` ${text.slice(0, 120)}` : ""}`);
   }
 }
 
@@ -240,7 +233,9 @@ async function listWebdavBackups(target: BackupTargetConfig): Promise<RemoteBack
     const key = decoded.split("/").pop() ?? "";
     if (!key.startsWith(BACKUP_PREFIX) || !key.endsWith(BACKUP_SUFFIX)) continue;
     const lastModified = item.match(/<[^:>]*:?getlastmodified[^>]*>([\s\S]*?)<\/[^:>]*:?getlastmodified>/i)?.[1]?.trim();
-    files.push({ key, url: webdavFileUrl(target, key), lastModified });
+    const sizeText = item.match(/<[^:>]*:?getcontentlength[^>]*>([\s\S]*?)<\/[^:>]*:?getcontentlength>/i)?.[1]?.trim();
+    const size = sizeText ? Number(sizeText) : undefined;
+    files.push({ key, url: webdavFileUrl(target, key), lastModified, size: Number.isFinite(size) ? size : undefined });
   }
   return files;
 }
@@ -263,6 +258,15 @@ async function deleteWebdavBackup(target: BackupTargetConfig, file: RemoteBackup
   if (!response.ok && response.status !== 404 && response.status !== 204) {
     throw new Error(`WebDAV 清理旧备份失败：${file.key} HTTP ${response.status}`);
   }
+}
+
+async function readWebdavBackup(target: BackupTargetConfig, key: string) {
+  const response = await fetch(webdavFileUrl(target, key), { method: "GET", headers: webdavHeaders(target) });
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`WebDAV 备份读取失败：${key} HTTP ${response.status}${text ? ` ${text.slice(0, 120)}` : ""}`);
+  }
+  return response.text();
 }
 
 function s3Url(targetInput: BackupTargetConfig, key = "", query = "") {
@@ -354,7 +358,9 @@ async function listS3Backups(target: BackupTargetConfig): Promise<RemoteBackupFi
   return contents.map((item) => {
     const key = item.match(/<Key>([\s\S]*?)<\/Key>/)?.[1]?.trim() ?? "";
     const lastModified = item.match(/<LastModified>([\s\S]*?)<\/LastModified>/)?.[1]?.trim();
-    return { key: decodeURIComponent(key), lastModified };
+    const sizeText = item.match(/<Size>([\s\S]*?)<\/Size>/)?.[1]?.trim();
+    const size = sizeText ? Number(sizeText) : undefined;
+    return { key: decodeURIComponent(key), lastModified, size: Number.isFinite(size) ? size : undefined };
   }).filter((file) => file.key.includes(BACKUP_PREFIX) && file.key.endsWith(BACKUP_SUFFIX));
 }
 
@@ -374,8 +380,25 @@ async function deleteS3Backup(target: BackupTargetConfig, file: RemoteBackupFile
   }
 }
 
-async function listRemoteBackups(target: BackupTargetConfig) {
+async function readS3Backup(target: BackupTargetConfig, key: string) {
+  const response = await s3Fetch(target, "GET", key);
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`S3 备份读取失败：${key} HTTP ${response.status}${text ? ` ${text.slice(0, 120)}` : ""}`);
+  }
+  return response.text();
+}
+
+export async function listRemoteBackups(target: BackupTargetConfig) {
   return target.type === "WebDAV" ? listWebdavBackups(target) : listS3Backups(target);
+}
+
+export async function readRemoteBackup(target: BackupTargetConfig, key: string) {
+  const safeKey = cleanPath(key);
+  if (!safeKey || !safeKey.includes(BACKUP_PREFIX) || !safeKey.endsWith(BACKUP_SUFFIX)) {
+    throw new Error("备份文件名不合法");
+  }
+  return target.type === "WebDAV" ? readWebdavBackup(target, safeKey) : readS3Backup(target, safeKey);
 }
 
 async function uploadRemoteBackup(target: BackupTargetConfig, fileName: string, payload: string) {
@@ -383,7 +406,7 @@ async function uploadRemoteBackup(target: BackupTargetConfig, fileName: string, 
   return putS3Backup(target, fileName, payload);
 }
 
-async function deleteRemoteBackup(target: BackupTargetConfig, file: RemoteBackupFile) {
+export async function deleteRemoteBackup(target: BackupTargetConfig, file: RemoteBackupFile) {
   if (target.type === "WebDAV") return deleteWebdavBackup(target, file);
   return deleteS3Backup(target, file);
 }
@@ -411,7 +434,6 @@ export async function testBackupTarget(targetInput: BackupTargetConfig): Promise
   const target = validateTarget(targetInput);
   if (target.type === "WebDAV") {
     await ensureWebdavCollection(target);
-    await probeWebdavCollection(target);
     await listWebdavBackups(target);
   } else {
     await listS3Backups(target);

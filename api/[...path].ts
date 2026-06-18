@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { nanoid } from "nanoid";
 import { fetchProviderModels } from "./_aiModels.js";
 import { normalizeStoredAsset, readState, writeState } from "./_state.js";
-import { normalizeBackupTarget, runBackupTarget, runDueBackups, testBackupTarget, type BackupTargetConfig } from "../server/backup.js";
+import { deleteRemoteBackup, listRemoteBackups, normalizeBackupTarget, readRemoteBackup, runBackupTarget, runDueBackups, testBackupTarget, type BackupTargetConfig } from "../server/backup.js";
 import { getExchangeRates } from "../server/exchangeRates.js";
 import { sendNotificationDispatch, sendNotificationTest, type NotificationDispatchPayload } from "../server/notify.js";
 import { lookupDomainRdap } from "../server/rdap.js";
@@ -661,6 +661,60 @@ app.post("/api/backups/:id/run", async (req, res) => {
     const message = error instanceof Error ? error.message : "备份执行失败";
     await updateBackupTargetStatus(target.id, { lastStatus: "failed", lastMessage: message }).catch(() => undefined);
     res.status(500).json({ ok: false, error: message });
+  }
+});
+
+app.get("/api/backups/:id/files", async (req, res) => {
+  const db = await readDb();
+  const target = backupTargetsFrom(db).find((item) => item.id === req.params.id);
+  if (!target) {
+    res.status(404).json({ ok: false, error: "backup target not found" });
+    return;
+  }
+  try {
+    const files = await listRemoteBackups(target);
+    res.json({ ok: true, files });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error instanceof Error ? error.message : "备份列表读取失败" });
+  }
+});
+
+app.post("/api/backups/:id/restore", async (req, res) => {
+  const db = await readDb();
+  const target = backupTargetsFrom(db).find((item) => item.id === req.params.id);
+  const key = String(req.body?.key ?? "");
+  if (!target) {
+    res.status(404).json({ ok: false, error: "backup target not found" });
+    return;
+  }
+  try {
+    const payload = JSON.parse(await readRemoteBackup(target, key));
+    await writeDb({
+      assets: Array.isArray(payload.assets) ? payload.assets : [],
+      domains: Array.isArray(payload.domains) ? payload.domains : [],
+      channels: Array.isArray(payload.channels) ? payload.channels : [],
+      ai: payload.aiConfig ?? payload.ai ?? {},
+      settings: { ...(payload.settings ?? {}), backupTargets: db.settings.backupTargets ?? [] },
+    });
+    res.json({ ok: true, message: "备份已恢复", restoredAt: new Date().toISOString() });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error instanceof Error ? error.message : "备份恢复失败" });
+  }
+});
+
+app.delete("/api/backups/:id/files", async (req, res) => {
+  const db = await readDb();
+  const target = backupTargetsFrom(db).find((item) => item.id === req.params.id);
+  const key = String(req.body?.key ?? "");
+  if (!target) {
+    res.status(404).json({ ok: false, error: "backup target not found" });
+    return;
+  }
+  try {
+    await deleteRemoteBackup(target, { key });
+    res.json({ ok: true, message: "备份文件已删除", key });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error instanceof Error ? error.message : "备份删除失败" });
   }
 });
 

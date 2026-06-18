@@ -114,6 +114,12 @@ export interface BackupTarget {
   notes?: string;
 }
 
+export interface RemoteBackupFile {
+  key: string;
+  lastModified?: string;
+  size?: number;
+}
+
 export interface AppSettings {
   language: Language;
   timezone: string;

@@ -1643,6 +1643,34 @@ body::after {
   margin-bottom: 16px;
 }
 
+.remote-backup-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--theme-core) 18%, transparent);
+}
+
+.remote-backup-list {
+  display: grid;
+  gap: 8px;
+}
+
+.remote-backup-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--theme-base) 62%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-core) 16%, transparent);
+  border-radius: 10px;
+}
+
+.remote-backup-row .ant-typography {
+  word-break: break-all;
+}
+
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(120px, 1fr));
