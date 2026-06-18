@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { nanoid } from "nanoid";
+import { fetchProviderModels } from "../api/_aiModels.js";
 import { normalizeStoredAsset, readState, writeState } from "../api/_state.js";
 import { normalizeBackupTarget, runBackupTarget, runDueBackups, testBackupTarget, type BackupTargetConfig } from "./backup.js";
 import { getExchangeRates } from "./exchangeRates.js";
@@ -295,80 +296,6 @@ app.get("/api/ai/models", async (_req, res) => {
   res.json(db.ai.models);
 });
 
-
-const MODEL_FETCH_TIMEOUT_MS = 18000;
-
-function modelEndpointCandidates(baseUrl: string) {
-  const base = baseUrl.trim().replace(/\/+$/, "");
-  if (!base) return [];
-  const urls = new Set<string>();
-  if (/\/models$/i.test(base)) urls.add(base);
-  else {
-    urls.add(`${base}/models`);
-    if (!/\/(?:v\d+(?:beta)?|openai\/v\d+(?:beta)?|compatible-mode\/v\d+)$/i.test(base)) {
-      urls.add(`${base}/v1/models`);
-    }
-  }
-  return [...urls];
-}
-
-function extractModelIds(payload: any): string[] {
-  const source = Array.isArray(payload)
-    ? payload
-    : Array.isArray(payload?.data)
-      ? payload.data
-      : Array.isArray(payload?.models)
-        ? payload.models
-        : Array.isArray(payload?.modelList)
-          ? payload.modelList
-          : payload?.data && typeof payload.data === "object"
-            ? Object.values(payload.data)
-            : payload?.models && typeof payload.models === "object"
-              ? Object.values(payload.models)
-              : [];
-
-  const ids = source
-    .map((item: any) => typeof item === "string" ? item : item?.id ?? item?.name ?? item?.model ?? item?.model_name)
-    .filter((id: unknown): id is string => typeof id === "string" && id.trim().length > 0)
-    .map((id: string) => id.trim());
-  return Array.from(new Set<string>(ids));
-}
-
-async function fetchProviderModels(baseUrl: string, apiKey: string): Promise<{ models: string[]; endpoint: string }> {
-  const endpoints = modelEndpointCandidates(baseUrl);
-  if (!endpoints.length) throw new Error("请先填写接口地址");
-  const errors: string[] = [];
-  for (const endpoint of endpoints) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), MODEL_FETCH_TIMEOUT_MS);
-    try {
-      const response = await fetch(endpoint, {
-        method: "GET",
-        signal: controller.signal,
-        headers: {
-          Accept: "application/json",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36 YiHuoGe/1.0",
-          ...(apiKey ? { Authorization: /^Bearer\s+/i.test(apiKey) ? apiKey : `Bearer ${apiKey}`, "x-api-key": apiKey.replace(/^Bearer\s+/i, "") } : {}),
-          "anthropic-version": "2023-06-01",
-        },
-      });
-      const text = await response.text();
-      if (!response.ok) {
-        errors.push(`${endpoint} -> HTTP ${response.status}${text ? `?${text.slice(0, 160)}` : ""}`);
-        continue;
-      }
-      const payload = text ? JSON.parse(text) : null;
-      const models = extractModelIds(payload);
-      if (models.length) return { models, endpoint };
-      errors.push(`${endpoint} -> 未发现模型字段`);
-    } catch (error) {
-      errors.push(`${endpoint} -> ${error instanceof Error ? error.message : "请求失败"}`);
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-  throw new Error(`远端未返回可用模型。已尝试：${errors.join("；")}`);
-}
 
 app.post("/api/ai/models/fetch", async (req, res) => {
   try {
@@ -716,13 +643,18 @@ app.post("/api/backups/test", async (req, res) => {
 
 app.post("/api/backups/:id/run", async (req, res) => {
   const db = await readDb();
-  const target = backupTargetsFrom(db).find((item) => item.id === req.params.id);
+  const fallbackTarget = req.body?.target && req.body.target.id === req.params.id ? normalizeBackupTarget(req.body.target) : undefined;
+  const target = backupTargetsFrom(db).find((item) => item.id === req.params.id) ?? fallbackTarget;
   if (!target) {
     res.status(404).json({ ok: false, error: "backup target not found" });
     return;
   }
   try {
     const result = await runBackupTarget(target, db);
+    if (!backupTargetsFrom(db).some((item) => item.id === target.id)) {
+      db.settings = { ...db.settings, backupTargets: [normalizeBackupTarget(target), ...backupTargetsFrom(db)] };
+      await writeDb(db);
+    }
     const saved = await updateBackupTargetStatus(target.id, { lastBackupAt: result.uploadedAt, nextBackupAt: result.nextBackupAt, lastStatus: "success", lastMessage: result.message });
     res.json({ ...result, target: saved });
   } catch (error) {

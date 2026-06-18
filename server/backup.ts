@@ -14,6 +14,7 @@ export interface BackupTargetConfig {
   region?: string;
   accessKeyId?: string;
   secretAccessKey?: string;
+  backupDir?: string;
   prefix?: string;
   pathStyle?: boolean;
   scheduleEnabled?: boolean;
@@ -81,6 +82,12 @@ function cleanPath(value?: string) {
   return String(value ?? "").trim().replace(/^\/+|\/+$/g, "");
 }
 
+function normalizeBackupDir(value?: string) {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed || trimmed === "/") return "";
+  return cleanPath(trimmed);
+}
+
 function retentionCount(target: BackupTargetConfig) {
   const value = Number(target.retentionCount ?? DEFAULT_RETENTION);
   if (!Number.isFinite(value)) return DEFAULT_RETENTION;
@@ -98,8 +105,9 @@ function nextBackupAtFrom(baseIso: string, target: BackupTargetConfig) {
 }
 
 export function backupTargetSummary(target: BackupTargetConfig) {
-  if (target.type === "WebDAV") return target.target || "";
-  return [target.endpoint, target.bucket, cleanPath(target.prefix)].filter(Boolean).join(" / ");
+  const dir = normalizeBackupDir(target.backupDir);
+  if (target.type === "WebDAV") return [target.target || "", dir ? `/${dir}` : "/"].filter(Boolean).join(" ");
+  return [target.endpoint, target.bucket, dir || "/"].filter(Boolean).join(" / ");
 }
 
 export function normalizeBackupTarget(input: BackupTargetConfig): BackupTargetConfig {
@@ -110,11 +118,13 @@ export function normalizeBackupTarget(input: BackupTargetConfig): BackupTargetCo
     target.endpoint = String(target.endpoint ?? target.target ?? "").trim().replace(/\/+$/, "");
     target.region = String(target.region ?? "auto").trim() || "auto";
     target.bucket = String(target.bucket ?? "").trim();
-    target.prefix = cleanPath(target.prefix);
+    target.backupDir = normalizeBackupDir(target.backupDir ?? target.prefix);
+    target.prefix = target.backupDir;
     target.pathStyle = target.pathStyle !== false;
     target.target = backupTargetSummary(target);
   } else {
     target.target = String(target.target ?? "").trim();
+    target.backupDir = normalizeBackupDir(target.backupDir);
   }
   return target;
 }
@@ -180,11 +190,32 @@ function ensureTrailingSlash(value: string) {
 
 function webdavFileUrl(target: BackupTargetConfig, fileName = "") {
   const base = ensureTrailingSlash(target.target ?? "");
-  return new URL(fileName.split("/").map(encodePathPart).join("/"), base).toString();
+  const path = [normalizeBackupDir(target.backupDir), fileName].filter(Boolean).join("/");
+  return new URL(path.split("/").map(encodePathPart).join("/"), base).toString();
+}
+
+function webdavCollectionUrl(target: BackupTargetConfig) {
+  const dir = normalizeBackupDir(target.backupDir);
+  return dir ? ensureTrailingSlash(webdavFileUrl(target, "")) : ensureTrailingSlash(target.target ?? "");
 }
 
 async function ensureWebdavCollection(target: BackupTargetConfig) {
-  const response = await fetch(webdavFileUrl(target), { method: "MKCOL", headers: webdavHeaders(target) });
+  const dir = normalizeBackupDir(target.backupDir);
+  if (!dir) return;
+  const parts = dir.split("/").filter(Boolean);
+  let current = "";
+  for (const part of parts) {
+    current = [current, part].filter(Boolean).join("/");
+    const response = await fetch(webdavFileUrl({ ...target, backupDir: current }, ""), { method: "MKCOL", headers: webdavHeaders(target) });
+    if (![201, 405].includes(response.status)) {
+      const text = await response.text().catch(() => "");
+      throw new Error(`WebDAV 目录不可用：HTTP ${response.status}${text ? ` ${text.slice(0, 120)}` : ""}`);
+    }
+  }
+}
+
+async function probeWebdavCollection(target: BackupTargetConfig) {
+  const response = await fetch(webdavCollectionUrl(target), { method: "MKCOL", headers: webdavHeaders(target) });
   if (![201, 405].includes(response.status)) {
     const text = await response.text().catch(() => "");
     throw new Error(`WebDAV 目录不可用：HTTP ${response.status}${text ? ` ${text.slice(0, 120)}` : ""}`);
@@ -192,7 +223,7 @@ async function ensureWebdavCollection(target: BackupTargetConfig) {
 }
 
 async function listWebdavBackups(target: BackupTargetConfig): Promise<RemoteBackupFile[]> {
-  const response = await fetch(webdavFileUrl(target), {
+  const response = await fetch(webdavCollectionUrl(target), {
     method: "PROPFIND",
     headers: webdavHeaders(target, { Depth: "1" }),
   });
@@ -215,7 +246,7 @@ async function listWebdavBackups(target: BackupTargetConfig): Promise<RemoteBack
 }
 
 async function putWebdavBackup(target: BackupTargetConfig, fileName: string, payload: string) {
-  await ensureWebdavCollection(target).catch(() => undefined);
+  await ensureWebdavCollection(target);
   const response = await fetch(webdavFileUrl(target, fileName), {
     method: "PUT",
     headers: webdavHeaders(target, { "Content-Type": "application/json; charset=utf-8" }),
@@ -311,7 +342,7 @@ async function s3Fetch(target: BackupTargetConfig, method: string, key = "", que
 }
 
 async function listS3Backups(target: BackupTargetConfig): Promise<RemoteBackupFile[]> {
-  const prefix = cleanPath([target.prefix, BACKUP_PREFIX].filter(Boolean).join("/"));
+  const prefix = cleanPath([normalizeBackupDir(target.backupDir ?? target.prefix), BACKUP_PREFIX].filter(Boolean).join("/"));
   const query = `list-type=2&prefix=${encodePathPart(prefix)}`;
   const response = await s3Fetch(target, "GET", "", query);
   if (!response.ok) {
@@ -328,7 +359,7 @@ async function listS3Backups(target: BackupTargetConfig): Promise<RemoteBackupFi
 }
 
 async function putS3Backup(target: BackupTargetConfig, fileName: string, payload: string) {
-  const key = cleanPath([target.prefix, fileName].filter(Boolean).join("/"));
+  const key = cleanPath([normalizeBackupDir(target.backupDir ?? target.prefix), fileName].filter(Boolean).join("/"));
   const response = await s3Fetch(target, "PUT", key, "", payload, { "Content-Type": "application/json; charset=utf-8" });
   if (!response.ok) {
     const text = await response.text().catch(() => "");
@@ -379,7 +410,8 @@ async function pruneBackups(target: BackupTargetConfig) {
 export async function testBackupTarget(targetInput: BackupTargetConfig): Promise<BackupActionResult> {
   const target = validateTarget(targetInput);
   if (target.type === "WebDAV") {
-    await ensureWebdavCollection(target).catch(() => undefined);
+    await ensureWebdavCollection(target);
+    await probeWebdavCollection(target);
     await listWebdavBackups(target);
   } else {
     await listS3Backups(target);

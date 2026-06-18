@@ -113,14 +113,20 @@ export function applyThemeVariables(palette: ThemePalette) {
   Object.entries(variables).forEach(([name, value]) => root.style.setProperty(name, value));
 }
 
+export function applyTheme(theme: ThemeId) {
+  const normalizedTheme = normalizeTheme(theme);
+  const palette = themePalettes[normalizedTheme];
+  applyThemeVariables(palette);
+  document.body.dataset.theme = normalizedTheme;
+  document.documentElement.dataset.theme = normalizedTheme;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", palette.colors.base);
+}
+
 export function applyStoredTheme() {
   if (typeof window === "undefined") return;
   const theme = normalizeTheme(window.localStorage.getItem(THEME_STORAGE) ?? undefined);
-  const palette = themePalettes[theme];
-  applyThemeVariables(palette);
-  document.body.dataset.theme = theme;
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", palette.colors.base);
+  applyTheme(theme);
 }
 
 export function readStoredTheme(): ThemeId | undefined {

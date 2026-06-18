@@ -132,7 +132,7 @@ function parseLocal(text: string) {
     try {
       const payload = JSON.parse(trimmed);
       const items = Array.isArray(payload) ? payload : Array.isArray(payload.assets) ? payload.assets : [];
-      return items.map((item: Record<string, any>, index: number) => normalizeAsset(item, index)).filter((asset) => asset.name);
+      return items.map((item: Record<string, any>, index: number) => normalizeAsset(item, index)).filter((asset: ReturnType<typeof normalizeAsset>) => asset.name);
     } catch {}
   }
   const lines = trimmed.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
@@ -229,7 +229,7 @@ Return strict JSON only: {"assets":[...]}. Do not use Markdown. Preserve as many
     const content = data.choices?.[0]?.message?.content ?? data.output_text ?? data.output?.[0]?.content?.[0]?.text ?? "";
     const payload = extractJson(String(content));
     const items = Array.isArray(payload) ? payload : Array.isArray(payload.assets) ? payload.assets : [];
-    const assets = items.map((item: Record<string, any>, index: number) => normalizeAsset(item, index)).filter((asset) => asset.name);
+    const assets = items.map((item: Record<string, any>, index: number) => normalizeAsset(item, index)).filter((asset: ReturnType<typeof normalizeAsset>) => asset.name);
     if (assets.length) return { assets, model };
     lastError = "AI 未返回可入库资产";
   }

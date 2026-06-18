@@ -3,7 +3,6 @@
   BellOutlined,
   CalendarOutlined,
   CopyOutlined,
-  DatabaseOutlined,
   DeleteOutlined,
   EditOutlined,
   ExclamationCircleOutlined,
@@ -19,6 +18,7 @@
   ThunderboltOutlined,
 } from "@ant-design/icons";
 import {
+  Alert,
   AutoComplete,
   Button,
   Card,
@@ -60,7 +60,7 @@ import "./i18n";
 import { useYiHuoStore } from "./store";
 import type { Asset, AssetType, BackupTarget, Language, NotificationChannel, NotifyType, ViewMode, AppSettings } from "./types";
 import { daysUntil, topbarDate } from "./utils/calendar";
-import { THEME_STORAGE, applyThemeVariables, normalizeTheme, themePalettes } from "./theme";
+import { THEME_STORAGE, applyTheme, normalizeTheme, themePalettes } from "./theme";
 import type { ThemeId } from "./theme";
 
 const { Header, Sider, Content } = Layout;
@@ -157,10 +157,12 @@ async function hydrateFromServer(key: string) {
     });
     if (!response.ok) return;
     const data = await response.json();
-    const nextSettings = data.settings ? { ...useYiHuoStore.getState().settings, ...data.settings } : undefined;
-    const nextTheme = nextSettings?.theme ? normalizeTheme(nextSettings.theme) : undefined;
+    const storedTheme = window.localStorage.getItem(THEME_STORAGE);
+    const serverSettings = data.settings ? { ...useYiHuoStore.getState().settings, ...data.settings } : undefined;
+    const nextTheme = storedTheme ? normalizeTheme(storedTheme) : serverSettings?.theme ? normalizeTheme(serverSettings.theme) : undefined;
+    const nextSettings = serverSettings ? { ...serverSettings, theme: nextTheme ?? serverSettings.theme } : undefined;
     if (nextTheme) window.localStorage.setItem(THEME_STORAGE, nextTheme);
-    if (nextSettings) window.localStorage.setItem(SETTINGS_STORAGE, JSON.stringify({ ...nextSettings, theme: nextTheme ?? nextSettings.theme }));
+    if (nextSettings) window.localStorage.setItem(SETTINGS_STORAGE, JSON.stringify(nextSettings));
     useYiHuoStore.setState((state) => ({
       assets: Array.isArray(data.assets) ? data.assets : state.assets,
       domains: Array.isArray(data.domains) ? data.domains : state.domains,
@@ -722,10 +724,79 @@ const backupTypeName: Record<BackupTarget["type"], string> = {
   S3: "对象存储",
 };
 
+const themeFlameSources: Record<ThemeId, { alpha: string; fallback: string; poster: string }> = {
+  "dark-fire": { alpha: "/异火/九玄金雷.alpha.webm", fallback: "/异火/九玄金雷.mp4", poster: "/异火/九玄金雷.poster.webp" },
+  "qing-lian": { alpha: "/异火/青莲地心火.alpha.webm", fallback: "/异火/青莲地心火.mp4", poster: "/异火/青莲地心火.poster.webp" },
+  "fallen-heart": { alpha: "/异火/陨落心炎.alpha.webm", fallback: "/异火/陨落心炎.mp4", poster: "/异火/陨落心炎.poster.webp" },
+  "bone-cold": { alpha: "/异火/骨灵冷火.alpha.webm", fallback: "/异火/骨灵冷火.mp4", poster: "/异火/骨灵冷火.poster.webp" },
+  "sanqian-flame": { alpha: "/异火/三千焱炎火.alpha.webm", fallback: "/异火/三千焱炎火.mp4", poster: "/异火/三千焱炎火.poster.webp" },
+  "sea-heart": { alpha: "/异火/海心焰.alpha.webm", fallback: "/异火/海心焰.mp4", poster: "/异火/海心焰.poster.webp" },
+  "pure-lotus": { alpha: "/异火/净莲妖火.alpha.webm", fallback: "/异火/净莲妖火.mp4", poster: "/异火/净莲妖火.poster.webp" },
+};
+
 const themeOptions: { value: ThemeId; label: string }[] = Object.entries(themePalettes).map(([value, palette]) => ({
   value: value as ThemeId,
   label: palette.label,
 }));
+
+function FlameVideoStack({ activeTheme }: { activeTheme: ThemeId }) {
+  const [readyThemes, setReadyThemes] = useState<Partial<Record<ThemeId, boolean>>>({});
+  const [fallbackThemes, setFallbackThemes] = useState<Partial<Record<ThemeId, boolean>>>({});
+
+  useEffect(() => {
+    (Object.keys(themeFlameSources) as ThemeId[]).forEach((theme) => {
+      const image = new Image();
+      image.decoding = "async";
+      image.src = themeFlameSources[theme].poster;
+    });
+  }, []);
+
+  const playVideo = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = event.currentTarget;
+    if (!video) return;
+    void video.play().catch(() => undefined);
+  };
+
+  const markReady = (theme: ThemeId) => {
+    setReadyThemes((items) => ({ ...items, [theme]: true }));
+  };
+
+  const recover = (theme: ThemeId) => {
+    setReadyThemes((items) => ({ ...items, [theme]: false }));
+    setFallbackThemes((items) => ({ ...items, [theme]: true }));
+  };
+
+  return (
+    <>
+      {(Object.keys(themeFlameSources) as ThemeId[]).map((theme) => {
+        const source = themeFlameSources[theme];
+        const isActive = theme === activeTheme;
+        const isReady = readyThemes[theme] === true;
+        const src = fallbackThemes[theme] ? source.fallback : source.alpha;
+        return (
+          <div className={`hero-flame-layer${isActive ? " is-active" : ""}`} key={theme}>
+            <img className={`hero-flame-poster${isReady ? "" : " is-visible"}`} src={source.poster} alt="" draggable={false} />
+            <video
+              className={`hero-flame-video${isReady ? " is-ready" : ""}`}
+              src={src}
+              poster={source.poster}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              onCanPlay={() => markReady(theme)}
+              onLoadedData={() => markReady(theme)}
+              onPlaying={playVideo}
+              onError={() => recover(theme)}
+              onStalled={() => recover(theme)}
+            />
+          </div>
+        );
+      })}
+    </>
+  );
+}
 
 const channelTypeName: Record<NotifyType, string> = {
   Email: "Email",
@@ -1283,6 +1354,7 @@ function OverviewModule({
   const monthlyCost = recurringBudgetCost(assets, settings.currency, currencyRates, "monthly");
   const yearlyCost = recurringBudgetCost(assets, settings.currency, currencyRates, "yearly");
   const currencySymbol = currencySymbols[settings.currency] ?? settings.currency;
+  const activeTheme = normalizeTheme(settings.theme);
   const heroTitleLines = settings.language === "en"
     ? ["Gather rare flames", "command every renewal"]
     : ["收诸般异火", "掌万般续期"];
@@ -1301,28 +1373,27 @@ function OverviewModule({
             <Button title="进入 AI 炼化炉，将文本与表格炼成资产火种" icon={<ImportOutlined />} onClick={() => setActive("ai")}>{t("aiImport")}</Button>
           </Space>
         </div>
-        <div className="hero-visual" aria-label="续期告警">
-          <div className="flame-orb">
-            <span />
-            <strong>{urgent.length}</strong>
-            <em>{t("urgentFlame")}</em>
+        <div className="hero-visual" aria-hidden="true">
+          <div className="hero-flame-video-shell">
+            <FlameVideoStack activeTheme={activeTheme} />
+            <div className="hero-flame-blend-overlay" />
           </div>
         </div>
       </section>
 
       <Row gutter={[24, 24]}>
-        <Col xs={24} md={12} xl={6}><Card className="metric-card">{hydrating ? <SummonLoading title={t("metricAssets")} /> : <Statistic title={t("metricAssets")} value={assets.length} prefix={<AppstoreOutlined />} />}</Card></Col>
+        <Col xs={24} md={12} xl={6}><Card className="metric-card">{hydrating ? <SummonLoading title={t("metricAssets")} /> : <Statistic title={t("metricAssets")} value={assets.length} prefix={<span className="metric-fire-emoji">🔥</span>} />}</Card></Col>
         <Col xs={24} md={12} xl={6}><Card className="metric-card"><Statistic title={t("metricUrgent")} value={urgent.length} prefix={<ThunderboltOutlined />} /></Card></Col>
         <Col xs={24} md={12} xl={6}>
           <Card className="metric-card budget-metric-card">
             <div className="budget-duo">
               <div className="budget-line">
                 <Text className="budget-label">{t("metricBudget")}</Text>
-                <div className="budget-value"><DatabaseOutlined /> {monthlyCost.toFixed(2)}{currencySymbol}</div>
+                <div className="budget-value">{currencySymbol}{monthlyCost.toFixed(2)}</div>
               </div>
               <div className="budget-line budget-yearly-line">
                 <Text className="budget-label">年付预算支出</Text>
-                <div className="budget-value">{yearlyCost.toFixed(2)}{currencySymbol}</div>
+                <div className="budget-value">{currencySymbol}{yearlyCost.toFixed(2)}</div>
               </div>
             </div>
           </Card>
@@ -2442,6 +2513,8 @@ function SettingsModule() {
   const [editingBackupId, setEditingBackupId] = useState<string>();
   const [testingBackupId, setTestingBackupId] = useState<string>();
   const [runningBackupId, setRunningBackupId] = useState<string>();
+  const [savingBackupConfig, setSavingBackupConfig] = useState(false);
+  const [backupFeedback, setBackupFeedback] = useState<{ type: "success" | "error" | "info"; message: string }>();
   const [adminKey, setAdminKey] = useState(() => window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "");
   const [api, contextHolder] = message.useMessage();
   const backupTargets = settings.backupTargets ?? [];
@@ -2472,7 +2545,11 @@ function SettingsModule() {
 
   const openBackupEditor = (target?: BackupTarget) => {
     setEditingBackupId(target?.id);
-    backupForm.setFieldsValue(target ?? {
+    setBackupFeedback(undefined);
+    backupForm.setFieldsValue(target ? {
+      ...target,
+      backupDir: target.backupDir ?? (target.prefix ? `/${target.prefix.replace(/^\/+|\/+$/g, "")}` : "/"),
+    } : {
       type: "WebDAV",
       enabled: true,
       name: "",
@@ -2484,6 +2561,7 @@ function SettingsModule() {
       region: "auto",
       accessKeyId: "",
       secretAccessKey: "",
+      backupDir: "/yihuoge",
       prefix: "yihuoge",
       pathStyle: true,
       scheduleEnabled: false,
@@ -2503,24 +2581,53 @@ function SettingsModule() {
       retentionCount,
       scheduleIntervalHours,
     };
+    const normalizedDir = (nextTarget.backupDir ?? nextTarget.prefix ?? "/").trim();
+    nextTarget.backupDir = normalizedDir === "/" ? "/" : `/${normalizedDir.replace(/^\/+|\/+$/g, "")}`;
+    nextTarget.prefix = nextTarget.backupDir === "/" ? "" : nextTarget.backupDir.replace(/^\/+|\/+$/g, "");
     if (nextTarget.type === "S3") {
       nextTarget.endpoint = nextTarget.endpoint?.replace(/\/+$/, "");
-      nextTarget.prefix = nextTarget.prefix?.replace(/^\/+|\/+$/g, "");
-      nextTarget.target = [nextTarget.endpoint, nextTarget.bucket, nextTarget.prefix].filter(Boolean).join(" / ");
+      nextTarget.target = [nextTarget.endpoint, nextTarget.bucket, nextTarget.backupDir].filter(Boolean).join(" / ");
+    } else {
+      nextTarget.target = nextTarget.target?.replace(/\/+$/, "");
     }
     return nextTarget;
+  };
+
+  const persistSettingsPatch = async (patch: Partial<AppSettings>) => {
+    const nextSettings = { ...settings, ...patch };
+    updateSettings(patch);
+    const response = await fetch("/api/settings", {
+      method: "PUT",
+      headers: authHeaders(),
+      body: JSON.stringify(nextSettings),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error ?? "设置保存失败，请检查管理密钥或后端状态");
+    return data as AppSettings;
   };
 
   const saveBackupTarget = async () => {
     const values = await backupForm.validateFields();
     const nextTarget = normalizeBackupForm(values);
-    updateSettings({
-      backupTargets: editingBackupId
-        ? backupTargets.map((item) => (item.id === editingBackupId ? nextTarget : item))
-        : [nextTarget, ...backupTargets],
-    });
-    setBackupOpen(false);
-    api.success("备份法阵已刻录");
+    const nextTargets = editingBackupId
+      ? backupTargets.map((item) => (item.id === editingBackupId ? nextTarget : item))
+      : [nextTarget, ...backupTargets];
+    const key = "backup-save";
+    setSavingBackupConfig(true);
+    setBackupFeedback({ type: "info", message: "正在保存备份配置…" });
+    api.open({ key, type: "loading", content: "正在保存备份配置…", duration: 0 });
+    try {
+      await persistSettingsPatch({ backupTargets: nextTargets });
+      setBackupOpen(false);
+      setBackupFeedback(undefined);
+      api.open({ key, type: "success", content: "备份配置已保存，可以测试连接或立即备份", duration: 3 });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "备份配置保存失败";
+      setBackupFeedback({ type: "error", message });
+      api.open({ key, type: "error", content: message, duration: 5 });
+    } finally {
+      setSavingBackupConfig(false);
+    }
   };
 
   const authHeaders = () => {
@@ -2535,7 +2642,11 @@ function SettingsModule() {
 
   const testBackupTargetAction = async (target?: BackupTarget) => {
     const candidate = target ?? normalizeBackupForm(await backupForm.validateFields());
-    setTestingBackupId(candidate.id);
+    const actionId = target?.id ?? editingBackupId ?? "draft";
+    const key = `backup-test-${actionId}`;
+    setTestingBackupId(actionId);
+    setBackupFeedback({ type: "info", message: "正在测试备份连接与目录权限…" });
+    api.open({ key, type: "loading", content: "正在测试备份连接…", duration: 0 });
     try {
       const response = await fetch("/api/backups/test", {
         method: "POST",
@@ -2545,27 +2656,45 @@ function SettingsModule() {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error ?? "连接测试失败");
       mergeBackupTarget(data.target);
-      api.success(data.message ?? "连接测试成功");
+      const message = data.message ?? "连接测试成功，目录可访问";
+      setBackupFeedback({ type: "success", message });
+      api.open({ key, type: "success", content: message, duration: 3 });
     } catch (error) {
-      api.error(error instanceof Error ? error.message : "连接测试失败");
+      const message = error instanceof Error ? error.message : "连接测试失败";
+      setBackupFeedback({ type: "error", message });
+      api.open({ key, type: "error", content: message, duration: 6 });
     } finally {
       setTestingBackupId(undefined);
     }
   };
 
   const runBackupNow = async (target: BackupTarget) => {
+    const freshTarget = (settings.backupTargets ?? []).find((item) => item.id === target.id);
+    if (!freshTarget) {
+      api.error("这条备份配置尚未保存到后端，请先保存配置后再立即备份");
+      return;
+    }
+    const key = `backup-run-${target.id}`;
     setRunningBackupId(target.id);
+    setBackupFeedback({ type: "info", message: "正在执行备份，请稍候…" });
+    api.open({ key, type: "loading", content: "正在执行备份…", duration: 0 });
     try {
       const response = await fetch(`/api/backups/${target.id}/run`, {
         method: "POST",
         headers: authHeaders(),
+        body: JSON.stringify({ target: freshTarget }),
       });
       const data = await response.json().catch(() => ({}));
+      if (response.status === 404) throw new Error("后端未找到这条备份配置：请重新保存一次该备份法阵，再执行立即备份");
       if (!response.ok) throw new Error(data.error ?? "备份执行失败");
       mergeBackupTarget(data.target);
-      api.success(data.message ?? "备份已完成");
+      const message = data.message ?? "备份已完成";
+      setBackupFeedback({ type: "success", message });
+      api.open({ key, type: "success", content: message, duration: 4 });
     } catch (error) {
-      api.error(error instanceof Error ? error.message : "备份执行失败");
+      const message = error instanceof Error ? error.message : "备份执行失败";
+      setBackupFeedback({ type: "error", message });
+      api.open({ key, type: "error", content: message, duration: 7 });
     } finally {
       setRunningBackupId(undefined);
     }
@@ -2625,14 +2754,14 @@ function SettingsModule() {
                       {target.lastStatus && <Tag color={target.lastStatus === "success" ? "success" : "error"}>{target.lastStatus === "success" ? "正常" : "失败"}</Tag>}
                     </Space>
                     <Title level={5}>{target.name}</Title>
-                    <Text className="muted">{target.target || [target.endpoint, target.bucket, target.prefix].filter(Boolean).join(" / ")}</Text>
+                    <Text className="muted">{target.target || [target.endpoint, target.bucket, target.backupDir ?? target.prefix].filter(Boolean).join(" / ")}</Text>
                     {target.lastBackupAt && <Paragraph className="muted backup-note">上次备份：{dayjs(target.lastBackupAt).format("YYYY-MM-DD HH:mm:ss")}{target.nextBackupAt ? ` · 下次：${dayjs(target.nextBackupAt).format("YYYY-MM-DD HH:mm:ss")}` : ""}</Paragraph>}
                     {target.lastMessage && <Paragraph className="muted backup-note">状态：{target.lastMessage}</Paragraph>}
                     {target.notes && <Paragraph className="muted backup-note">{target.notes}</Paragraph>}
                   </div>
                   <Space wrap>
                     <Switch checked={target.enabled} checkedChildren="启用" unCheckedChildren="停用" onChange={(enabled) => updateSettings({ backupTargets: backupTargets.map((item) => item.id === target.id ? { ...item, enabled } : item) })} />
-                    <Button title="测试备份目标连接与权限" loading={testingBackupId === target.id} onClick={() => testBackupTargetAction(target)}>测试</Button>
+                    <Button title="测试备份目标连接与目录权限" loading={testingBackupId === target.id} onClick={() => testBackupTargetAction(target)}>测试连接</Button>
                     <Button title="立即执行一次备份并清理旧文件" loading={runningBackupId === target.id} onClick={() => runBackupNow(target)}>立即备份</Button>
                     <Button title="编辑该备份方式" icon={<EditOutlined />} onClick={() => openBackupEditor(target)}>编辑</Button>
                     <Popconfirm title="确认删除该备份方式？" onConfirm={() => removeBackupTarget(target.id)}>
@@ -2653,8 +2782,9 @@ function SettingsModule() {
           </Card>
         </Col>
       </Row>
-      <Modal open={backupOpen} title={editingBackupId ? "编辑备份法阵" : "新增备份法阵"} onCancel={() => setBackupOpen(false)} onOk={saveBackupTarget} okText="保存" width={720}>
+      <Modal open={backupOpen} title={editingBackupId ? "编辑备份法阵" : "新增备份法阵"} onCancel={() => setBackupOpen(false)} onOk={saveBackupTarget} okText="保存" confirmLoading={savingBackupConfig} width={720}>
         <Form form={backupForm} layout="vertical">
+          {backupFeedback && <Alert className="backup-feedback" showIcon type={backupFeedback.type} message={backupFeedback.message} />}
           <Form.Item name="name" label="名称" rules={[{ required: true, message: "请填写备份名称" }]}><Input placeholder="例如：网盘镜像 / 对象存储仓" /></Form.Item>
           <Form.Item name="type" label="类型"><Select options={(Object.keys(backupTypeName) as BackupTarget["type"][]).map((value) => ({ value, label: backupTypeName[value] }))} /></Form.Item>
           <Form.Item noStyle shouldUpdate={(prev, next) => prev.type !== next.type}>
@@ -2666,7 +2796,7 @@ function SettingsModule() {
                 </Row>
                 <Row gutter={12}>
                   <Col xs={24} md={12}><Form.Item name="region" label="Region"><Input placeholder="auto / us-east-1 / cn-east-1" /></Form.Item></Col>
-                  <Col xs={24} md={12}><Form.Item name="prefix" label="目录前缀"><Input placeholder="backups/yihuoge" /></Form.Item></Col>
+                  <Col xs={24} md={12}><Form.Item name="backupDir" label="备份目录" tooltip="可填 / 表示根目录，也可填 /yihuoge，由项目负责创建目录"><Input placeholder="/yihuoge" /></Form.Item></Col>
                 </Row>
                 <Row gutter={12}>
                   <Col xs={24} md={12}><Form.Item name="accessKeyId" label="Access Key ID" rules={[{ required: true, message: "请填写 Access Key ID" }]}><Input autoComplete="off" /></Form.Item></Col>
@@ -2677,6 +2807,7 @@ function SettingsModule() {
             ) : (
               <>
                 <Form.Item name="target" label="WebDAV 地址" rules={[{ required: true, message: "请填写 WebDAV 地址" }]}><Input placeholder="https://dav.example.com/remote.php/dav/files/user/yihuoge/" /></Form.Item>
+                <Form.Item name="backupDir" label="备份目录" tooltip="可填 / 表示根目录，也可填 /yihuoge，由项目负责创建目录"><Input placeholder="/yihuoge" /></Form.Item>
                 <Row gutter={12}>
                   <Col xs={24} md={12}><Form.Item name="username" label="用户名"><Input autoComplete="username" /></Form.Item></Col>
                   <Col xs={24} md={12}><Form.Item name="password" label="密码 / 应用密码"><Input.Password autoComplete="new-password" /></Form.Item></Col>
@@ -2693,7 +2824,7 @@ function SettingsModule() {
             <Col xs={24} md={12}><Form.Item name="retentionCount" label="保留最新份数" rules={[{ required: true, message: "请选择保留份数" }]}><InputNumber min={1} max={100} style={{ width: "100%" }} /></Form.Item></Col>
           </Row>
           <Form.Item name="notes" label="备注"><TextArea rows={3} /></Form.Item>
-          <Button title="保存前先测试当前填写的备份配置" loading={testingBackupId === (editingBackupId ?? "draft")} onClick={() => testBackupTargetAction()}>测试当前配置</Button>
+          <Button title="保存前先测试当前填写的备份连接与目录权限" loading={testingBackupId === (editingBackupId ?? "draft")} onClick={() => testBackupTargetAction()}>测试连接</Button>
         </Form>
       </Modal>
     </div>
@@ -2873,17 +3004,20 @@ export default function App() {
   }, [activeTheme]);
 
   useEffect(() => {
-    if (settings.theme !== activeTheme) {
-      updateSettings({ theme: activeTheme });
-      return;
-    }
-    applyThemeVariables(themePalettes[activeTheme]);
+    applyTheme(activeTheme);
     window.localStorage.setItem(THEME_STORAGE, activeTheme);
-    document.body.dataset.theme = activeTheme;
     return () => {
       delete document.body.dataset.theme;
+      delete document.documentElement.dataset.theme;
     };
-  }, [activeTheme, settings.theme, updateSettings]);
+  }, [activeTheme]);
+
+  const selectTheme = (theme: ThemeId) => {
+    const nextTheme = normalizeTheme(theme);
+    window.localStorage.setItem(THEME_STORAGE, nextTheme);
+    applyTheme(nextTheme);
+    updateSettings({ theme: nextTheme });
+  };
 
   const openQuickCreate = () => {
     setActive("assets");
@@ -2975,7 +3109,7 @@ export default function App() {
                 menu={{
                   selectable: true,
                   selectedKeys: [activeTheme],
-                  onClick: ({ key }) => updateSettings({ theme: key as ThemeId }),
+                  onClick: ({ key }) => selectTheme(key as ThemeId),
                   items: themeOptions.map((option) => ({ key: option.value, label: option.label })),
                 }}
               >

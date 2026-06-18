@@ -99,6 +99,7 @@ export interface BackupTarget {
   region?: string;
   accessKeyId?: string;
   secretAccessKey?: string;
+  backupDir?: string;
   prefix?: string;
   pathStyle?: boolean;
   scheduleEnabled?: boolean;
