@@ -724,14 +724,14 @@ const backupTypeName: Record<BackupTarget["type"], string> = {
   S3: "对象存储",
 };
 
-const themeFlameSources: Record<ThemeId, { alpha: string; fallback: string; poster: string }> = {
-  "dark-fire": { alpha: "/异火/九玄金雷.alpha.webm", fallback: "/异火/九玄金雷.mp4", poster: "/异火/九玄金雷.poster.webp" },
-  "qing-lian": { alpha: "/异火/青莲地心火.alpha.webm", fallback: "/异火/青莲地心火.mp4", poster: "/异火/青莲地心火.poster.webp" },
-  "fallen-heart": { alpha: "/异火/陨落心炎.alpha.webm", fallback: "/异火/陨落心炎.mp4", poster: "/异火/陨落心炎.poster.webp" },
-  "bone-cold": { alpha: "/异火/骨灵冷火.alpha.webm", fallback: "/异火/骨灵冷火.mp4", poster: "/异火/骨灵冷火.poster.webp" },
-  "sanqian-flame": { alpha: "/异火/三千焱炎火.alpha.webm", fallback: "/异火/三千焱炎火.mp4", poster: "/异火/三千焱炎火.poster.webp" },
-  "sea-heart": { alpha: "/异火/海心焰.alpha.webm", fallback: "/异火/海心焰.mp4", poster: "/异火/海心焰.poster.webp" },
-  "pure-lotus": { alpha: "/异火/净莲妖火.alpha.webm", fallback: "/异火/净莲妖火.mp4", poster: "/异火/净莲妖火.poster.webp" },
+const themeFlameSources: Record<ThemeId, { alpha: string; poster: string }> = {
+  "dark-fire": { alpha: "/异火/九玄金雷.alpha.webm", poster: "/异火/九玄金雷.poster.webp" },
+  "qing-lian": { alpha: "/异火/青莲地心火.alpha.webm", poster: "/异火/青莲地心火.poster.webp" },
+  "fallen-heart": { alpha: "/异火/陨落心炎.alpha.webm", poster: "/异火/陨落心炎.poster.webp" },
+  "bone-cold": { alpha: "/异火/骨灵冷火.alpha.webm", poster: "/异火/骨灵冷火.poster.webp" },
+  "sanqian-flame": { alpha: "/异火/三千焱炎火.alpha.webm", poster: "/异火/三千焱炎火.poster.webp" },
+  "sea-heart": { alpha: "/异火/海心焰.alpha.webm", poster: "/异火/海心焰.poster.webp" },
+  "pure-lotus": { alpha: "/异火/净莲妖火.alpha.webm", poster: "/异火/净莲妖火.poster.webp" },
 };
 
 const themeOptions: { value: ThemeId; label: string }[] = Object.entries(themePalettes).map(([value, palette]) => ({
@@ -741,7 +741,7 @@ const themeOptions: { value: ThemeId; label: string }[] = Object.entries(themePa
 
 function FlameVideoStack({ activeTheme }: { activeTheme: ThemeId }) {
   const [readyThemes, setReadyThemes] = useState<Partial<Record<ThemeId, boolean>>>({});
-  const [fallbackThemes, setFallbackThemes] = useState<Partial<Record<ThemeId, boolean>>>({});
+  const [failedThemes, setFailedThemes] = useState<Partial<Record<ThemeId, boolean>>>({});
 
   useEffect(() => {
     (Object.keys(themeFlameSources) as ThemeId[]).forEach((theme) => {
@@ -759,11 +759,12 @@ function FlameVideoStack({ activeTheme }: { activeTheme: ThemeId }) {
 
   const markReady = (theme: ThemeId) => {
     setReadyThemes((items) => ({ ...items, [theme]: true }));
+    setFailedThemes((items) => ({ ...items, [theme]: false }));
   };
 
-  const recover = (theme: ThemeId) => {
+  const markFailed = (theme: ThemeId) => {
     setReadyThemes((items) => ({ ...items, [theme]: false }));
-    setFallbackThemes((items) => ({ ...items, [theme]: true }));
+    setFailedThemes((items) => ({ ...items, [theme]: true }));
   };
 
   return (
@@ -772,13 +773,13 @@ function FlameVideoStack({ activeTheme }: { activeTheme: ThemeId }) {
         const source = themeFlameSources[theme];
         const isActive = theme === activeTheme;
         const isReady = readyThemes[theme] === true;
-        const src = fallbackThemes[theme] ? source.fallback : source.alpha;
+        const isFailed = failedThemes[theme] === true;
         return (
           <div className={`hero-flame-layer${isActive ? " is-active" : ""}`} key={theme}>
-            <img className={`hero-flame-poster${isReady ? "" : " is-visible"}`} src={source.poster} alt="" draggable={false} />
+            <img className={`hero-flame-poster${isReady && !isFailed ? "" : " is-visible"}`} src={source.poster} alt="" draggable={false} />
             <video
-              className={`hero-flame-video${isReady ? " is-ready" : ""}`}
-              src={src}
+              className={`hero-flame-video${isReady && !isFailed ? " is-ready" : ""}`}
+              src={source.alpha}
               poster={source.poster}
               autoPlay
               muted
@@ -788,8 +789,7 @@ function FlameVideoStack({ activeTheme }: { activeTheme: ThemeId }) {
               onCanPlay={() => markReady(theme)}
               onLoadedData={() => markReady(theme)}
               onPlaying={playVideo}
-              onError={() => recover(theme)}
-              onStalled={() => recover(theme)}
+              onError={() => markFailed(theme)}
             />
           </div>
         );
