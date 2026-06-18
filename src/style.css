@@ -1049,8 +1049,8 @@ body::after {
 }
 
 .hero-flame-layer,
-.hero-flame-poster,
-.hero-flame-video {
+.hero-flame-video,
+.hero-flame-empty {
   position: absolute;
   inset: 0;
 }
@@ -1065,7 +1065,6 @@ body::after {
   opacity: 1;
 }
 
-.hero-flame-poster,
 .hero-flame-video {
   z-index: 1;
   display: block;
@@ -1085,16 +1084,6 @@ body::after {
   transform: translateZ(0);
 }
 
-.hero-flame-poster {
-  z-index: 1;
-  object-fit: contain;
-  opacity: 0;
-}
-
-.hero-flame-poster.is-visible {
-  opacity: 1;
-}
-
 .hero-flame-video {
   z-index: 2;
   object-fit: contain;
@@ -1104,6 +1093,11 @@ body::after {
 
 .hero-flame-video.is-ready {
   opacity: 1 !important;
+}
+
+.hero-flame-empty {
+  z-index: 1;
+  background: transparent;
 }
 
 .theme-pure-lotus .hero-flame-video {
@@ -1641,6 +1635,46 @@ body::after {
 
 .backup-feedback {
   margin-bottom: 16px;
+}
+
+.backup-feedback.ant-alert {
+  color: var(--theme-light) !important;
+  background: color-mix(in srgb, var(--theme-base) 90%, #000) !important;
+  border: 1px solid color-mix(in srgb, var(--theme-core) 46%, transparent) !important;
+  border-radius: 12px;
+}
+
+.backup-feedback.ant-alert-error {
+  background: color-mix(in srgb, #3b0707 70%, var(--theme-base)) !important;
+  border-color: rgba(255, 112, 112, 0.72) !important;
+}
+
+.backup-feedback .ant-alert-message,
+.backup-feedback .ant-alert-description {
+  color: var(--theme-light) !important;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.backup-message .ant-message-notice-content {
+  max-width: min(720px, calc(100vw - 32px));
+  color: var(--theme-light) !important;
+  background:
+    radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--theme-core) 16%, transparent), transparent 42%),
+    color-mix(in srgb, var(--theme-base) 92%, #000) !important;
+  border: 1px solid color-mix(in srgb, var(--theme-core) 42%, transparent);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgb(0 0 0 / 42%);
+}
+
+.backup-message-content {
+  display: inline-block;
+  max-width: 640px;
+  color: var(--theme-light) !important;
+  line-height: 1.55;
+  text-align: left;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .remote-backup-panel {

@@ -724,14 +724,14 @@ const backupTypeName: Record<BackupTarget["type"], string> = {
   S3: "对象存储",
 };
 
-const themeFlameSources: Record<ThemeId, { alpha: string; poster: string }> = {
-  "dark-fire": { alpha: "/异火/九玄金雷.alpha.webm", poster: "/异火/九玄金雷.poster.webp" },
-  "qing-lian": { alpha: "/异火/青莲地心火.alpha.webm", poster: "/异火/青莲地心火.poster.webp" },
-  "fallen-heart": { alpha: "/异火/陨落心炎.alpha.webm", poster: "/异火/陨落心炎.poster.webp" },
-  "bone-cold": { alpha: "/异火/骨灵冷火.alpha.webm", poster: "/异火/骨灵冷火.poster.webp" },
-  "sanqian-flame": { alpha: "/异火/三千焱炎火.alpha.webm", poster: "/异火/三千焱炎火.poster.webp" },
-  "sea-heart": { alpha: "/异火/海心焰.alpha.webm", poster: "/异火/海心焰.poster.webp" },
-  "pure-lotus": { alpha: "/异火/净莲妖火.alpha.webm", poster: "/异火/净莲妖火.poster.webp" },
+const themeFlameSources: Record<ThemeId, { alpha: string }> = {
+  "dark-fire": { alpha: "/异火/九玄金雷.alpha.webm" },
+  "qing-lian": { alpha: "/异火/青莲地心火.alpha.webm" },
+  "fallen-heart": { alpha: "/异火/陨落心炎.alpha.webm" },
+  "bone-cold": { alpha: "/异火/骨灵冷火.alpha.webm" },
+  "sanqian-flame": { alpha: "/异火/三千焱炎火.alpha.webm" },
+  "sea-heart": { alpha: "/异火/海心焰.alpha.webm" },
+  "pure-lotus": { alpha: "/异火/净莲妖火.alpha.webm" },
 };
 
 const themeOptions: { value: ThemeId; label: string }[] = Object.entries(themePalettes).map(([value, palette]) => ({
@@ -740,16 +740,26 @@ const themeOptions: { value: ThemeId; label: string }[] = Object.entries(themePa
 }));
 
 function FlameVideoStack({ activeTheme }: { activeTheme: ThemeId }) {
-  const [readyThemes, setReadyThemes] = useState<Partial<Record<ThemeId, boolean>>>({});
-  const [failedThemes, setFailedThemes] = useState<Partial<Record<ThemeId, boolean>>>({});
+  const [readyTheme, setReadyTheme] = useState<ThemeId | null>(null);
+  const [failedTheme, setFailedTheme] = useState<ThemeId | null>(null);
+  const source = themeFlameSources[activeTheme] ?? themeFlameSources["dark-fire"];
 
   useEffect(() => {
-    (Object.keys(themeFlameSources) as ThemeId[]).forEach((theme) => {
-      const image = new Image();
-      image.decoding = "async";
-      image.src = themeFlameSources[theme].poster;
+    const links = (Object.keys(themeFlameSources) as ThemeId[]).map((theme) => {
+      const link = document.createElement("link");
+      link.rel = "preload";
+      link.as = "video";
+      link.href = themeFlameSources[theme].alpha;
+      document.head.appendChild(link);
+      return link;
     });
+    return () => links.forEach((link) => link.remove());
   }, []);
+
+  useEffect(() => {
+    setReadyTheme(null);
+    setFailedTheme(null);
+  }, [activeTheme]);
 
   const playVideo = (event: React.SyntheticEvent<HTMLVideoElement>) => {
     const video = event.currentTarget;
@@ -757,44 +767,37 @@ function FlameVideoStack({ activeTheme }: { activeTheme: ThemeId }) {
     void video.play().catch(() => undefined);
   };
 
-  const markReady = (theme: ThemeId) => {
-    setReadyThemes((items) => ({ ...items, [theme]: true }));
-    setFailedThemes((items) => ({ ...items, [theme]: false }));
+  const markReady = () => {
+    setReadyTheme(activeTheme);
+    setFailedTheme(null);
   };
 
-  const markFailed = (theme: ThemeId) => {
-    setReadyThemes((items) => ({ ...items, [theme]: false }));
-    setFailedThemes((items) => ({ ...items, [theme]: true }));
+  const markFailed = () => {
+    setReadyTheme(null);
+    setFailedTheme(activeTheme);
   };
+
+  const isReady = readyTheme === activeTheme;
+  const isFailed = failedTheme === activeTheme;
 
   return (
-    <>
-      {(Object.keys(themeFlameSources) as ThemeId[]).map((theme) => {
-        const source = themeFlameSources[theme];
-        const isActive = theme === activeTheme;
-        const isReady = readyThemes[theme] === true;
-        const isFailed = failedThemes[theme] === true;
-        return (
-          <div className={`hero-flame-layer${isActive ? " is-active" : ""}`} key={theme}>
-            <img className={`hero-flame-poster${isReady && !isFailed ? "" : " is-visible"}`} src={source.poster} alt="" draggable={false} />
-            <video
-              className={`hero-flame-video${isReady && !isFailed ? " is-ready" : ""}`}
-              src={source.alpha}
-              poster={source.poster}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
-              onCanPlay={() => markReady(theme)}
-              onLoadedData={() => markReady(theme)}
-              onPlaying={playVideo}
-              onError={() => markFailed(theme)}
-            />
-          </div>
-        );
-      })}
-    </>
+    <div className="hero-flame-layer is-active" key={activeTheme}>
+      {isFailed && <div className="hero-flame-empty" />}
+      <video
+        key={activeTheme}
+        className={`hero-flame-video${isReady && !isFailed ? " is-ready" : ""}`}
+        src={source.alpha}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        onCanPlay={markReady}
+        onLoadedData={markReady}
+        onPlaying={playVideo}
+        onError={markFailed}
+      />
+    </div>
   );
 }
 
@@ -2579,6 +2582,7 @@ function SettingsModule() {
   const normalizeBackupForm = (values: BackupTarget): BackupTarget => {
     const retentionCount = Math.max(1, Number(values.retentionCount ?? 7));
     const scheduleIntervalHours = Math.max(1, Number(values.scheduleIntervalHours ?? 24));
+    const previousTarget = editingBackupId ? backupTargets.find((item) => item.id === editingBackupId) : undefined;
     const nextTarget = {
       ...values,
       id: editingBackupId ?? values.id ?? `backup-${Date.now()}`,
@@ -2591,8 +2595,10 @@ function SettingsModule() {
     if (nextTarget.type === "S3") {
       nextTarget.endpoint = nextTarget.endpoint?.replace(/\/+$/, "");
       nextTarget.target = [nextTarget.endpoint, nextTarget.bucket, nextTarget.backupDir].filter(Boolean).join(" / ");
+      if (!nextTarget.secretAccessKey && previousTarget?.type === "S3") nextTarget.secretAccessKey = previousTarget.secretAccessKey;
     } else {
       nextTarget.target = nextTarget.target?.replace(/\/+$/, "");
+      if (!nextTarget.password && previousTarget?.type === "WebDAV") nextTarget.password = previousTarget.password;
     }
     return nextTarget;
   };
@@ -2610,6 +2616,16 @@ function SettingsModule() {
     return data as AppSettings;
   };
 
+  const showBackupMessage = (type: "success" | "error" | "loading", key: string, content: string, duration?: number) => {
+    api.open({
+      key,
+      type,
+      content: <span className="backup-message-content">{content}</span>,
+      duration: duration ?? (type === "error" ? 8 : 3),
+      className: "backup-message",
+    });
+  };
+
   const saveBackupTarget = async () => {
     const values = await backupForm.validateFields();
     const nextTarget = normalizeBackupForm(values);
@@ -2619,16 +2635,16 @@ function SettingsModule() {
     const key = "backup-save";
     setSavingBackupConfig(true);
     setBackupFeedback({ type: "info", message: "正在保存备份配置…" });
-    api.open({ key, type: "loading", content: "正在保存备份配置…", duration: 0 });
+    showBackupMessage("loading", key, "正在保存备份配置…", 0);
     try {
       await persistSettingsPatch({ backupTargets: nextTargets });
       setBackupOpen(false);
       setBackupFeedback(undefined);
-      api.open({ key, type: "success", content: "备份配置已保存，可以测试连接或立即备份", duration: 3 });
+      showBackupMessage("success", key, "备份配置已保存，可以测试连接或立即备份", 3);
     } catch (error) {
       const message = error instanceof Error ? error.message : "备份配置保存失败";
       setBackupFeedback({ type: "error", message });
-      api.open({ key, type: "error", content: message, duration: 5 });
+      showBackupMessage("error", key, message, 8);
     } finally {
       setSavingBackupConfig(false);
     }
@@ -2659,7 +2675,7 @@ function SettingsModule() {
       if (!response.ok) throw new Error(data.error ?? "备份列表读取失败");
       setBackupFiles((items) => ({ ...items, [target.id]: data.files ?? [] }));
     } catch (error) {
-      api.error(error instanceof Error ? error.message : "备份列表读取失败");
+      showBackupMessage("error", `backup-files-${target.id}`, error instanceof Error ? error.message : "备份列表读取失败");
     } finally {
       setLoadingBackupFilesId(undefined);
     }
@@ -2681,12 +2697,11 @@ function SettingsModule() {
       mergeBackupTarget(data.target);
       const message = data.message ?? "连接测试成功，目录可访问";
       setBackupFeedback({ type: "success", message });
-      if (target) api.success(message);
-      if (target) void refreshBackupFiles(target);
+      if (target) showBackupMessage("success", `backup-test-${target.id}`, message);
     } catch (error) {
       const message = error instanceof Error ? error.message : "连接测试失败";
       setBackupFeedback({ type: "error", message });
-      if (target) api.error(message);
+      if (target) showBackupMessage("error", `backup-test-${target.id}`, message);
     } finally {
       setTestingBackupId(undefined);
     }
@@ -2701,7 +2716,7 @@ function SettingsModule() {
     const key = `backup-run-${target.id}`;
     setRunningBackupId(target.id);
     setBackupFeedback({ type: "info", message: "正在执行备份，请稍候…" });
-    api.open({ key, type: "loading", content: "正在执行备份…", duration: 0 });
+    showBackupMessage("loading", key, "正在执行备份…", 0);
     try {
       const response = await fetch(`/api/backups/${target.id}/run`, {
         method: "POST",
@@ -2714,12 +2729,12 @@ function SettingsModule() {
       mergeBackupTarget(data.target);
       const message = data.message ?? "备份已完成";
       setBackupFeedback({ type: "success", message });
-      api.open({ key, type: "success", content: message, duration: 4 });
+      showBackupMessage("success", key, message, 4);
       void refreshBackupFiles(freshTarget);
     } catch (error) {
       const message = error instanceof Error ? error.message : "备份执行失败";
       setBackupFeedback({ type: "error", message });
-      api.open({ key, type: "error", content: message, duration: 7 });
+      showBackupMessage("error", key, message, 8);
     } finally {
       setRunningBackupId(undefined);
     }
@@ -2728,7 +2743,7 @@ function SettingsModule() {
   const restoreBackupFile = async (target: BackupTarget, file: RemoteBackupFile) => {
     setRestoringBackupKey(`${target.id}:${file.key}`);
     const key = `backup-restore-${target.id}`;
-    api.open({ key, type: "loading", content: "正在恢复备份…", duration: 0 });
+    showBackupMessage("loading", key, "正在恢复备份…", 0);
     try {
       const response = await fetch(`/api/backups/${target.id}/restore`, {
         method: "POST",
@@ -2737,11 +2752,11 @@ function SettingsModule() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error ?? "备份恢复失败");
-      api.open({ key, type: "success", content: data.message ?? "备份已恢复，正在刷新数据", duration: 3 });
+      showBackupMessage("success", key, data.message ?? "备份已恢复，正在刷新数据", 3);
       const storedKey = window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "";
       await hydrateFromServer(storedKey);
     } catch (error) {
-      api.open({ key, type: "error", content: error instanceof Error ? error.message : "备份恢复失败", duration: 7 });
+      showBackupMessage("error", key, error instanceof Error ? error.message : "备份恢复失败", 8);
     } finally {
       setRestoringBackupKey(undefined);
     }
@@ -2757,10 +2772,10 @@ function SettingsModule() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error ?? "备份删除失败");
-      api.success(data.message ?? "备份文件已删除");
+      showBackupMessage("success", `backup-delete-${target.id}`, data.message ?? "备份文件已删除");
       await refreshBackupFiles(target);
     } catch (error) {
-      api.error(error instanceof Error ? error.message : "备份删除失败");
+      showBackupMessage("error", `backup-delete-${target.id}`, error instanceof Error ? error.message : "备份删除失败");
     } finally {
       setDeletingBackupKey(undefined);
     }

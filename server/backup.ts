@@ -58,6 +58,15 @@ const BACKUP_SUFFIX = ".json";
 const DEFAULT_RETENTION = 7;
 const DEFAULT_INTERVAL_HOURS = 24;
 const MAX_RETENTION = 100;
+const REMOTE_TIMEOUT_MS = 15000;
+const WEBDAV_PROPFIND_BODY = `<?xml version="1.0" encoding="utf-8"?>
+<d:propfind xmlns:d="DAV:">
+  <d:prop>
+    <d:getlastmodified/>
+    <d:getcontentlength/>
+    <d:resourcetype/>
+  </d:prop>
+</d:propfind>`;
 
 function textEncoder() {
   return new TextEncoder();
@@ -200,6 +209,26 @@ function webdavCollectionUrl(target: BackupTargetConfig) {
   return dir ? ensureTrailingSlash(webdavFileUrl(target, "")) : ensureTrailingSlash(target.target ?? "");
 }
 
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, label = "远端请求") {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REMOTE_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`${label}超时：${Math.round(REMOTE_TIMEOUT_MS / 1000)} 秒内没有响应`);
+    }
+    throw new Error(`${label}失败：${error instanceof Error ? error.message : "网络不可达"}`);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function responseTextSnippet(response: Response) {
+  const text = await response.text().catch(() => "");
+  return text ? `：${text.replace(/\s+/g, " ").slice(0, 180)}` : "";
+}
+
 async function ensureWebdavCollection(target: BackupTargetConfig) {
   const dir = normalizeBackupDir(target.backupDir);
   if (!dir) return;
@@ -207,22 +236,23 @@ async function ensureWebdavCollection(target: BackupTargetConfig) {
   let current = "";
   for (const part of parts) {
     current = [current, part].filter(Boolean).join("/");
-    const response = await fetch(webdavFileUrl({ ...target, backupDir: current }, ""), { method: "MKCOL", headers: webdavHeaders(target) });
+    const url = webdavFileUrl({ ...target, backupDir: current }, "");
+    const response = await fetchWithTimeout(url, { method: "MKCOL", headers: webdavHeaders(target) }, "WebDAV 创建目录");
     if (![201, 405, 409].includes(response.status)) {
-      const text = await response.text().catch(() => "");
-      throw new Error(`WebDAV 目录不可用：HTTP ${response.status}${text ? ` ${text.slice(0, 120)}` : ""}`);
+      throw new Error(`WebDAV 目录不可用：${url} HTTP ${response.status}${await responseTextSnippet(response)}`);
     }
   }
 }
 
 async function listWebdavBackups(target: BackupTargetConfig): Promise<RemoteBackupFile[]> {
-  const response = await fetch(webdavCollectionUrl(target), {
+  const url = webdavCollectionUrl(target);
+  const response = await fetchWithTimeout(url, {
     method: "PROPFIND",
-    headers: webdavHeaders(target, { Depth: "1" }),
-  });
+    headers: webdavHeaders(target, { Depth: "1", "Content-Type": "application/xml; charset=utf-8" }),
+    body: WEBDAV_PROPFIND_BODY,
+  }, "WebDAV 读取列表");
   if (!response.ok && response.status !== 207) {
-    const text = await response.text().catch(() => "");
-    throw new Error(`WebDAV 列表读取失败：HTTP ${response.status}${text ? ` ${text.slice(0, 120)}` : ""}`);
+    throw new Error(`WebDAV 列表读取失败：${url} HTTP ${response.status}${await responseTextSnippet(response)}`);
   }
   const xml = await response.text();
   const files: RemoteBackupFile[] = [];
@@ -242,29 +272,30 @@ async function listWebdavBackups(target: BackupTargetConfig): Promise<RemoteBack
 
 async function putWebdavBackup(target: BackupTargetConfig, fileName: string, payload: string) {
   await ensureWebdavCollection(target);
-  const response = await fetch(webdavFileUrl(target, fileName), {
+  const url = webdavFileUrl(target, fileName);
+  const response = await fetchWithTimeout(url, {
     method: "PUT",
     headers: webdavHeaders(target, { "Content-Type": "application/json; charset=utf-8" }),
     body: payload,
-  });
+  }, "WebDAV 上传备份");
   if (!response.ok && response.status !== 201 && response.status !== 204) {
-    const text = await response.text().catch(() => "");
-    throw new Error(`WebDAV 上传失败：HTTP ${response.status}${text ? ` ${text.slice(0, 120)}` : ""}`);
+    throw new Error(`WebDAV 上传失败：${url} HTTP ${response.status}${await responseTextSnippet(response)}`);
   }
 }
 
 async function deleteWebdavBackup(target: BackupTargetConfig, file: RemoteBackupFile) {
-  const response = await fetch(file.url ?? webdavFileUrl(target, file.key), { method: "DELETE", headers: webdavHeaders(target) });
+  const url = file.url ?? webdavFileUrl(target, file.key);
+  const response = await fetchWithTimeout(url, { method: "DELETE", headers: webdavHeaders(target) }, "WebDAV 删除备份");
   if (!response.ok && response.status !== 404 && response.status !== 204) {
     throw new Error(`WebDAV 清理旧备份失败：${file.key} HTTP ${response.status}`);
   }
 }
 
 async function readWebdavBackup(target: BackupTargetConfig, key: string) {
-  const response = await fetch(webdavFileUrl(target, key), { method: "GET", headers: webdavHeaders(target) });
+  const url = webdavFileUrl(target, key);
+  const response = await fetchWithTimeout(url, { method: "GET", headers: webdavHeaders(target) }, "WebDAV 读取备份");
   if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(`WebDAV 备份读取失败：${key} HTTP ${response.status}${text ? ` ${text.slice(0, 120)}` : ""}`);
+    throw new Error(`WebDAV 备份读取失败：${key} HTTP ${response.status}${await responseTextSnippet(response)}`);
   }
   return response.text();
 }
@@ -337,11 +368,11 @@ function s3Headers(targetInput: BackupTargetConfig, method: string, url: URL, bo
 
 async function s3Fetch(target: BackupTargetConfig, method: string, key = "", query = "", body = "", extra: Record<string, string> = {}) {
   const url = s3Url(target, key, query);
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method,
     headers: s3Headers(target, method, url, body, extra),
     body: method === "GET" || method === "HEAD" ? undefined : textEncoder().encode(body),
-  });
+  }, "S3 请求");
   return response;
 }
 
