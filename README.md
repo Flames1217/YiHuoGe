@@ -22,17 +22,40 @@
 
 ## 🖼️ 界面预览
 
-| 九玄金雷 | 青莲地心火 | 陨落心炎 |
-| --- | --- | --- |
-| ![九玄金雷主题预览](./public/preview/九玄金雷.png) | ![青莲地心火主题预览](./public/preview/青莲地心火.png) | ![陨落心炎主题预览](./public/preview/陨落心炎.png) |
-
-| 骨灵冷火 | 三千焱炎火 | 海心焰 |
-| --- | --- | --- |
-| ![骨灵冷火主题预览](./public/preview/骨灵冷火.png) | ![三千焱炎火主题预览](./public/preview/三千焱炎火.png) | ![海心焰主题预览](./public/preview/海心焰.png) |
-
-| 净莲妖火 |
-| --- |
-| ![净莲妖火主题预览](./public/preview/净莲妖火.png) |
+<table>
+  <tr>
+    <th>九玄金雷</th>
+    <th>青莲地心火</th>
+  </tr>
+  <tr>
+    <td><img src="./public/preview/九玄金雷.png" alt="九玄金雷主题预览" width="420" /></td>
+    <td><img src="./public/preview/青莲地心火.png" alt="青莲地心火主题预览" width="420" /></td>
+  </tr>
+  <tr>
+    <th>陨落心炎</th>
+    <th>骨灵冷火</th>
+  </tr>
+  <tr>
+    <td><img src="./public/preview/陨落心炎.png" alt="陨落心炎主题预览" width="420" /></td>
+    <td><img src="./public/preview/骨灵冷火.png" alt="骨灵冷火主题预览" width="420" /></td>
+  </tr>
+  <tr>
+    <th>三千焱炎火</th>
+    <th>海心焰</th>
+  </tr>
+  <tr>
+    <td><img src="./public/preview/三千焱炎火.png" alt="三千焱炎火主题预览" width="420" /></td>
+    <td><img src="./public/preview/海心焰.png" alt="海心焰主题预览" width="420" /></td>
+  </tr>
+  <tr>
+    <th>净莲妖火</th>
+    <th></th>
+  </tr>
+  <tr>
+    <td><img src="./public/preview/净莲妖火.png" alt="净莲妖火主题预览" width="420" /></td>
+    <td></td>
+  </tr>
+</table>
 
 ## 🚀 快速开始
 
