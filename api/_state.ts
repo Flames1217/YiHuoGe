@@ -76,6 +76,15 @@ function parseJson<T>(value: unknown, fallback: T): T {
   }
 }
 
+function parseOptionalJson<T>(value: unknown): T | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  try {
+    return typeof value === "string" ? JSON.parse(value) as T : value as T;
+  } catch {
+    return undefined;
+  }
+}
+
 function mergeSeed(db: Partial<YiHuoStateData>): YiHuoStateData {
   return {
     assets: Array.isArray(db.assets) ? db.assets : [],
@@ -556,7 +565,7 @@ export async function readAppCache<T>(key: string): Promise<T | undefined> {
     try {
       for (const sql of schemaStatements("mysql")) await connection.execute(sql);
       const [rows] = await connection.execute("SELECT value_json FROM yh_app_cache WHERE key_name = ?", [key]);
-      return (rows as any[])[0] ? parseJson<T>((rows as any[])[0].value_json, undefined as T | undefined) : undefined;
+      return (rows as any[])[0] ? parseOptionalJson<T>((rows as any[])[0].value_json) : undefined;
     } finally {
       await connection.end();
     }
@@ -565,20 +574,20 @@ export async function readAppCache<T>(key: string): Promise<T | undefined> {
     return withPostgres(async (client) => {
       for (const sql of schemaStatements("postgres")) await client.query(sql);
       const result = await client.query("SELECT value_json FROM yh_app_cache WHERE key_name = $1", [key]);
-      return result.rows[0] ? parseJson<T>(result.rows[0].value_json, undefined as T | undefined) : undefined;
+      return result.rows[0] ? parseOptionalJson<T>(result.rows[0].value_json) : undefined;
     });
   }
   if (kind === "d1") {
     const db = d1Binding();
     for (const sql of schemaStatements("sqlite")) await d1Run(db, sql);
     const row = await d1First(db, "SELECT value_json FROM yh_app_cache WHERE key_name = ?", [key]);
-    return row ? parseJson<T>(row.value_json, undefined as T | undefined) : undefined;
+    return row ? parseOptionalJson<T>(row.value_json) : undefined;
   }
   const db = await openSqlite();
   try {
     for (const sql of schemaStatements("sqlite")) await db.exec(sql);
     const row = await db.get("SELECT value_json FROM yh_app_cache WHERE key_name = ?", key);
-    return row ? parseJson<T>(row.value_json, undefined as T | undefined) : undefined;
+    return row ? parseOptionalJson<T>(row.value_json) : undefined;
   } finally {
     await db.close();
   }

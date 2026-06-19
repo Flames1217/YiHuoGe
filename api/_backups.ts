@@ -10,15 +10,15 @@ export function ensureBackupAuth(req: any, res: any) {
 }
 
 function backupTargetsFrom(db: any) {
-  return Array.isArray(db.settings?.backupTargets) ? db.settings.backupTargets.map(normalizeBackupTarget) : [];
+  return Array.isArray(db.settings?.backupTargets) ? (db.settings.backupTargets as BackupTarget[]).map(normalizeBackupTarget) : [];
 }
 
 export async function updateBackupTargetStatus(id: string, patch: Partial<BackupTarget>) {
   const db = await readState() as any;
-  const backupTargets = backupTargetsFrom(db).map((target) => (target.id === id ? normalizeBackupTarget({ ...target, ...patch }) : target));
+  const backupTargets = backupTargetsFrom(db).map((target: BackupTarget) => (target.id === id ? normalizeBackupTarget({ ...target, ...patch }) : target));
   db.settings = { ...db.settings, backupTargets };
   await writeState(db);
-  return backupTargets.find((target) => target.id === id);
+  return backupTargets.find((target: BackupTarget) => target.id === id);
 }
 
 export async function testBackup(req: any, res: any, testBackupTarget: (target: BackupTargetConfig) => Promise<any>) {
@@ -46,7 +46,7 @@ export async function testBackup(req: any, res: any, testBackupTarget: (target: 
 export async function findBackupTarget(id: string, bodyTarget?: BackupTarget) {
   const db = await readState() as any;
   const fallbackTarget = bodyTarget?.id === id ? normalizeBackupTarget(bodyTarget) : undefined;
-  return { db, target: backupTargetsFrom(db).find((item) => item.id === id) ?? fallbackTarget };
+  return { db, target: backupTargetsFrom(db).find((item: BackupTarget) => item.id === id) ?? fallbackTarget };
 }
 
 export async function runBackup(req: any, res: any) {
@@ -78,7 +78,7 @@ export async function backupFiles(req: any, res: any) {
   if (!ensureBackupAuth(req, res)) return;
 
   const id = String(req.query.id ?? "");
-  const { db, target } = await findBackupTarget(id);
+  const { target } = await findBackupTarget(id);
   if (!target) {
     res.status(404).json({ ok: false, error: "backup target not found" });
     return;
