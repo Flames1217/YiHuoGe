@@ -53,7 +53,7 @@ import enUS from "antd/locale/en_US";
 import zhCN from "antd/locale/zh_CN";
 import dayjs from "dayjs";
 import "dayjs/locale/zh-cn";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Key, MouseEvent as ReactMouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import "./i18n";
@@ -69,6 +69,8 @@ const { TextArea } = Input;
 const ADMIN_KEY_STORAGE = "yihuoge-admin-key";
 const ASSET_COLUMN_WIDTHS_STORAGE = "yihuoge-asset-column-widths";
 const SETTINGS_STORAGE = "yihuoge-settings";
+const FLAME_PRELOADER_DISMISS_DATE_STORAGE = "yihuoge-flame-preloader-dismiss-date";
+const FLAME_PRELOADER_DISMISS_FOREVER_STORAGE = "yihuoge-flame-preloader-dismiss-forever";
 
 type AssetColumnKey = "name" | "type" | "provider" | "renewalDate" | "cycle" | "autoRenew" | "price" | "manage" | "action";
 
@@ -155,7 +157,10 @@ async function hydrateFromServer(key: string) {
     const response = await fetch("/api/bootstrap", {
       headers: key ? { "x-admin-key": key } : undefined,
     });
-    if (!response.ok) return;
+    if (!response.ok) {
+      if (response.status === 401) window.localStorage.removeItem(ADMIN_KEY_STORAGE);
+      return false;
+    }
     const data = await response.json();
     const storedTheme = window.localStorage.getItem(THEME_STORAGE);
     const serverSettings = data.settings ? { ...useYiHuoStore.getState().settings, ...data.settings } : undefined;
@@ -170,6 +175,7 @@ async function hydrateFromServer(key: string) {
       aiConfig: data.ai ? { ...state.aiConfig, ...data.ai } : state.aiConfig,
       settings: settingsWithAssetPresets(nextSettings ?? state.settings, Array.isArray(data.assets) ? data.assets : state.assets),
     }));
+    return true;
   } finally {
     useYiHuoStore.setState({ hydrating: false, hydrated: true });
   }
@@ -724,28 +730,42 @@ const backupTypeName: Record<BackupTarget["type"], string> = {
   S3: "对象存储",
 };
 
+const THEME_VIDEO_DIR = "/异火";
+
 const themeFlameSources: Record<ThemeId, { alpha: string }> = {
-  "dark-fire": { alpha: "/异火/九玄金雷.alpha.webm" },
-  "qing-lian": { alpha: "/异火/青莲地心火.alpha.webm" },
-  "fallen-heart": { alpha: "/异火/陨落心炎.alpha.webm" },
-  "bone-cold": { alpha: "/异火/骨灵冷火.alpha.webm" },
-  "sanqian-flame": { alpha: "/异火/三千焱炎火.alpha.webm" },
-  "sea-heart": { alpha: "/异火/海心焰.alpha.webm" },
-  "pure-lotus": { alpha: "/异火/净莲妖火.alpha.webm" },
+  "dark-fire": { alpha: `${THEME_VIDEO_DIR}/九玄金雷.alpha.webm` },
+  "qing-lian": { alpha: `${THEME_VIDEO_DIR}/青莲地心火.alpha.webm` },
+  "fallen-heart": { alpha: `${THEME_VIDEO_DIR}/陨落心炎.alpha.webm` },
+  "bone-cold": { alpha: `${THEME_VIDEO_DIR}/骨灵冷火.alpha.webm` },
+  "sanqian-flame": { alpha: `${THEME_VIDEO_DIR}/三千焱炎火.alpha.webm` },
+  "sea-heart": { alpha: `${THEME_VIDEO_DIR}/海心焰.alpha.webm` },
+  "pure-lotus": { alpha: `${THEME_VIDEO_DIR}/净莲妖火.alpha.webm` },
 };
+const themeFlameIds = Object.keys(themeFlameSources) as ThemeId[];
 
 const themeOptions: { value: ThemeId; label: string }[] = Object.entries(themePalettes).map(([value, palette]) => ({
   value: value as ThemeId,
   label: palette.label,
 }));
 
-function FlameVideoStack({ activeTheme }: { activeTheme: ThemeId }) {
-  const [readyTheme, setReadyTheme] = useState<ThemeId | null>(null);
-  const [failedTheme, setFailedTheme] = useState<ThemeId | null>(null);
-  const source = themeFlameSources[activeTheme] ?? themeFlameSources["dark-fire"];
+function FlameVideoStack({ activeTheme, onLoadProgress }: { activeTheme: ThemeId; onLoadProgress?: (loaded: number, total: number) => void }) {
+  const videoRefs = useRef<Partial<Record<ThemeId, HTMLVideoElement>>>({});
+  const [readyThemes, setReadyThemes] = useState<Partial<Record<ThemeId, boolean>>>({});
+  const [failedThemes, setFailedThemes] = useState<Partial<Record<ThemeId, boolean>>>({});
+  const themeIds = themeFlameIds;
+  const readyCount = themeIds.filter((theme) => readyThemes[theme]).length;
+  const failedCount = themeIds.filter((theme) => failedThemes[theme]).length;
+  const totalCount = themeIds.length;
+  const loadedCount = Math.min(totalCount, readyCount + failedCount);
+  const loadPercent = Math.round((loadedCount / totalCount) * 100);
+  const allSettled = loadedCount >= totalCount;
 
   useEffect(() => {
-    const links = (Object.keys(themeFlameSources) as ThemeId[]).map((theme) => {
+    onLoadProgress?.(loadedCount, totalCount);
+  }, [loadedCount, onLoadProgress, totalCount]);
+
+  useEffect(() => {
+    const links = themeIds.map((theme) => {
       const link = document.createElement("link");
       link.rel = "preload";
       link.as = "video";
@@ -754,50 +774,62 @@ function FlameVideoStack({ activeTheme }: { activeTheme: ThemeId }) {
       return link;
     });
     return () => links.forEach((link) => link.remove());
-  }, []);
+  }, [themeIds]);
 
   useEffect(() => {
-    setReadyTheme(null);
-    setFailedTheme(null);
-  }, [activeTheme]);
+    themeIds.forEach((theme) => {
+      const video = videoRefs.current[theme];
+      if (!video) return;
+      if (theme === activeTheme && readyThemes[theme]) {
+        void video.play().catch(() => undefined);
+      } else {
+        video.pause();
+      }
+    });
+  }, [activeTheme, readyThemes, themeIds]);
 
-  const playVideo = (event: React.SyntheticEvent<HTMLVideoElement>) => {
-    const video = event.currentTarget;
-    if (!video) return;
-    void video.play().catch(() => undefined);
+  const markReady = (theme: ThemeId) => {
+    setReadyThemes((items) => (items[theme] ? items : { ...items, [theme]: true }));
+    setFailedThemes((items) => (items[theme] ? { ...items, [theme]: false } : items));
   };
 
-  const markReady = () => {
-    setReadyTheme(activeTheme);
-    setFailedTheme(null);
+  const markFailed = (theme: ThemeId) => {
+    setReadyThemes((items) => (items[theme] ? { ...items, [theme]: false } : items));
+    setFailedThemes((items) => (items[theme] ? items : { ...items, [theme]: true }));
   };
 
-  const markFailed = () => {
-    setReadyTheme(null);
-    setFailedTheme(activeTheme);
+  const bindVideo = (theme: ThemeId) => (element: HTMLVideoElement | null) => {
+    if (element) videoRefs.current[theme] = element;
+    else delete videoRefs.current[theme];
   };
-
-  const isReady = readyTheme === activeTheme;
-  const isFailed = failedTheme === activeTheme;
 
   return (
-    <div className="hero-flame-layer is-active" key={activeTheme}>
-      {isFailed && <div className="hero-flame-empty" />}
-      <video
-        key={activeTheme}
-        className={`hero-flame-video${isReady && !isFailed ? " is-ready" : ""}`}
-        src={source.alpha}
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="auto"
-        onCanPlay={markReady}
-        onLoadedData={markReady}
-        onPlaying={playVideo}
-        onError={markFailed}
-      />
-    </div>
+    <>
+      {themeIds.map((theme) => {
+        const source = themeFlameSources[theme];
+        const isActive = theme === activeTheme;
+        const isReady = readyThemes[theme] === true;
+        const isFailed = failedThemes[theme] === true;
+        return (
+          <div className={`hero-flame-layer${isActive ? " is-active" : ""}`} key={theme}>
+            {isFailed && <div className="hero-flame-empty" />}
+            <video
+              ref={bindVideo(theme)}
+              className={`hero-flame-video${isReady && !isFailed ? " is-ready" : ""}`}
+              src={source.alpha}
+              muted
+              loop
+              playsInline
+              preload="auto"
+              onCanPlay={() => markReady(theme)}
+              onLoadedData={() => markReady(theme)}
+              onError={() => markFailed(theme)}
+            />
+          </div>
+        );
+      })}
+      {!allSettled && <div className="hero-flame-empty" aria-hidden="true" data-progress={loadPercent} />}
+    </>
   );
 }
 
@@ -1343,9 +1375,11 @@ function SummonLoading({ title = "异火火种" }: { title?: string }) {
 function OverviewModule({
   setActive,
   onQuickAdd,
+  onFlameLoadProgress,
 }: {
   setActive: (key: string) => void;
   onQuickAdd: () => void;
+  onFlameLoadProgress?: (loaded: number, total: number) => void;
 }) {
   const { t } = useTranslation();
   const assets = useYiHuoStore((state) => state.assets);
@@ -1376,12 +1410,12 @@ function OverviewModule({
             <Button title="进入 AI 炼化炉，将文本与表格炼成资产火种" icon={<ImportOutlined />} onClick={() => setActive("ai")}>{t("aiImport")}</Button>
           </Space>
         </div>
-        <div className="hero-visual" aria-hidden="true">
-          <div className="hero-flame-video-shell">
-            <FlameVideoStack activeTheme={activeTheme} />
-            <div className="hero-flame-blend-overlay" />
+          <div className="hero-visual" aria-hidden="true">
+            <div className="hero-flame-video-shell">
+              <FlameVideoStack activeTheme={activeTheme} onLoadProgress={onFlameLoadProgress} />
+              <div className="hero-flame-blend-overlay" />
+            </div>
           </div>
-        </div>
       </section>
 
       <Row gutter={[24, 24]}>
@@ -3045,9 +3079,19 @@ export default function App() {
   const [savedAccessKey, setSavedAccessKey] = useState(() => window.localStorage.getItem(ADMIN_KEY_STORAGE) ?? "");
   const [themeTransitionKey, setThemeTransitionKey] = useState(0);
   const [themeTransitionActive, setThemeTransitionActive] = useState(false);
+  const [flameLoadProgress, setFlameLoadProgress] = useState({ loaded: 0, total: themeFlameIds.length });
+  const [flamePreloaderDismissed, setFlamePreloaderDismissed] = useState(() => {
+    const today = dayjs().format("YYYY-MM-DD");
+    return window.localStorage.getItem(FLAME_PRELOADER_DISMISS_FOREVER_STORAGE) === "1"
+      || window.localStorage.getItem(FLAME_PRELOADER_DISMISS_DATE_STORAGE) === today;
+  });
   const previousThemeRef = useRef<ThemeId | null>(null);
   const activeTheme = normalizeTheme(settings.theme);
   const activeThemeLabel = themeOptions.find((option) => option.value === activeTheme)?.label ?? "九玄金雷";
+  const flameLoadTotal = flameLoadProgress.total || themeFlameIds.length;
+  const flameLoadLoaded = Math.min(flameLoadProgress.loaded, flameLoadTotal);
+  const flameLoadPercent = Math.round((flameLoadLoaded / flameLoadTotal) * 100);
+  const flamePreloaderVisible = accessState === "unlocked" && active === "overview" && !flamePreloaderDismissed;
 
 
   useRenewalWatcher(assets, channels, settings);
@@ -3062,7 +3106,13 @@ export default function App() {
       }
       window.localStorage.setItem(ADMIN_KEY_STORAGE, key);
       setSavedAccessKey(key);
-      await hydrateFromServer(key);
+      const hydrated = await hydrateFromServer(key);
+      if (!hydrated) {
+        window.localStorage.removeItem(ADMIN_KEY_STORAGE);
+        setSavedAccessKey("");
+        setAccessState("locked");
+        return false;
+      }
       void hydrateExchangeRates();
       setAccessState("unlocked");
       return true;
@@ -3077,7 +3127,11 @@ export default function App() {
     if (!stored) return;
     setSavedAccessKey(stored);
     setAccessState("unlocked");
-    void hydrateFromServer(stored);
+    void hydrateFromServer(stored).then((ok) => {
+      if (ok) return;
+      setSavedAccessKey("");
+      setAccessState("locked");
+    });
     void hydrateExchangeRates();
   }, []);
 
@@ -3132,6 +3186,30 @@ export default function App() {
     setQuickCreateNonce((value) => value + 1);
   };
 
+  const handleFlameLoadProgress = useCallback((loaded: number, total: number) => {
+    setFlameLoadProgress((current) => (
+      current.loaded === loaded && current.total === total ? current : { loaded, total }
+    ));
+  }, []);
+
+  const dismissFlamePreloader = useCallback(() => {
+    setFlamePreloaderDismissed(true);
+  }, []);
+
+  const dismissReadyFlamePreloader = useCallback(() => {
+    if (flameLoadLoaded >= flameLoadTotal) setFlamePreloaderDismissed(true);
+  }, [flameLoadLoaded, flameLoadTotal]);
+
+  const dismissFlamePreloaderToday = useCallback(() => {
+    window.localStorage.setItem(FLAME_PRELOADER_DISMISS_DATE_STORAGE, dayjs().format("YYYY-MM-DD"));
+    setFlamePreloaderDismissed(true);
+  }, []);
+
+  const dismissFlamePreloaderForever = useCallback(() => {
+    window.localStorage.setItem(FLAME_PRELOADER_DISMISS_FOREVER_STORAGE, "1");
+    setFlamePreloaderDismissed(true);
+  }, []);
+
   const menuItems = [
     { key: "overview", icon: <LayoutOutlined />, label: t("overview") },
     { key: "assets", icon: <AppstoreOutlined />, label: t("assets") },
@@ -3141,7 +3219,7 @@ export default function App() {
   ];
 
   const module = {
-    overview: <OverviewModule setActive={setActive} onQuickAdd={openQuickCreate} />,
+    overview: <OverviewModule setActive={setActive} onQuickAdd={openQuickCreate} onFlameLoadProgress={handleFlameLoadProgress} />,
     assets: <AssetsModule globalSearch={globalSearch} goAi={() => setActive("ai")} quickCreateNonce={quickCreateNonce} />,
     notifications: <NotificationsModule />,
     ai: <AiModule onForgeDone={() => setActive("assets")} />,
@@ -3177,6 +3255,23 @@ export default function App() {
       }}
     >
       {contextHolder}
+      {flamePreloaderVisible && (
+        <div className="app-flame-preloader" aria-live="polite" onClick={dismissReadyFlamePreloader}>
+          <div className="app-flame-preloader-core" onClick={(event) => event.stopPropagation()}>
+            <div className="app-flame-preloader-ring" />
+            <div className="app-flame-preloader-title">{flameLoadLoaded >= flameLoadTotal ? "七火已就绪" : "异火凝形中"}</div>
+            <div className="app-flame-preloader-subtitle">{flameLoadLoaded >= flameLoadTotal ? "七种主题火焰已挂入后台" : "正在唤醒七种主题火焰"}</div>
+            <div className="app-flame-preloader-bar"><span style={{ width: `${flameLoadPercent}%` }} /></div>
+            <div className="app-flame-preloader-count">{flameLoadLoaded}/{flameLoadTotal}</div>
+            {flameLoadLoaded >= flameLoadTotal && <div className="app-flame-preloader-ready">七种异火已就绪，点击任意位置进入</div>}
+            <div className="app-flame-preloader-actions">
+              <Button size="small" onClick={dismissFlamePreloader}>本次关闭</Button>
+              <Button size="small" onClick={dismissFlamePreloaderToday}>今日关闭</Button>
+              <Button size="small" onClick={dismissFlamePreloaderForever}>永久关闭</Button>
+            </div>
+          </div>
+        </div>
+      )}
       {accessState !== "unlocked" ? (
         <AccessGate initialKey={savedAccessKey} checking={accessState === "checking"} onUnlock={unlock} />
       ) : (
