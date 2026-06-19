@@ -142,7 +142,7 @@ body::after {
 
 .side-nav::before {
   position: absolute;
-  inset: 104px 18px auto;
+  inset: 92px 18px auto;
   height: 1px;
   content: "";
   background: linear-gradient(90deg, transparent, rgba(255, 184, 77, 0.5), transparent);
@@ -151,9 +151,9 @@ body::after {
 .brand-mark {
   display: flex;
   align-items: center;
-  gap: 16px;
-  height: 104px;
-  padding: 24px 24px 22px;
+  gap: 12px;
+  height: 92px;
+  padding: 18px 18px 16px;
 }
 
 .brand-sigil {
@@ -196,10 +196,11 @@ body::after {
 
 .brand-mark strong {
   display: block;
-  font-size: 22px;
+  font-size: 25px;
+  line-height: 1.1;
   font-family: var(--font-display);
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
 }
 
 .brand-mark span,
@@ -208,8 +209,12 @@ body::after {
 }
 
 .brand-mark span {
+  display: block;
+  margin-top: 3px;
   font-family: var(--font-ui);
-  letter-spacing: 0.12em;
+  font-size: 15px;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
 }
 
 .ant-typography,
