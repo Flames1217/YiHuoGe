@@ -2660,6 +2660,17 @@ function SettingsModule() {
     });
   };
 
+  const readApiError = async (response: Response, fallback: string) => {
+    const text = await response.text().catch(() => "");
+    if (!text) return `${fallback}（HTTP ${response.status}）`;
+    try {
+      const data = JSON.parse(text) as { error?: string; message?: string };
+      return data.error ?? data.message ?? `${fallback}（HTTP ${response.status}）：${text.slice(0, 300)}`;
+    } catch {
+      return `${fallback}（HTTP ${response.status}）：${text.replace(/\s+/g, " ").slice(0, 300)}`;
+    }
+  };
+
   const saveBackupTarget = async () => {
     const values = await backupForm.validateFields();
     const nextTarget = normalizeBackupForm(values);
@@ -2705,8 +2716,8 @@ function SettingsModule() {
     setLoadingBackupFilesId(target.id);
     try {
       const response = await fetch(`/api/backups/${target.id}/files`, { headers: authHeaders() });
+      if (!response.ok) throw new Error(await readApiError(response, "备份列表读取失败"));
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error ?? "备份列表读取失败");
       setBackupFiles((items) => ({ ...items, [target.id]: data.files ?? [] }));
     } catch (error) {
       showBackupMessage("error", `backup-files-${target.id}`, error instanceof Error ? error.message : "备份列表读取失败");
@@ -2726,8 +2737,8 @@ function SettingsModule() {
         headers: authHeaders(),
         body: JSON.stringify({ target: candidate }),
       });
+      if (!response.ok) throw new Error(await readApiError(response, "连接测试失败"));
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error ?? "连接测试失败");
       mergeBackupTarget(data.target);
       const message = data.message ?? "连接测试成功，目录可访问";
       setBackupFeedback({ type: "success", message });

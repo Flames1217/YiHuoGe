@@ -4,8 +4,9 @@
   "outputDirectory": "dist",
   "functions": {
     "api/**/*.ts": {
+      "maxDuration": 60,
       "regions": [
-        "sin1"
+        "hnd1"
       ]
     }
   },

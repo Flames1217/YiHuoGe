@@ -142,7 +142,7 @@ body::after {
 
 .side-nav::before {
   position: absolute;
-  inset: 78px 12px auto;
+  inset: 104px 18px auto;
   height: 1px;
   content: "";
   background: linear-gradient(90deg, transparent, rgba(255, 184, 77, 0.5), transparent);

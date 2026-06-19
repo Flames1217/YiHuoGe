@@ -629,8 +629,9 @@ async function updateBackupTargetStatus(id: string, patch: Partial<BackupTarget>
 }
 
 app.post("/api/backups/test", async (req, res) => {
-  const target = normalizeBackupTarget(req.body?.target ?? req.body);
+  let target: BackupTarget | undefined;
   try {
+    target = normalizeBackupTarget(req.body?.target ?? req.body);
     const result = await testBackupTarget(target);
     const patch = { lastTestAt: new Date().toISOString(), lastStatus: "success" as const, lastMessage: result.message };
     const nextTarget = target.id ? normalizeBackupTarget({ ...target, ...patch }) : undefined;
@@ -638,7 +639,7 @@ app.post("/api/backups/test", async (req, res) => {
     res.json({ ...result, target: nextTarget });
   } catch (error) {
     const message = error instanceof Error ? error.message : "备份连接测试失败";
-    if (target.id) void updateBackupTargetStatus(target.id, { lastTestAt: new Date().toISOString(), lastStatus: "failed", lastMessage: message }).catch(() => undefined);
+    if (target?.id) void updateBackupTargetStatus(target.id, { lastTestAt: new Date().toISOString(), lastStatus: "failed", lastMessage: message }).catch(() => undefined);
     res.status(400).json({ ok: false, error: message });
   }
 });
