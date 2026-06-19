@@ -2715,7 +2715,7 @@ function SettingsModule() {
   const refreshBackupFiles = async (target: BackupTarget) => {
     setLoadingBackupFilesId(target.id);
     try {
-      const response = await fetch(`/api/backups/${target.id}/files`, { headers: authHeaders() });
+      const response = await fetch(`/api/backup-files?id=${encodeURIComponent(target.id)}`, { headers: authHeaders() });
       if (!response.ok) throw new Error(await readApiError(response, "备份列表读取失败"));
       const data = await response.json().catch(() => ({}));
       setBackupFiles((items) => ({ ...items, [target.id]: data.files ?? [] }));
@@ -2732,7 +2732,7 @@ function SettingsModule() {
     setTestingBackupId(actionId);
     setBackupFeedback({ type: "info", message: "正在测试备份连接与目录权限…" });
     try {
-      const response = await fetch("/api/backups/test", {
+      const response = await fetch("/api/backup-test", {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({ target: candidate }),
@@ -2763,7 +2763,7 @@ function SettingsModule() {
     setBackupFeedback({ type: "info", message: "正在执行备份，请稍候…" });
     showBackupMessage("loading", key, "正在执行备份…", 0);
     try {
-      const response = await fetch(`/api/backups/${target.id}/run`, {
+      const response = await fetch(`/api/backup-run?id=${encodeURIComponent(target.id)}`, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({ target: freshTarget }),
@@ -2790,7 +2790,7 @@ function SettingsModule() {
     const key = `backup-restore-${target.id}`;
     showBackupMessage("loading", key, "正在恢复备份…", 0);
     try {
-      const response = await fetch(`/api/backups/${target.id}/restore`, {
+      const response = await fetch(`/api/backup-restore?id=${encodeURIComponent(target.id)}`, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({ key: file.key }),
@@ -2810,7 +2810,7 @@ function SettingsModule() {
   const deleteBackupFile = async (target: BackupTarget, file: RemoteBackupFile) => {
     setDeletingBackupKey(`${target.id}:${file.key}`);
     try {
-      const response = await fetch(`/api/backups/${target.id}/files`, {
+      const response = await fetch(`/api/backup-files?id=${encodeURIComponent(target.id)}`, {
         method: "DELETE",
         headers: authHeaders(),
         body: JSON.stringify({ key: file.key }),

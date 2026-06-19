@@ -121,7 +121,7 @@ export async function restoreBackup(req: any, res: any) {
 
   const id = String(req.query.id ?? "");
   const key = String(req.body?.key ?? "");
-  const { target } = await findBackupTarget(id);
+  const { db, target } = await findBackupTarget(id);
   if (!target) {
     res.status(404).json({ ok: false, error: "backup target not found" });
     return;
