@@ -181,6 +181,11 @@ function schemaStatements(dialect: SqlDialect) {
       value_json ${c.longText} NOT NULL,
       updated_at ${c.now}${c.autoUpdate}
     )`,
+    `CREATE TABLE IF NOT EXISTS yh_app_cache (
+      key_name VARCHAR(64) PRIMARY KEY,
+      value_json ${c.longText} NOT NULL,
+      updated_at ${c.now}${c.autoUpdate}
+    )`,
   ];
 }
 
@@ -544,6 +549,82 @@ export async function writeState(db: YiHuoStateData) {
   return writeSqlite(db);
 }
 
+export async function readAppCache<T>(key: string): Promise<T | undefined> {
+  const kind = storageKind();
+  if (kind === "mysql") {
+    const connection = await createConnection({ uri: mysqlUrl, ssl: { rejectUnauthorized: true } });
+    try {
+      for (const sql of schemaStatements("mysql")) await connection.execute(sql);
+      const [rows] = await connection.execute("SELECT value_json FROM yh_app_cache WHERE key_name = ?", [key]);
+      return (rows as any[])[0] ? parseJson<T>((rows as any[])[0].value_json, undefined as T | undefined) : undefined;
+    } finally {
+      await connection.end();
+    }
+  }
+  if (kind === "postgres") {
+    return withPostgres(async (client) => {
+      for (const sql of schemaStatements("postgres")) await client.query(sql);
+      const result = await client.query("SELECT value_json FROM yh_app_cache WHERE key_name = $1", [key]);
+      return result.rows[0] ? parseJson<T>(result.rows[0].value_json, undefined as T | undefined) : undefined;
+    });
+  }
+  if (kind === "d1") {
+    const db = d1Binding();
+    for (const sql of schemaStatements("sqlite")) await d1Run(db, sql);
+    const row = await d1First(db, "SELECT value_json FROM yh_app_cache WHERE key_name = ?", [key]);
+    return row ? parseJson<T>(row.value_json, undefined as T | undefined) : undefined;
+  }
+  const db = await openSqlite();
+  try {
+    for (const sql of schemaStatements("sqlite")) await db.exec(sql);
+    const row = await db.get("SELECT value_json FROM yh_app_cache WHERE key_name = ?", key);
+    return row ? parseJson<T>(row.value_json, undefined as T | undefined) : undefined;
+  } finally {
+    await db.close();
+  }
+}
+
+export async function writeAppCache(key: string, value: unknown) {
+  const valueJson = json(value);
+  const kind = storageKind();
+  if (kind === "mysql") {
+    const connection = await createConnection({ uri: mysqlUrl, ssl: { rejectUnauthorized: true } });
+    try {
+      for (const sql of schemaStatements("mysql")) await connection.execute(sql);
+      await connection.execute(
+        "INSERT INTO yh_app_cache (key_name, value_json) VALUES (?, ?) ON DUPLICATE KEY UPDATE value_json = VALUES(value_json)",
+        [key, valueJson],
+      );
+    } finally {
+      await connection.end();
+    }
+    return;
+  }
+  if (kind === "postgres") {
+    await withPostgres(async (client) => {
+      for (const sql of schemaStatements("postgres")) await client.query(sql);
+      await client.query(
+        "INSERT INTO yh_app_cache (key_name, value_json) VALUES ($1, $2) ON CONFLICT (key_name) DO UPDATE SET value_json = EXCLUDED.value_json",
+        [key, valueJson],
+      );
+    });
+    return;
+  }
+  if (kind === "d1") {
+    const db = d1Binding();
+    for (const sql of schemaStatements("sqlite")) await d1Run(db, sql);
+    await d1Run(db, "INSERT OR REPLACE INTO yh_app_cache (key_name, value_json) VALUES (?, ?)", [key, valueJson]);
+    return;
+  }
+  const db = await openSqlite();
+  try {
+    for (const sql of schemaStatements("sqlite")) await db.exec(sql);
+    await db.run("INSERT OR REPLACE INTO yh_app_cache (key_name, value_json) VALUES (?, ?)", key, valueJson);
+  } finally {
+    await db.close();
+  }
+}
+
 export function hasValidAdminKey(req: any) {
   const adminKey = process.env.YIHUOGE_ADMIN_KEY ?? "";
   const headerKey = Array.isArray(req.headers["x-admin-key"]) ? req.headers["x-admin-key"][0] : req.headers["x-admin-key"];
@@ -552,5 +633,5 @@ export function hasValidAdminKey(req: any) {
 
 export const storageInfo = {
   kind: storageKind,
-  tables: ["yh_assets", "yh_asset_domain_details", "yh_channels", "yh_ai_config", "yh_settings"],
+  tables: ["yh_assets", "yh_asset_domain_details", "yh_channels", "yh_ai_config", "yh_settings", "yh_app_cache"],
 };

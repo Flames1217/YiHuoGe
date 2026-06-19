@@ -143,7 +143,7 @@ app.get("/api/bootstrap", async (_req, res) => {
 });
 
 app.get("/api/exchange-rates", async (_req, res) => {
-  res.json(await getExchangeRates(rootDir));
+  res.json(await getExchangeRates());
 });
 
 app.get("/api/assets", async (_req, res) => {

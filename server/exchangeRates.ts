@@ -1,7 +1,7 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import path from "node:path";
+import { readAppCache, writeAppCache } from "../api/_state.js";
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const EXCHANGE_RATE_CACHE_KEY = "exchange-rates";
 
 const fallbackRatesToCny: Record<string, number> = {
   CNY: 1,
@@ -40,21 +40,15 @@ type ExchangeRateApiResponse = {
 
 let memoryCache: ExchangeRateCache | undefined;
 
-function cachePath(rootDir: string) {
-  return path.join(rootDir, "data", "exchange-rates.json");
-}
-
 function isFresh(cache: ExchangeRateCache) {
   const updatedAt = Date.parse(cache.updatedAt);
   return Number.isFinite(updatedAt) && Date.now() - updatedAt < CACHE_TTL_MS;
 }
 
-function readCache(rootDir: string) {
+async function readCache() {
   if (memoryCache && isFresh(memoryCache)) return memoryCache;
-  const file = cachePath(rootDir);
-  if (!existsSync(file)) return undefined;
   try {
-    const parsed = JSON.parse(readFileSync(file, "utf8")) as ExchangeRateCache;
+    const parsed = await readAppCache<ExchangeRateCache>(EXCHANGE_RATE_CACHE_KEY);
     if (parsed?.base === "CNY" && parsed.ratesToCny && isFresh(parsed)) {
       memoryCache = parsed;
       return parsed;
@@ -65,14 +59,12 @@ function readCache(rootDir: string) {
   return undefined;
 }
 
-function writeCache(rootDir: string, cache: ExchangeRateCache) {
+async function writeCache(cache: ExchangeRateCache) {
   memoryCache = cache;
   try {
-    const file = cachePath(rootDir);
-    mkdirSync(path.dirname(file), { recursive: true });
-    writeFileSync(file, JSON.stringify(cache, null, 2));
+    await writeAppCache(EXCHANGE_RATE_CACHE_KEY, cache);
   } catch {
-    // Serverless deployments may have read-only project files; memory cache still covers the current instance.
+    // 数据库短暂不可用时，当前实例仍可用内存缓存兜底。
   }
 }
 
@@ -86,8 +78,8 @@ function fallbackCache(): ExchangeRateCache {
   };
 }
 
-export async function getExchangeRates(rootDir: string) {
-  const cached = readCache(rootDir);
+export async function getExchangeRates() {
+  const cached = await readCache();
   if (cached) return { ...cached, cached: true };
 
   try {
@@ -114,7 +106,7 @@ export async function getExchangeRates(rootDir: string) {
       source: "open.er-api.com",
       attribution: "Rates By Exchange Rate API",
     };
-    writeCache(rootDir, fresh);
+    await writeCache(fresh);
     return { ...fresh, cached: false };
   } catch {
     const stale = memoryCache;
