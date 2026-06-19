@@ -2881,13 +2881,13 @@ function SettingsModule() {
                       <div className="remote-backup-list">
                         {(backupFiles[target.id] ?? []).map((file) => (
                           <div className="remote-backup-row" key={file.key}>
-                            <div>
-                              <Text>{file.key}</Text>
+                            <div className="remote-backup-file">
+                              <Text className="remote-backup-file-name">{file.key}</Text>
                               <Paragraph className="muted backup-note">
                                 {[file.lastModified ? dayjs(file.lastModified).format("YYYY-MM-DD HH:mm:ss") : "", fileSizeLabel(file.size)].filter(Boolean).join(" · ") || "远端文件"}
                               </Paragraph>
                             </div>
-                            <Space wrap>
+                            <Space wrap className="remote-backup-actions">
                               <Popconfirm title="确认恢复该备份？当前资产、通知、AI 配置会被覆盖。" onConfirm={() => restoreBackupFile(target, file)}>
                                 <Button size="small" loading={restoringBackupKey === `${target.id}:${file.key}`}>恢复</Button>
                               </Popconfirm>
@@ -2901,7 +2901,7 @@ function SettingsModule() {
                       </div>
                     </div>
                   </div>
-                  <Space wrap>
+                  <Space wrap className="backup-actions">
                     <Switch checked={target.enabled} checkedChildren="启用" unCheckedChildren="停用" onChange={(enabled) => updateSettings({ backupTargets: backupTargets.map((item) => item.id === target.id ? { ...item, enabled } : item) })} />
                     <Button title="测试备份目标连接与目录权限" loading={testingBackupId === target.id} onClick={() => testBackupTargetAction(target)}>测试连接</Button>
                     <Button title="立即执行一次备份并清理旧文件" loading={runningBackupId === target.id} onClick={() => runBackupNow(target)}>立即备份</Button>
@@ -3258,7 +3258,9 @@ export default function App() {
       {flamePreloaderVisible && (
         <div className="app-flame-preloader" aria-live="polite" onClick={dismissReadyFlamePreloader}>
           <div className="app-flame-preloader-core" onClick={(event) => event.stopPropagation()}>
-            <div className="app-flame-preloader-ring" />
+            {flameLoadLoaded >= flameLoadTotal
+              ? <img className="app-flame-preloader-logo" src="/logo.png" alt="异火阁" draggable={false} />
+              : <div className="app-flame-preloader-ring" />}
             <div className="app-flame-preloader-title">{flameLoadLoaded >= flameLoadTotal ? "七火已就绪" : "异火凝形中"}</div>
             <div className="app-flame-preloader-subtitle">{flameLoadLoaded >= flameLoadTotal ? "七种主题火焰已挂入后台" : "正在唤醒七种主题火焰"}</div>
             <div className="app-flame-preloader-bar"><span style={{ width: `${flameLoadPercent}%` }} /></div>

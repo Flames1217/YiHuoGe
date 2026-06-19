@@ -226,7 +226,16 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}
 
 async function responseTextSnippet(response: Response) {
   const text = await response.text().catch(() => "");
-  return text ? `：${text.replace(/\s+/g, " ").slice(0, 180)}` : "";
+  return text ? `：${text.replace(/\s+/g, " ").slice(0, 300)}` : "";
+}
+
+function backupOperationError(action: string, target: BackupTargetConfig, error: unknown) {
+  const dir = normalizeBackupDir(target.backupDir ?? target.prefix);
+  const detail = error instanceof Error ? error.message : String(error);
+  const location = target.type === "WebDAV"
+    ? [target.target, dir ? `/${dir}` : "/"].filter(Boolean).join(" ")
+    : [target.endpoint, target.bucket, dir || "/"].filter(Boolean).join(" / ");
+  return new Error(`${action}失败（${target.type}${location ? `，${location}` : ""}）：${detail}`);
 }
 
 async function ensureWebdavCollection(target: BackupTargetConfig) {
@@ -421,7 +430,11 @@ async function readS3Backup(target: BackupTargetConfig, key: string) {
 }
 
 export async function listRemoteBackups(target: BackupTargetConfig) {
-  return target.type === "WebDAV" ? listWebdavBackups(target) : listS3Backups(target);
+  try {
+    return target.type === "WebDAV" ? listWebdavBackups(target) : listS3Backups(target);
+  } catch (error) {
+    throw backupOperationError("读取远端备份列表", target, error);
+  }
 }
 
 export async function readRemoteBackup(target: BackupTargetConfig, key: string) {
@@ -463,11 +476,15 @@ async function pruneBackups(target: BackupTargetConfig) {
 
 export async function testBackupTarget(targetInput: BackupTargetConfig): Promise<BackupActionResult> {
   const target = validateTarget(targetInput);
-  if (target.type === "WebDAV") {
-    await ensureWebdavCollection(target);
-    await listWebdavBackups(target);
-  } else {
-    await listS3Backups(target);
+  try {
+    if (target.type === "WebDAV") {
+      await ensureWebdavCollection(target);
+      await listWebdavBackups(target);
+    } else {
+      await listS3Backups(target);
+    }
+  } catch (error) {
+    throw backupOperationError("测试备份连接", target, error);
   }
   return { ok: true, message: "连接测试成功" };
 }

@@ -1145,6 +1145,16 @@ body::after {
   animation: flameLoadingSpin 960ms linear infinite;
 }
 
+.app-flame-preloader-logo {
+  width: 86px;
+  aspect-ratio: 1;
+  object-fit: contain;
+  border-radius: 20px;
+  filter:
+    drop-shadow(0 0 12px color-mix(in srgb, var(--theme-core) 42%, transparent))
+    drop-shadow(0 0 26px color-mix(in srgb, var(--theme-edge) 24%, transparent));
+}
+
 .app-flame-preloader-title {
   font-family: var(--font-calligraphy);
   font-size: 34px;
@@ -1729,13 +1739,21 @@ body::after {
 
 .backup-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 20px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
   padding: 18px;
   background: linear-gradient(90deg, rgba(255, 184, 77, 0.08), rgba(139, 92, 246, 0.035));
   border: 1px solid rgba(255, 184, 77, 0.16);
   border-radius: 14px 14px 22px 14px;
+}
+
+.backup-row > div:first-child {
+  min-width: 0;
+}
+
+.backup-actions {
+  justify-content: flex-start;
 }
 
 .backup-row h5.ant-typography {
@@ -1804,18 +1822,32 @@ body::after {
 }
 
 .remote-backup-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  width: min(100%, 360px);
   padding: 10px 12px;
   background: color-mix(in srgb, var(--theme-base) 62%, transparent);
   border: 1px solid color-mix(in srgb, var(--theme-core) 16%, transparent);
   border-radius: 10px;
 }
 
-.remote-backup-row .ant-typography {
-  word-break: break-all;
+.remote-backup-file {
+  width: 100%;
+  min-width: 0;
+}
+
+.remote-backup-file-name {
+  display: block;
+  max-width: 100%;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.remote-backup-actions {
+  justify-content: flex-start;
 }
 
 .calendar-grid {

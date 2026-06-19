@@ -632,11 +632,13 @@ app.post("/api/backups/test", async (req, res) => {
   const target = normalizeBackupTarget(req.body?.target ?? req.body);
   try {
     const result = await testBackupTarget(target);
-    const saved = target.id ? await updateBackupTargetStatus(target.id, { lastTestAt: new Date().toISOString(), lastStatus: "success", lastMessage: result.message }) : undefined;
-    res.json({ ...result, target: saved });
+    const patch = { lastTestAt: new Date().toISOString(), lastStatus: "success" as const, lastMessage: result.message };
+    const nextTarget = target.id ? normalizeBackupTarget({ ...target, ...patch }) : undefined;
+    if (target.id) void updateBackupTargetStatus(target.id, patch).catch(() => undefined);
+    res.json({ ...result, target: nextTarget });
   } catch (error) {
     const message = error instanceof Error ? error.message : "备份连接测试失败";
-    if (target.id) await updateBackupTargetStatus(target.id, { lastTestAt: new Date().toISOString(), lastStatus: "failed", lastMessage: message }).catch(() => undefined);
+    if (target.id) void updateBackupTargetStatus(target.id, { lastTestAt: new Date().toISOString(), lastStatus: "failed", lastMessage: message }).catch(() => undefined);
     res.status(400).json({ ok: false, error: message });
   }
 });
